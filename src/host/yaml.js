@@ -237,32 +237,99 @@ export function readVariables(text) {
   return variables
 }
 
-const PLACEHOLDER = /\$\{([^}]+)\}/g
+/** Index of the `}` closing the placeholder opened at `from`; -1 when unbalanced. */
+function closingBrace(text, from) {
+  let level = 1
+  for (let index = from; index < text.length; index += 1) {
+    if (text.startsWith('${', index)) {
+      level += 1
+      index += 1
+      continue
+    }
+    if (text[index] === '}') {
+      level -= 1
+      if (level === 0) return index
+    }
+  }
+  return -1
+}
+
+/** First `:` that is not inside a nested placeholder. */
+function topLevelColon(expression) {
+  let level = 0
+  for (let index = 0; index < expression.length; index += 1) {
+    if (expression.startsWith('${', index)) {
+      level += 1
+      index += 1
+      continue
+    }
+    if (expression[index] === '}') {
+      level = Math.max(0, level - 1)
+      continue
+    }
+    if (expression[index] === ':' && level === 0) return index
+  }
+  return -1
+}
 
 /**
  * Resolve `${a.b}` and `${a.b:fallback}` against a variable map.
  *
  * Resolution recurses because one config value can name another placeholder, and
  * an unresolvable placeholder becomes its fallback (or an empty string), which is
- * exactly what Spring does.
+ * exactly what Spring does. The default may itself contain a placeholder
+ * (`${new.name:${old.name}}`), so the closing brace is found by counting nesting
+ * instead of taking the first `}`.
  */
 export function resolveTemplate(text, variables, depth = 0) {
   if (typeof text !== 'string' || text === '') return text
   if (depth > 12) return text
-  return text.replace(PLACEHOLDER, (_, expression) => {
-    const separator = expression.indexOf(':')
-    const name = separator >= 0 ? expression.slice(0, separator) : expression
+  let output = ''
+  let index = 0
+  while (index < text.length) {
+    const start = text.indexOf('${', index)
+    if (start < 0) {
+      output += text.slice(index)
+      break
+    }
+    output += text.slice(index, start)
+    const end = closingBrace(text, start + 2)
+    if (end < 0) {
+      output += text.slice(start)
+      break
+    }
+    const expression = text.slice(start + 2, end)
+    const separator = topLevelColon(expression)
+    const name = (separator >= 0 ? expression.slice(0, separator) : expression).trim()
     const fallback = separator >= 0 ? expression.slice(separator + 1) : ''
-    const found = variables.get(name.trim())
-    if (found === undefined || found === null) return resolveTemplate(fallback, variables, depth + 1)
-    return resolveTemplate(String(found), variables, depth + 1)
-  })
+    const found = variables.get(name)
+    output += found === undefined || found === null
+      ? resolveTemplate(fallback, variables, depth + 1)
+      : resolveTemplate(String(found), variables, depth + 1)
+    index = end + 1
+  }
+  return output
 }
 
-/** Collect every `${...}` name a value mentions. */
-export function placeholdersOf(text) {
+/** Every key a template references, including keys inside nested defaults. */
+export function placeholderNames(text) {
   const names = []
-  if (typeof text !== 'string') return names
-  for (const match of text.matchAll(PLACEHOLDER)) names.push(match[1].split(':')[0].trim())
+  const visit = (value, depth) => {
+    if (typeof value !== 'string' || value === '' || depth > 12) return
+    let index = 0
+    while (index < value.length) {
+      const start = value.indexOf('${', index)
+      if (start < 0) return
+      const end = closingBrace(value, start + 2)
+      if (end < 0) return
+      const expression = value.slice(start + 2, end)
+      const separator = topLevelColon(expression)
+      const name = (separator >= 0 ? expression.slice(0, separator) : expression).trim()
+      if (name !== '' && !names.includes(name)) names.push(name)
+      if (separator >= 0) visit(expression.slice(separator + 1), depth + 1)
+      index = end + 1
+    }
+  }
+  visit(text, 0)
   return names
 }

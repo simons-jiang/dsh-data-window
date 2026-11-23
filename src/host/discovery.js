@@ -28,7 +28,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { homedir } from 'node:os'
-import { flattenYaml, parseYaml, readVariables, resolveTemplate } from './yaml.js'
+import { flattenYaml, parseYaml, placeholderNames, readVariables, resolveTemplate } from './yaml.js'
 
 /** Directories that never hold a project's own configuration. */
 const SKIP_DIRECTORIES = new Set(['node_modules', 'target', 'build', 'dist', 'out', '.git', '.idea', '.gradle', 'test', 'tests'])
@@ -215,16 +215,6 @@ export function parseJdbcUrl(url) {
   return { host, port, schema }
 }
 
-/** The variable keys a template references, without their `:default` parts. */
-function placeholderKeys(text) {
-  const keys = []
-  for (const match of String(text ?? '').matchAll(/\$\{([^}]+)\}/g)) {
-    const key = match[1].split(':')[0].trim()
-    if (key !== '' && !keys.includes(key)) keys.push(key)
-  }
-  return keys
-}
-
 /** Placeholders whose last segment names nothing a user would recognise. */
 const GENERIC_PLACEHOLDER_NAMES = new Set(['host', 'hostname', 'url', 'addr', 'address', 'server', 'endpoint', 'port'])
 
@@ -318,7 +308,7 @@ export function discoverProject(root, options = {}) {
 
   // Which Nacos server the project itself points at decides which local cache is
   // authoritative: several caches can hold a tenant with the same name (`dev1`
-  // exists under both the application Nacos and the SCF Nacos), and merging them
+  // exists under both the application Nacos and another cluster's Nacos), and merging
   // would put another cluster's hosts into this project's tree.
   const servers = projectNacosServers(configFiles)
 
@@ -378,7 +368,7 @@ export function discoverProject(root, options = {}) {
     for (const { datasources } of projectTexts) {
       for (const datasource of datasources) {
         for (const value of [datasource.url, datasource.username, datasource.password]) {
-          for (const key of placeholderKeys(value)) needed.add(key)
+          for (const key of placeholderNames(value)) needed.add(key)
         }
       }
     }
@@ -418,7 +408,7 @@ export function discoverProject(root, options = {}) {
         readVariableFiles.push(file)
         for (const [key, value] of values) {
           if (!variables.has(key)) variables.set(key, value)
-          for (const referenced of placeholderKeys(value)) needed.add(referenced)
+          for (const referenced of placeholderNames(value)) needed.add(referenced)
         }
       }
     }
