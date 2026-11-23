@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+### Fixed
+
+- Completion resolves quoted table names in `db`.`table` form, so columns of a
+  backtick-quoted table are suggested (they used to be dropped because the table
+  name kept its leading backtick).
+- The SQL completion list appears as soon as the schema map arrives. Typing right
+  after opening a workbench used to beat the map request, so the list stayed closed
+  until the next keystroke.
+- Placeholder resolution now understands nested defaults (`${new.name:${old.name}}`),
+  which projects use when a service or data-id was renamed. The first `}` used to end
+  the placeholder, so the resolved user kept a trailing `}` and the password one more
+  character, and every query failed with `Access denied` even though the configuration
+  was correct.
+
+### Added
+
+- Running with a selection executes **only the selected statement** (⌘/Ctrl+Enter or
+  the Run button); running the whole buffer while a fragment was selected used to
+  send several statements and end in a confusing `ER_PARSE_ERROR`.
+- The window is titled **Data window / 数据窗口** (it used to read “database data
+  window”).
+- A workspace chip in the toolbar lists every known workspace and re-roots the window
+  in place, without a trip through the sidebar.
+- The explorer column is draggable; a double-click on the divider restores the
+  default width.
+- Entering the window folds the shell's navigation column, and a toolbar button folds
+  or unfolds it at any time.
+
+- The SQL editor highlights keywords, functions, strings, numbers and comments, and
+  suggests tables, columns and keywords from a schema map the Host reads once per
+  database (`alias.` narrows to that table's columns).
+- A **Format** button reindents the statement: clause keywords on their own line, one
+  select item per line, joins and boolean operators indented; keyword case is kept.
+
 ### Changed
 
 - Discovery no longer hard-codes the data-id that carries hosts and passwords.
@@ -19,6 +53,11 @@
   `ENOTFOUND` for a short host name that only resolves inside the cluster.
 - The empty state explains that only this project's data sources are read; the
   "list every database on the first instance" fallback button is gone with it.
+- The discovery cache is now one file per workspace under
+  `storages/dsh-data-window/workspaces/` instead of a single `discovery.json` that
+  held every project's resolved hosts and credentials. Deleting a project's file
+  forgets only that project, a corrupt file cannot affect the others, and the old
+  shared file is removed on startup.
 - An empty discovery result is no longer cached, so a service that starts (or a
   datasource that is added) shows up on the next open instead of needing a reload.
 - `docs/screenshots/` retaken against a neutral `demo-shop` workspace (system schema

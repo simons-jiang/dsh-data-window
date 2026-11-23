@@ -13,7 +13,11 @@ that into a browsable tree plus one read-only SQL workbench per database.
   are shown; results are cached per workspace and refreshed when the files change.
 - **Explorer** — environments → instances → databases → tables → columns, with type,
   primary key, nullability and comment. One button reveals every schema on an
-  instance, not only the configured ones.
+  instance, not only the configured ones. The column is draggable, and a
+double-click on the divider restores its default width.
+- **Editor with JetBrains-style colouring** — keywords, functions, strings, numbers and
+  comments are highlighted; typing suggests tables, columns and keywords, `alias.`
+  narrows to that table's columns; one click reindents the statement.
 - **Create statement in one keystroke** — `F4` or `⌘/Ctrl + Shift + D` on a table.
 - **One workbench per database**, kept as tabs, with a result grid, copy-as-TSV,
   a row limit, a draggable editor/result split and a collapsible run log. Opening a
@@ -37,13 +41,21 @@ database button at the sidebar foot and renders as the main-column page keyed
 `dsh-data-window:database`; `conversation.header.leading` is deliberately left
 alone because another plugin already occupies that single seat.
 
+- **Workspace chip** — the toolbar lists every workspace; picking one re-roots the
+  window in place, without a trip through the sidebar.
+- **Full width on entry** — entering the window folds the shell's navigation column;
+  a toolbar button folds or unfolds it at any time.
+
 ## Shortcuts
 
 | Key | Action |
 |---|---|
-| `⌘/Ctrl + Enter` | Run the statement in the active workbench |
+| `⌘/Ctrl + Enter` | Run the statement in the active workbench (only the selection when there is one) |
 | `F4` / `⌘/Ctrl + Shift + D` | Show the selected table's create statement |
-| `Tab` in the editor | Insert two spaces |
+| `Tab` in the editor | Insert two spaces (or accept the highlighted suggestion) |
+| `⌘/Ctrl + Space` | Open the suggestion list |
+| `↑` / `↓`, `Esc` | Move through or dismiss suggestions |
+| Format button | Reindent the statement |
 | Double-click a table | Open its rows in a workbench |
 
 The window follows the workspace the shell is showing. Picking a directory by hand
@@ -72,9 +84,10 @@ Set these under the plugin row's `config` in `cordis.patch.yml`:
   configuration. A project without one, or one that has never started, shows an empty
   tree; the other data-ids in the snapshot are read only for the values the
   project's placeholders name.
-- The discovery cache under `$DSH_HOME/storages/dsh-data-window/` contains the
-  resolved credentials (mode `0600`); it is the same data the workspace config
-  already holds in clear text.
+- Each workspace keeps its own discovery cache under
+  `$DSH_HOME/storages/dsh-data-window/workspaces/` (mode `0600`). A file holds only
+  that project's resolved hosts and credentials; deleting it forgets just that
+  project.
 - One instance per query; use `schema.table` for cross-schema reads.
 
 ## License

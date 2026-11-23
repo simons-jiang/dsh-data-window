@@ -20,8 +20,8 @@ DataGrip 风格的 DSH 数据库窗口插件。本文件是这个工作区的**�
 | `src/host/yaml.js` | YAML 子集解析（缩进映射/列表/多文档/注释/引号），`${a.b:default}` 占位符解析 |
 | `src/host/discovery.js` | 配置发现：`bootstrap.yml` → 应用名 → Nacos 快照 → 按占位符找定义变量的 data-id（不假定文件名），产出环境/实例/库与连接目标表 |
 | `src/host/mysql.js` | 只读网关：连接池、语句校验、元数据与 DDL 查询、行数上限 |
-| `src/host/rpc.js` | action 分发（discover/ping/databases/tables/columns/ddl/query/config/forget）、错误→HTTP 映射 |
-| `src/host/cache.js` | 按工作区的发现缓存（文件指纹 + 插件版本），0600，写临时文件再 rename |
+| `src/host/rpc.js` | action 分发（discover/ping/databases/tables/columns/schema/ddl/query/config/forget）、错误→HTTP 映射 |
+| `src/host/cache.js` | 每个工作区一份发现缓存（文件指纹 + 插件版本），0600，写临时文件再 rename |
 | `src/client/*.js` | 面板源码，`node build.mjs` 拼成单文件 `client.js` |
 | `build.mjs` | 拼接 + 注入语言字典 + 未定义 helper 检查 + 去掉模块语法 |
 | `locale/{en,zh}.json` | 显示名（`meta`）+ 全部界面文案，客户端把它内联进 bundle |
@@ -43,7 +43,9 @@ plugin_manager remove_bundle  dsh-data-window
 plugin_manager install_bundle /path/to/dsh-data-window
 ```
 
-**生效条件**：客户端改动刷新窗口即可；Host 改动要一次模块重新加载（移除+安装通常就够，否则重启应用）。
+**生效条件**：Host 改动要一次模块重新加载（移除+安装通常就够，否则重启应用）。客户端 bundle 由宿主按插件**版本号**拼成 `/plugins/??…&rev=<hash>` 并带 `immutable` 缓存：**同版本下改 `client.js`，普通刷新可能仍用旧 bundle**（重启应用也不一定有用，实测踩过）。
+
+约定：**本地开发不升版本**（不发 npm 包），改完客户端 `node build.mjs` + 重新安装后，用 `⌘ + Shift + R` 强刷一次换掉旧 bundle；版本号只在正式发布时调整。
 
 ## 验证方式（重要）
 

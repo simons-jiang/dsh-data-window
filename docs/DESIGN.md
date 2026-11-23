@@ -49,7 +49,9 @@
 2. **必须在 Host 侧读文件系统**。浏览器拿不到 `~/nacos`。
 3. **必须做占位符递归解析**（`${a.b:fallback}`），否则拿到的全是字面量。
 
-另一个容易踩的坑：**同一个租户名会出现在多个 nacos 缓存里**。本机 12 个 `fixed-*_nacos` 目录，`dev1` 同时存在于 `nacos-dev`（业务）和 `nacos-other`（另一套集群）。如果按租户名合并，SCF 集群的主机会混进业务项目的树里。
+解析器还有一个容易漏的细节：**默认值里可以再嵌套占位符**（`${acme.dbs.new_app.username:${acme.dbs.old_app.username}}`，项目改名时的常见写法）。按"第一个 `}`"截断会得到 `dev_user}` 和尾随一个字符的密码，登录直接 `Access denied`；`yaml.js` 现在按嵌套计数找结束花括号，并对默认值继续递归解析。
+
+另一个容易踩的坑：**同一个租户名会出现在多个 nacos 缓存里**。本机 12 个 `fixed-*_nacos` 目录，`dev1` 同时存在于 `nacos-dev`（业务）和 `nacos-other`（另一套集群）。如果按租户名合并，另一套集群的主机会混进业务项目的树里。
 
 解法：从项目自己的 `bootstrap.yml` 取 `server-addr`，**用主机名去匹配缓存目录名**，同名租户只取匹配的那个（`discovery.js: projectNacosServers` + `compareCandidates`）。匹配不到才退化成"解析出库最多的那个缓存"。
 
@@ -71,7 +73,7 @@
 │  rpc.js    DataController：action 分发 + 错误→HTTP                  │
 │  discovery.js  bootstrap.yml → nacos → 环境/实例/库 + targets(Map)  │
 │  mysql.js  DataGateway：连接池 + 只读校验 + 元数据/DDL              │
-│  cache.js  按工作区缓存（指纹 + 版本，0600）                        │
+│  cache.js  每个工作区一份缓存（指纹 + 版本，0600）                  │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -170,11 +172,13 @@ discover(root, {nacosHome, groups, envOrder}):
 
 ## 7. 缓存与失效
 
-- 位置：`$DSH_HOME/storages/dsh-data-window/discovery.json`，0600。
-- 键：工作区绝对路径。
-- 值：`{payload, targets[], fingerprintPaths[], fingerprint, version}`。
+- 位置：`$DSH_HOME/storages/dsh-data-window/workspaces/<hash>-<目录名>.json`，0600，**一个工作区一份**。
+- 键：文件内的 `root` 是工作区绝对路径；文件名用路径 hash 保证唯一，目录名只是方便人看。
+- 值：`{version, root, at, payload, targets[], fingerprintPaths[], fingerprint}`。
 - 失效：**文件指纹**（每个读过的配置文件，含定义占位符的那些 data-id，取 mtime+size）+ **插件版本**。任一变化就重解析。
 - 写入：临时文件 + `rename`，崩溃不会留下半截 JSON。
+
+**为什么不是一份大文件**：所有项目的账号密码会挤在同一个文件里（一份泄露等于全泄露），一个坏文件连累全部，"忘记某个项目"也做不到；并发写入还要整表重写。旧版的 `discovery.json` 在插件启动时直接删除（它只是缓存，删掉最多重新解析一次）。
 
 两个设计点值得记住：
 
@@ -190,6 +194,21 @@ discover(root, {nacosHome, groups, envOrder}):
 整个面板只有一个 `state` 对象 + `useSyncExternalStore`。理由：树、标签页、结果、日志互相牵连（打开库要展开树、运行要更新 tab），多份 state 会立刻不同步。
 
 派生数据（可见行、网格）用 `useMemo` / `React.memo` 挂在**引用稳定的切片**上（`state.expanded`、`state.children`、`result.rows` 这些只在真变化时换新引用），所以输入 SQL 时不会重建两千个单元格。
+
+### 窗口内切换工作区
+
+标题栏的 chip 从 `useWorkspaces` 的快照里取全部工作区（名称 + 路径），选中后调用 `store.setManualRoot(path)`，**只把窗口重新生根，不去选 Session**：选 Session 会把主栏交给对话页，等于把用户踢出数据窗口。因此 chip 切换后的状态是“手动选择”，要回到跟随 Shell 再点「跟随工作区」。
+
+### 折叠侧栏与列表宽度
+
+- `layout.toggleSidebar()` 是个裸开关，没有可读状态；能判断的只有 frame 上的 `data-sidebar-collapsed`。进入窗口时收起（仅宽屏，窄于 1024 时这个开关翻的是抽屉而不是列），离开时只在仍然收起的情况下展开，工具栏再给一个手动开关兜底。
+- 资源管理器宽度存在 `localStorage`（`dsh-data-window:side-width`）：它是阅读偏好，不属于项目事实；拖动时夹在 200px、720px 与“面板宽度 - 360px”之间，双击恢复 268px。
+
+### SQL 编辑器
+
+- **高亮不改输入层**。编辑器仍是 textarea：输入法、选区、撤销、快捷键都是浏览器自带的。高亮是一层 `<pre>`，字形、行高、内边距与 textarea 完全一致，文字透明、只留光标；滚动时把 `scrollTop/scrollLeft` 同步过去。这样不必自造编辑器，也不会和输入法打架。
+- **提示数据来自 Host 的一次读取**。新增 `schema` action：一次 `information_schema.COLUMNS` 查询拿到整库的表与字段，客户端按库缓存；`FROM/JOIN` 的别名从 SQL 里解析，`别名.` 直接筛该表字段。没有结构数据时退化为关键字，不让提示失败影响输入。
+- **格式化不引第三方**。客户端产物是拼接出来的单文件，装不了 npm 包，所以格式化器自己写：复用同一个词法器的 token，只在子句关键字、select 列表逗号、join/and 处换行并缩进，**不改变关键字大小写**（和 DataGrip 的默认行为一致）。
 
 ### 工作区跟随
 
@@ -259,6 +278,7 @@ Host 返回的是机器码（`write-keyword`、`read-only-violation`）。用户
 | 把 SQL 工作台做成 rightbar 页面 | 结果表格需要整宽，rightbar 太窄；`main` 才是数据窗口该占的位置 |
 | 每个库一个独立 `connection` | 174 个库 × 池 = 连接爆炸；按 (host,port,user,database) 池化，且只有打开过的库才建池 |
 | 缓存里不存密码，每次现解析 | 每点一次展开都要重读整棵 nacos，且解析失败时体验退化；0600 + 与源文件同权限等级的缓存是等价取舍 |
+| 所有工作区共用一份 `discovery.json` | 所有项目的凭据挤在一个文件里、坏文件连累全部、无法单独忘记某个项目；改为每个工作区一份 |
 | 发现结果只按 `env` 合并多个 nacos | 见第 2 节：会把另一套集群的主机混进来 |
 | 用快照里其它 data-id 声明的全部实例兜底 | 混进其它项目的实例，账号只能猜（`Access denied` / `ENOTFOUND`），树很乱；改为只列本项目数据源声明的实例 |
 | 写死运维数据源文件名（`yunwei-db.yml`） | 别的项目把同样的变量放在 `db.yml` / `datasource.yml` / 自定义 data-id 里就解析不到；改为按占位符找定义它的文件 |
