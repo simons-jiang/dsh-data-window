@@ -1,0 +1,70 @@
+{
+  "name": "dsh-data-window",
+  "version": "0.1.0",
+  "description": "DataGrip-style database window for DeepSeek Harness: reads the workspace's own config to find the environment hosts, then browses instances, databases, tables and columns and runs read-only SQL in one workbench per database.",
+  "type": "module",
+  "icon": "icon.svg",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "src/",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "docs/"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node --check index.js && node --check client.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.24.6"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  },
+  "license": "MIT",
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "dsh",
+    "database",
+    "mysql",
+    "datagrip",
+    "sql"
+  ],
+  "engines": {
+    "dsh": "^0.2.2-rc.3"
+  },
+  "author": "simons-jiang",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simons-jiang/dsh-data-window.git"
+  },
+  "homepage": "https://github.com/simons-jiang/dsh-data-window#readme",
+  "bugs": {
+    "url": "https://github.com/simons-jiang/dsh-data-window/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

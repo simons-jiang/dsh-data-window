@@ -1,0 +1,135 @@
+/**
+ * Client activation.
+ *
+ * Three seats and one mode:
+ *
+ *  - `main` (keyed `dsh-data-window:database`) — the DataGrip-style window itself.
+ *  - `sidebar.footer.action` — one always-visible control beside Settings, so the
+ *    window is reachable without hunting through the navigation column.
+ *  - `conversation.header.leading` is deliberately left alone: it is a single seat
+ *    that another plugin already holds, and a second registration would replace
+ *    that plugin's entry rather than sit beside it.
+ *  - `shell.overlay` — a headless tracker that keeps the last Workspace while the
+ *    Conversation still holds the main column.
+ *
+ * Opening the panel goes through `ctx.layout.selectPanel`, the same service the
+ * shipped navigation uses, so the window is a real main-column page rather than an
+ * overlay that would fight the layout.
+ */
+const DW_TRANSLATE_FALLBACK = (key) => key
+
+function dwPanelButton({ store, translate, label, wide }) {
+  const tr = typeof translate === 'function' ? translate : DW_TRANSLATE_FALLBACK
+  const onClick = () => {
+    const layout = store.layout?.()
+    if (layout !== undefined && typeof layout.selectPanel === 'function') layout.selectPanel(DW_PANEL_ID)
+  }
+  if (wide === true) {
+    return h('button', {
+      type: 'button',
+      className: 'dw-btn',
+      title: tr('openPanelHint'),
+      'aria-label': tr('openPanelHint'),
+      onClick,
+      style: { padding: '0 8px', gap: 6 },
+    }, [h(DwStyles, { key: 'style' }), h(DwIcon, { key: 'i', name: 'database', size: 15 }), h('span', { key: 't' }, label ?? tr('openPanel'))])
+  }
+  return h('button', {
+    type: 'button',
+    className: 'dw-btn',
+    title: tr('openPanelHint'),
+    'aria-label': tr('openPanelHint'),
+    onClick,
+    style: { minWidth: 26, padding: '0 4px', justifyContent: 'center' },
+  }, [h(DwStyles, { key: 'style' }), h(DwIcon, { key: 'i', name: 'database', size: 15 }), label === undefined ? null : h('span', { key: 't' }, label)])
+}
+
+/** The sidebar-foot control: icon-only, or with its label when the column is wide. */
+function DwFooterAction({ store, translate, wide }) {
+  return dwPanelButton({ store, translate, wide: wide === true })
+}
+
+function apply(ctx) {
+  let bound
+  try {
+    if (ctx.locale !== undefined && typeof ctx.locale.register === 'function') {
+      ctx.locale.register(DW_NS, { en: DW_TEXT_EN, zh: DW_TEXT_ZH })
+      for (const alias of ['zh-CN', 'zh-Hans']) {
+        try {
+          ctx.locale.register(DW_NS, alias, DW_TEXT_ZH)
+        } catch (error) {
+          void error
+        }
+      }
+      const candidate = ctx.locale.bind(DW_NS)
+      if (typeof candidate === 'function') bound = candidate
+    }
+  } catch (error) {
+    // A host without the locale face still renders: the translator falls back to
+    // the dictionary the bundle carries.
+    void error
+  }
+  const translate = dwMakeTranslator(ctx, bound)
+  const store = dwCreateStore(translate)
+
+  // `layout` is an optional service: it is resolved in its own scope so the plugin
+  // still activates where the shell has no panel navigation.
+  const layoutRef = { current: undefined }
+  try {
+    ctx.inject(['layout'], (scoped) => {
+      layoutRef.current = scoped.layout
+    })
+  } catch (error) {
+    void error
+  }
+  Object.defineProperty(store, 'layout', { value: () => layoutRef.current, enumerable: false })
+
+  // `uiWorkspace` opens the directory picker. It is resolved in its own scope, so
+  // a shell without it still activates — the pick button then simply reports that
+  // no picker is available instead of failing at click time.
+  const workspaceRef = { current: undefined }
+  try {
+    ctx.inject(['uiWorkspace'], (scoped) => {
+      workspaceRef.current = scoped.uiWorkspace
+    })
+  } catch (error) {
+    void error
+  }
+  const pickDirectory = async () => {
+    const service = workspaceRef.current
+    if (service === undefined || typeof service.pickDirectory !== 'function') return null
+    return await service.pickDirectory()
+  }
+
+  ctx.effect(() => ctx.slots.inject('main', () => ctx.slots.register({
+    name: 'main',
+    key: DW_PANEL_ID,
+    registrant: DW_NS,
+    locale: DW_NS,
+    inject: () => ({
+      store,
+      translate,
+      pickDirectory,
+    }),
+  }, DwPanel)), 'dsh-data-window: database panel')
+
+  ctx.effect(() => ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
+    name: 'sidebar.footer.action',
+    id: `${DW_NS}:open`,
+    order: 7,
+    label: () => translate('openPanel'),
+    registrant: DW_NS,
+    locale: DW_NS,
+    inject: () => ({ store, translate }),
+  }, DwFooterAction)), 'dsh-data-window: footer action')
+
+  ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    name: 'shell.overlay',
+    id: `${DW_NS}:tracker`,
+    order: 42,
+    registrant: DW_NS,
+    inject: () => ({ store }),
+  }, DwTracker)), 'dsh-data-window: workspace tracker')
+}
+
+export { apply, DwFooterAction }
