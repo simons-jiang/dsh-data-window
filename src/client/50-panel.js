@@ -203,6 +203,9 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   // explorer and the workbench get the whole frame. Leaving unfolds it again, but
   // only if it is still folded.
   useEffect(() => {
+    // The settings page can keep the shell's navigation column where it is; the
+    // toolbar button still folds it on demand.
+    if (dwReadPrefs().autoHideSidebar === false) return undefined
     if (dwHideSidebar(store)) {
       sidebarHiddenRef.current = true
       setSidebarHidden(true)
@@ -296,6 +299,10 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
 
   const activeTab = (state.tabs ?? []).find((tab) => tab.id === state.activeTab)
   const environments = state.environments ?? []
+  // The palette is owned by the code workspace; watch it so switching there
+  // recolours this panel without a reload.
+  const themeId = useSyncExternalStore(dwSubscribeTheme, dwSharedTheme, dwSharedTheme)
+  useEffect(() => { dwWatchTheme() }, [])
 
   // Every Workspace the shell knows, plus the current root when it is not a
   // registered Workspace yet (a directory picked by hand).
@@ -478,9 +485,10 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     ]),
     h('div', { key: 'body', className: 'dw-log-body', ref: logRef }, state.log.map((entry) => h('div', {
       key: entry.id,
-      className: `dw-log-line ${entry.level === 'error' ? 'dw-log-error' : entry.level === 'warn' ? 'dw-log-warn' : entry.level === 'ok' ? 'dw-log-ok' : ''}`,
+      className: `dw-log-line ${entry.level === 'error' ? 'dw-log-error' : entry.level === 'warn' ? 'dw-log-warn' : entry.level === 'ok' ? 'dw-log-ok' : entry.level === 'sql' ? 'dw-log-sql' : ''}`,
     }, [
       h('b', { key: 't' }, `[${dwClock(entry.at)}] `),
+      entry.level === 'sql' ? h('span', { key: 'tag', className: 'dw-log-tag' }, 'SQL') : null,
       entry.text,
     ]))),
   ])
@@ -508,7 +516,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     ])
   }
 
-  return h('div', { className: 'dw-root', ref: panelRef }, [
+  return h('div', { className: 'dw-root', ref: panelRef, 'data-dsh-theme': themeId === '' ? undefined : themeId }, [
     h(DwStyles, { key: 'style' }),
     toolbar,
     h('div', { key: 'body', className: 'dw-body' }, [
@@ -552,8 +560,9 @@ function dwMenuItems(node, store, tr, close) {
   if (node.kind === 'table' || node.kind === 'view') {
     add('ddl', tr('menuDdl'), 'F4', () => void store.openDdl(node))
     add('data', tr('menuOpenData'), '', () => {
-      store.seedStatement(node, `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`)
-      void store.runActiveTab()
+      const statement = `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`
+      store.seedStatement(node, statement)
+      void store.runActiveTab(statement)
     })
     add('name', tr('menuCopyName'), '', () => {
       const write = globalThis.navigator?.clipboard?.writeText?.(node.table)

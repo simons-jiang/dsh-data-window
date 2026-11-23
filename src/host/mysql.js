@@ -391,6 +391,28 @@ export class DataGateway {
   }
 
   /**
+   * Count the rows of one statement without touching its filters.
+   *
+   * The statement is wrapped, so WHERE/GROUP BY/LIMIT inside it still apply. SHOW
+   * and EXPLAIN cannot live in a derived table and are refused as unsupported.
+   */
+  async countRows(id, sql) {
+    const statement = assertReadOnly(sql)
+    const normalized = statement.trim().replace(/;+\s*$/, '')
+    if (!/^(select|with)\b/i.test(normalized)) {
+      const error = new Error('count-unsupported')
+      error.code = 'count-unsupported'
+      throw error
+    }
+    const result = await this.run(id, `SELECT COUNT(*) AS total FROM (${normalized}) AS dw_count`, { limit: 1 })
+    return {
+      total: Number(result.rows?.[0]?.[0] ?? 0),
+      elapsedMs: result.elapsedMs,
+      sql: result.sql,
+    }
+  }
+
+  /**
    * Every table and column of one schema in one round trip.
    *
    * The SQL editor suggests table and column names; one map call per database

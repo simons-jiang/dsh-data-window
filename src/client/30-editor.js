@@ -111,6 +111,7 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
   const gutterRef = useRef(null)
   const areaRef = useRef(null)
   const highlightRef = useRef(null)
+  const completionRef = useRef(null)
   const [completion, setCompletion] = useState(null)
 
   useEffect(() => {
@@ -163,6 +164,19 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     if (area === null || document.activeElement !== area) return
     refreshCompletion(value, area.selectionStart)
   }, [schema])
+
+  // Arrow keys move the highlight through a list that can be taller than its box;
+  // scroll just the popup so the selected row never disappears below the fold.
+  useEffect(() => {
+    const popup = completionRef.current
+    if (popup === null || completion === null) return
+    const active = popup.querySelector('.dw-complete-row.active')
+    if (active === null) return
+    const top = active.offsetTop
+    const bottom = top + active.offsetHeight
+    if (top < popup.scrollTop) popup.scrollTop = top
+    else if (bottom > popup.scrollTop + popup.clientHeight) popup.scrollTop = bottom - popup.clientHeight
+  }, [completion])
 
   const applyCompletion = (item) => {
     const current = completion
@@ -300,6 +314,7 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
           ? null
           : h('div', {
             key: 'ac',
+            ref: completionRef,
             className: 'dw-complete',
             style: { left: completion.left, top: completion.top },
             role: 'listbox',

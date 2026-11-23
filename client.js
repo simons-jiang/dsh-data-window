@@ -111,6 +111,37 @@ window.__ModuleLoader__.load({
     "suggestColumn": "column",
     "suggestTable": "table",
     "suggestKeyword": "keyword",
+    "settingsNav": "Data window",
+    "settingsIntro": "These options only affect the data window and are kept in this browser.",
+    "settingsAutoHide": "Fold the sidebar when entering",
+    "settingsAutoHideHint": "Applies when the window is at least 1024px wide; with this off the sidebar stays as it is, and the toolbar button still folds it.",
+    "settingsLimit": "Default row limit",
+    "settingsLimitHint": "Used by new queries; the limit control above the grid still overrides it for one run.",
+    "settingsLimitAuto": "Use plugin config",
+    "settingsShortcut": "Open the data window",
+    "settingsShortcutHint": "Press this shortcut anywhere to open the data window.",
+    "settingsStorage": "Console snapshots",
+    "settingsStorageHint": "One 0600 file per workspace under ~/.dsh/storages/dsh-data-window/workspaces/.",
+    "countRows": "Refresh total rows",
+    "countRowsHint": "Run one COUNT query for the current statement (read-only)",
+    "countRowsUnknown": "— rows total",
+    "countRowsRunning": "Counting…",
+    "countRowsFailed": "Count failed",
+    "countRowsValue": "{rows} rows total",
+    "log.count": "Counted {rows} rows · {ms}",
+    "settingsGroupDisplay": "Display",
+    "settingsGroupStorage": "Storage",
+    "settingsShortcuts": "Shortcuts",
+    "settingsShortcutsHint": "Shortcuts are editable, and future ones will be listed here.",
+    "settingsShortcutChange": "Change",
+    "settingsShortcutCancel": "Cancel",
+    "settingsShortcutRecording": "Press keys…",
+    "settingsShortcutRecordingHint": "Press the new combination (⌘/Ctrl/⌥ required); Esc cancels.",
+    "settingsShortcutReset": "Reset",
+    "settingsShortcutNeedsModifier": "Use a combination with ⌘/Ctrl/⌥",
+    "settingsTheme": "Colour theme",
+    "settingsThemeHint": "Follows the theme chosen in the code workspace (dsh-ide-window); with none chosen, DSH colours are used.",
+    "settingsThemeDsh": "Follow DSH",
   }
   const DW_TEXT_ZH = {
     "openPanel": "数据窗口",
@@ -215,6 +246,37 @@ window.__ModuleLoader__.load({
     "suggestColumn": "字段",
     "suggestTable": "表",
     "suggestKeyword": "关键字",
+    "settingsNav": "数据窗口",
+    "settingsIntro": "这些选项只影响数据窗口本身，保存在本机浏览器里。",
+    "settingsAutoHide": "进入窗口时自动收起侧栏",
+    "settingsAutoHideHint": "窗口宽度 ≥1024 时生效；关闭后侧栏保持原样，仍可用工具栏按钮手动收起。",
+    "settingsLimit": "默认行数上限",
+    "settingsLimitHint": "新查询的默认值；结果栏里的上限选择仍可临时调整。",
+    "settingsLimitAuto": "跟随插件配置",
+    "settingsShortcut": "打开数据窗口",
+    "settingsShortcutHint": "在任意界面按该快捷键即可打开数据窗口。",
+    "settingsStorage": "控制台保存位置",
+    "settingsStorageHint": "每个工作区一份 0600 文件，位于 ~/.dsh/storages/dsh-data-window/workspaces/。",
+    "countRows": "刷新总行数",
+    "countRowsHint": "对当前语句执行一次 COUNT 查询（只读）",
+    "countRowsUnknown": "共 — 行",
+    "countRowsRunning": "统计中…",
+    "countRowsFailed": "统计失败",
+    "countRowsValue": "共 {rows} 行",
+    "log.count": "总行数 {rows} 行 · {ms}",
+    "settingsGroupDisplay": "显示",
+    "settingsGroupStorage": "存储",
+    "settingsShortcuts": "快捷键",
+    "settingsShortcutsHint": "快捷键可以修改；以后新增的快捷键也会列在这里。",
+    "settingsShortcutChange": "修改",
+    "settingsShortcutCancel": "取消",
+    "settingsShortcutRecording": "按下组合键…",
+    "settingsShortcutRecordingHint": "按下新的组合键（需要 ⌘/Ctrl/⌥），按 Esc 取消。",
+    "settingsShortcutReset": "恢复默认",
+    "settingsShortcutNeedsModifier": "需要带 ⌘/Ctrl/⌥ 的组合键",
+    "settingsTheme": "界面配色",
+    "settingsThemeHint": "在代码工作区（dsh-ide-window）切换主题后自动同步；未选择主题时跟随 DSH。",
+    "settingsThemeDsh": "跟随 DSH",
   }
 
 // ---- 00-css.js -----------------------------------------------------------
@@ -824,6 +886,83 @@ const DW_CSS = `
 .dw-splitter:hover { background: color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 40%, transparent); }
 .dw-spin { animation: dw-spin 900ms linear infinite; }
 @keyframes dw-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* The plugin's settings page: rows separated by hairlines, controls on the right. */
+.dw-settings { display: flex; flex-direction: column; gap: 0; max-width: 760px; }
+.dw-settings-intro { margin: 0 0 8px; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 12px; line-height: 1.6; }
+.dw-settings-row { display: flex; flex-direction: column; gap: 5px; padding: 14px 0; border-top: 1px solid var(--dsw-alias-border-l1, #2c2f36); }
+.dw-settings-row:first-of-type { border-top: none; }
+.dw-settings-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.dw-settings-label { color: var(--dsw-alias-label-primary, #e6e8ec); font-size: 13px; }
+.dw-settings-desc { color: var(--dsw-alias-label-secondary, #8b919d); font-size: 11.5px; line-height: 1.6; }
+.dw-settings-select {
+  height: 28px;
+  min-width: 150px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.dw-settings-check { width: 16px; height: 16px; accent-color: var(--dsw-alias-brand-primary, #4b8bf5); }
+.dw-settings-key {
+  padding: 3px 9px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 5px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--ds-font-family-code, ui-monospace, Menlo, monospace);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.dw-settings-path {
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-family: var(--ds-font-family-code, ui-monospace, Menlo, monospace);
+  font-size: 11px;
+  word-break: break-all;
+}
+.dw-count { display: flex; align-items: center; gap: 5px; }
+.dw-count-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 5px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.dw-count-btn:hover:not(:disabled) { background: var(--dsw-alias-bg-overlay, #2f333b); }
+.dw-count-btn:disabled { opacity: .45; cursor: default; }
+.dw-count-value { font-size: 11px; color: var(--dsw-alias-label-secondary, #8b919d); font-variant-numeric: tabular-nums; }
+
+.dw-log-sql { font-family: var(--ds-font-family-code, ui-monospace, Menlo, monospace); font-size: 11px; color: var(--dsw-alias-label-primary, #e6e8ec); }
+.dw-log-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 22%, transparent);
+  color: var(--dsw-alias-brand-primary, #4b8bf5);
+  font-family: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .4px;
+}
+
+.dw-settings-section { display: flex; flex-direction: column; margin-top: 18px; }
+.dw-settings-section-title { padding-bottom: 2px; color: var(--dsw-alias-label-primary, #e6e8ec); font-size: 12px; font-weight: 600; }
+.dw-settings-value { color: var(--dsw-alias-label-secondary, #8b919d); font-size: 12px; }
+.dw-settings-shortcut-actions { display: flex; align-items: center; gap: 6px; }
+.dw-settings-key-live { border-color: var(--dsw-alias-brand-primary, #4b8bf5); color: var(--dsw-alias-brand-primary, #4b8bf5); }
+.dw-settings-warn { color: var(--dsw-alias-state-warning-primary, #d9a13b); font-size: 11px; }
+
 `
 
 function DwStyles() {
@@ -949,6 +1088,206 @@ function DwIcon({ name, size = 14, className }) {
     default:
       return h('svg', common, [h('circle', { cx: 8, cy: 8, r: 5.2 })])
   }
+}
+
+// ---- 05-theme.js ---------------------------------------------------------
+/**
+ * Follow the palette chosen in `dsh-ide-window`.
+ *
+ * The code workspace owns the theme choice; this plugin only reads the same
+ * three strings `dsh-git-window` already follows:
+ *
+ * - `localStorage['dsh-theme']` — current id, absent/empty means "follow DSH";
+ * - a `dsh-theme` window event with `{ id }` — same document, live updates;
+ * - `<link id="dsh-theme-link">` to `/dsh-ide/theme?id=<id>` — the stylesheet
+ *   scopes its alias tokens to `[data-dsh-theme="<id>"]`, so the panel only
+ *   needs that attribute on its own root and the palette cascades in.
+ *
+ * Nothing here writes the key: the code workspace owns the choice. Without it the
+ * stylesheet request 404s, the attribute matches nothing and the panel keeps the
+ * host palette.
+ */
+
+const DW_THEME_KEY = 'dsh-theme'
+const DW_THEME_EVENT = 'dsh-theme'
+const DW_THEME_LINK_ID = 'dsh-theme-link'
+
+/** Listeners for `useSyncExternalStore`; notified after every change. */
+const dwThemeListeners = new Set()
+
+function dwReadSharedTheme() {
+  try {
+    const value = globalThis.localStorage?.getItem(DW_THEME_KEY)
+    return typeof value === 'string' && value !== '' ? value : ''
+  } catch (error) {
+    return ''
+  }
+}
+
+let dwThemeId = dwReadSharedTheme()
+
+/** The palette id this panel should wear; empty means "follow DSH". */
+function dwSharedTheme() {
+  return dwThemeId
+}
+
+function dwSubscribeTheme(listener) {
+  dwThemeListeners.add(listener)
+  return () => dwThemeListeners.delete(listener)
+}
+
+/** Point the stylesheet at `id`; a missing code workspace just 404s. */
+function dwSyncThemeLink(id) {
+  const doc = globalThis.document
+  if (doc === undefined || typeof doc.createElement !== 'function') return
+  const existing = typeof doc.getElementById === 'function' ? doc.getElementById(DW_THEME_LINK_ID) : null
+  if (id === '') {
+    if (typeof existing?.remove === 'function') existing.remove()
+    return
+  }
+  const href = `/dsh-ide/theme?id=${encodeURIComponent(id)}`
+  if (existing === null || existing === undefined) {
+    if (doc.head === undefined || typeof doc.head.append !== 'function') return
+    const link = doc.createElement('link')
+    link.id = DW_THEME_LINK_ID
+    link.rel = 'stylesheet'
+    link.href = href
+    if (typeof link.addEventListener === 'function') {
+      link.addEventListener('error', () => link.remove(), { once: true })
+    }
+    doc.head.append(link)
+    return
+  }
+  if (typeof existing.getAttribute === 'function' && existing.getAttribute('href') !== href) {
+    existing.setAttribute('href', href)
+  }
+}
+
+function dwApplyTheme(id) {
+  const next = typeof id === 'string' ? id : ''
+  if (next === dwThemeId) return
+  dwThemeId = next
+  dwSyncThemeLink(next)
+  for (const listener of dwThemeListeners) {
+    try {
+      listener()
+    } catch (error) {
+      void error
+    }
+  }
+}
+
+let dwThemeWatched = false
+
+/** Start following the code workspace's palette; safe to call on every mount. */
+function dwWatchTheme() {
+  if (dwThemeWatched === true) return
+  const bus = globalThis.window ?? globalThis
+  if (bus === undefined || typeof bus.addEventListener !== 'function') return
+  dwThemeWatched = true
+  dwSyncThemeLink(dwThemeId)
+  bus.addEventListener(DW_THEME_EVENT, (event) => dwApplyTheme(event?.detail?.id))
+  // Another window/tab switching the theme only shows up as a storage event.
+  bus.addEventListener('storage', (event) => {
+    if (event.key !== DW_THEME_KEY) return
+    dwApplyTheme(typeof event.newValue === 'string' ? event.newValue : '')
+  })
+}
+
+/** The attribute the palette stylesheet matches; `undefined` for "follow DSH". */
+function dwThemeAttribute() {
+  return dwThemeId === '' ? undefined : dwThemeId
+}
+
+// ---- 06-shortcuts.js -----------------------------------------------------
+/**
+ * Keyboard shortcuts of the data window.
+ *
+ * One registry, so the settings page and the window-level listener cannot drift
+ * apart: add an entry here and it appears in the settings group automatically.
+ * A binding is `{ code, modifiers }` — a physical key plus the exact modifier
+ * set, independent of the keyboard layout.
+ */
+
+/** Platforms where the primary modifier draws as ⌘. */
+function dwIsMac() {
+  const platform = String(globalThis.navigator?.platform ?? '')
+  return /Mac|iPhone|iPad/.test(platform)
+}
+
+/** "Open the data window": ⌘3 on macOS, Ctrl+3 elsewhere. */
+function dwDefaultOpenShortcut() {
+  return dwIsMac() ? { code: 'Digit3', modifiers: ['meta'] } : { code: 'Digit3', modifiers: ['ctrl'] }
+}
+
+/** The binding in force for opening the panel (custom preference or default). */
+function dwOpenShortcut() {
+  const saved = dwReadPrefs().shortcutOpen
+  if (saved !== null && saved !== undefined && typeof saved.code === 'string') return saved
+  return dwDefaultOpenShortcut()
+}
+
+/** Whether one keyboard event is exactly the binding (extra modifiers fail). */
+function dwShortcutMatches(binding, event) {
+  if (binding === null || binding === undefined || event.code !== binding.code) return false
+  const modifiers = Array.isArray(binding.modifiers) ? binding.modifiers : []
+  if (event.metaKey !== modifiers.includes('meta')) return false
+  if (event.ctrlKey !== modifiers.includes('ctrl')) return false
+  if (event.altKey !== modifiers.includes('alt')) return false
+  if (event.shiftKey !== modifiers.includes('shift')) return false
+  return true
+}
+
+/** The modifiers of one keyboard event, in a stable order. */
+function dwShortcutModifiers(event) {
+  const modifiers = []
+  if (event.ctrlKey === true) modifiers.push('ctrl')
+  if (event.altKey === true) modifiers.push('alt')
+  if (event.shiftKey === true) modifiers.push('shift')
+  if (event.metaKey === true) modifiers.push('meta')
+  return modifiers
+}
+
+/** Keys that are only a modifier press, and therefore not a complete binding. */
+const DW_MODIFIER_KEYS = new Set(['Control', 'Alt', 'Shift', 'Meta', 'CapsLock'])
+
+/** One keycap for a physical code; letters/digits are the common case. */
+function dwKeycapForCode(code) {
+  const text = String(code ?? '')
+  if (text.startsWith('Key') && text.length === 4) return text.slice(3)
+  if (text.startsWith('Digit') && text.length === 6) return text.slice(5)
+  if (text.startsWith('Numpad') && text.length > 6) return text.slice(6)
+  const named = {
+    Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']',
+    Backslash: '\\', Semicolon: ';', Quote: '\'', Comma: ',', Period: '.', Slash: '/',
+    Space: 'Space', Enter: 'Enter', Escape: 'Esc', Tab: 'Tab', Backspace: '⌫',
+    Delete: 'Del', Insert: 'Ins', Home: 'Home', End: 'End', PageUp: 'PgUp', PageDown: 'PgDn',
+    ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
+  }
+  if (named[text] !== undefined) return named[text]
+  if (/^F([1-9]|1[0-9]|2[0-4])$/.test(text)) return text
+  return text
+}
+
+/** Human keycap string: `⌘3`, `⌃⇧4`, `Ctrl+Shift+3`. */
+function dwFormatShortcut(binding) {
+  const modifiers = Array.isArray(binding?.modifiers) ? binding.modifiers : []
+  const key = dwKeycapForCode(binding?.code)
+  if (dwIsMac()) {
+    let text = ''
+    if (modifiers.includes('ctrl')) text += '⌃'
+    if (modifiers.includes('alt')) text += '⌥'
+    if (modifiers.includes('shift')) text += '⇧'
+    if (modifiers.includes('meta')) text += '⌘'
+    return `${text}${key}`
+  }
+  const parts = []
+  if (modifiers.includes('ctrl')) parts.push('Ctrl')
+  if (modifiers.includes('alt')) parts.push('Alt')
+  if (modifiers.includes('shift')) parts.push('Shift')
+  if (modifiers.includes('meta')) parts.push('Meta')
+  parts.push(key)
+  return parts.join('+')
 }
 
 // ---- 10-core.js ----------------------------------------------------------
@@ -1131,6 +1470,78 @@ function dwPersistRoot(root) {
   }
 }
 
+/** Legacy local-storage prefix, read once to migrate consoles to the Host. */
+const DW_CONSOLE_KEY = 'dsh-data-window:consoles'
+
+/** Client-side preferences edited in the plugin's settings section. */
+const DW_PREFS_KEY = 'dsh-data-window:prefs'
+
+/** Read the display preferences, tolerating a blocked storage. */
+function dwReadPrefs() {
+  const fallback = { autoHideSidebar: true, defaultLimit: 0, shortcutOpen: null }
+  try {
+    const parsed = JSON.parse(globalThis.localStorage?.getItem(DW_PREFS_KEY) ?? '{}')
+    const limit = Number(parsed?.defaultLimit)
+    const raw = parsed?.shortcutOpen
+    const shortcutOpen = raw !== null && raw !== undefined && typeof raw.code === 'string' && raw.code !== ''
+      ? {
+        code: raw.code,
+        modifiers: (Array.isArray(raw.modifiers) ? raw.modifiers : []).filter((name) => ['meta', 'ctrl', 'alt', 'shift'].includes(name)),
+      }
+      : null
+    return {
+      autoHideSidebar: parsed?.autoHideSidebar !== false,
+      defaultLimit: Number.isFinite(limit) && limit > 0 ? limit : 0,
+      shortcutOpen,
+    }
+  } catch (error) {
+    return fallback
+  }
+}
+
+/** Merge and persist display preferences. */
+function dwWritePrefs(changes) {
+  const next = { ...dwReadPrefs(), ...changes }
+  try {
+    globalThis.localStorage?.setItem(DW_PREFS_KEY, JSON.stringify(next))
+  } catch (error) {
+    void error
+  }
+  return next
+}
+
+/** Restore the SQL consoles saved for one workspace. */
+function dwReadConsoles(root) {
+  const empty = { tabs: [], activeTab: '' }
+  if (typeof root !== 'string' || root === '') return empty
+  try {
+    const raw = globalThis.localStorage?.getItem(`${DW_CONSOLE_KEY}:${root}`)
+    if (raw === null || raw === undefined) return empty
+    const parsed = JSON.parse(raw)
+    const tabs = (Array.isArray(parsed?.tabs) ? parsed.tabs : [])
+      .filter((tab) => tab !== null && typeof tab === 'object' && typeof tab.id === 'string' && typeof tab.dbId === 'string')
+      .map((tab) => ({
+        id: tab.id,
+        kind: 'sql',
+        title: String(tab.title ?? tab.database ?? ''),
+        env: String(tab.env ?? ''),
+        subtitle: String(tab.subtitle ?? ''),
+        dbId: tab.dbId,
+        database: String(tab.database ?? ''),
+        instanceLabel: String(tab.instanceLabel ?? ''),
+        sql: String(tab.sql ?? ''),
+        result: undefined,
+        error: '',
+        running: false,
+      }))
+    const activeTab = tabs.some((tab) => tab.id === parsed?.activeTab) ? parsed.activeTab : (tabs[0]?.id ?? '')
+    return { tabs, activeTab }
+  } catch (error) {
+    return empty
+  }
+}
+
+
 function dwCreateStore(translate) {
   const t = typeof translate === 'function' ? translate : (key) => key
 
@@ -1183,6 +1594,7 @@ function dwCreateStore(translate) {
     emit()
   }
 
+
   const pushLog = (level, text) => {
     const next = [...state.log, dwLogEntry(level, text)]
     patch({ log: next.length > DW_LOG_LIMIT ? next.slice(next.length - DW_LOG_LIMIT) : next })
@@ -1197,6 +1609,106 @@ function dwCreateStore(translate) {
       pushLog('warn', t('log.hostRestarted'))
       await store.loadDiscovery({ refresh: true, quiet: true })
       return await dwRpc(action, payload)
+    }
+  }
+
+  // SQL is the user's work: the Host keeps one snapshot per workspace so switching
+  // workspaces or restarting DSH does not throw the statement away. Writes are
+  // debounced because they happen on every keystroke; results are never saved.
+  const consoleSnapshot = () => ({
+    activeTab: state.activeTab,
+    tabs: state.tabs
+      .filter((tab) => tab.kind === 'sql' && typeof tab.dbId === 'string')
+      .map((tab) => ({
+        id: tab.id,
+        title: tab.title,
+        env: tab.env,
+        subtitle: tab.subtitle,
+        dbId: tab.dbId,
+        database: tab.database,
+        instanceLabel: tab.instanceLabel,
+        sql: String(tab.sql ?? ''),
+      })),
+  })
+
+  const saveConsoles = async () => {
+    const root = state.root
+    if (root === '') return
+    try {
+      await call('saveConsoles', { root, value: consoleSnapshot() })
+    } catch (error) {
+      void error
+    }
+  }
+
+  let consoleTimer = null
+  const scheduleConsoles = () => {
+    if (consoleTimer !== null) clearTimeout(consoleTimer)
+    consoleTimer = setTimeout(() => {
+      consoleTimer = null
+      void saveConsoles()
+    }, 250)
+  }
+  const flushConsoles = () => {
+    if (consoleTimer !== null) {
+      clearTimeout(consoleTimer)
+      consoleTimer = null
+    }
+    void saveConsoles()
+  }
+
+  /** Merge a saved snapshot into whatever is already open, never clobbering it. */
+  const applyConsoles = (root, saved) => {
+    if (state.root !== root) return
+    const existing = new Set(state.tabs.map((tab) => tab.id))
+    const restored = (Array.isArray(saved?.tabs) ? saved.tabs : [])
+      .filter((tab) => tab !== null && typeof tab.id === 'string' && typeof tab.dbId === 'string' && !existing.has(tab.id))
+      .map((tab) => ({
+        id: tab.id,
+        kind: 'sql',
+        title: String(tab.title ?? ''),
+        env: String(tab.env ?? ''),
+        subtitle: String(tab.subtitle ?? ''),
+        dbId: tab.dbId,
+        database: String(tab.database ?? ''),
+        instanceLabel: String(tab.instanceLabel ?? ''),
+        sql: String(tab.sql ?? ''),
+        result: undefined,
+        error: '',
+        running: false,
+      }))
+    if (restored.length === 0) return
+    const sequence = restored.reduce((max, tab) => {
+      const match = /:(\d+)$/.exec(tab.id)
+      return match === null ? max : Math.max(max, Number(match[1]))
+    }, 0)
+    if (sequence > dwStatementSequence) dwStatementSequence = sequence
+    const tabs = [...restored, ...state.tabs]
+    const activeTab = state.activeTab === '' && tabs.some((tab) => tab.id === saved.activeTab) ? saved.activeTab : state.activeTab
+    patch({ tabs, activeTab })
+  }
+
+  const loadConsoles = async (root) => {
+    const local = dwReadConsoles(root)
+    let saved = null
+    try {
+      saved = await call('consoles', { root })
+    } catch (error) {
+      void error
+    }
+    if (saved !== null && Array.isArray(saved.tabs) && saved.tabs.length > 0) {
+      applyConsoles(root, saved)
+      return
+    }
+    // One-time migration: snapshots written by the localStorage build move to the
+    // Host the first time their workspace opens.
+    if (local.tabs.length === 0) return
+    applyConsoles(root, local)
+    try {
+      await call('saveConsoles', { root, value: { activeTab: local.activeTab, tabs: local.tabs } })
+      globalThis.localStorage?.removeItem(`${DW_CONSOLE_KEY}:${root}`)
+    } catch (error) {
+      void error
     }
   }
 
@@ -1254,6 +1766,7 @@ function dwCreateStore(translate) {
 
     /** Show the panel with nothing loaded yet. */
     reset() {
+      flushConsoles()
       patch({
         root: '',
         manual: false,
@@ -1284,6 +1797,7 @@ function dwCreateStore(translate) {
     setRoot(root) {
       const next = typeof root === 'string' ? root : ''
       if (next === state.root) return
+      flushConsoles()
       if (next === '') {
         store.reset()
         return
@@ -1305,6 +1819,7 @@ function dwCreateStore(translate) {
         activeTab: '',
         schemas: new Map(),
       })
+      void loadConsoles(next)
       void store.loadDiscovery({ refresh: false })
       void store.loadSettings()
     },
@@ -1313,11 +1828,10 @@ function dwCreateStore(translate) {
     async loadSettings() {
       try {
         const settings = await dwRpc('config')
-        const limit = Number(settings?.defaultLimit)
-        patch({
-          settings,
-          limit: Number.isFinite(limit) && limit > 0 ? limit : state.limit,
-        })
+        const configured = Number(settings?.defaultLimit)
+        const preferred = dwReadPrefs().defaultLimit
+        const limit = preferred > 0 ? preferred : (Number.isFinite(configured) && configured > 0 ? configured : state.limit)
+        patch({ settings, limit })
       } catch (error) {
         void error
       }
@@ -1547,6 +2061,7 @@ function dwCreateStore(translate) {
       const existing = state.tabs.find((tab) => tab.id === id)
       if (existing !== undefined) {
         patch({ activeTab: id })
+        scheduleConsoles()
         return existing
       }
       const tab = {
@@ -1566,6 +2081,7 @@ function dwCreateStore(translate) {
         running: false,
       }
       patch({ tabs: [...state.tabs, tab], activeTab: id })
+      scheduleConsoles()
       return tab
     },
 
@@ -1575,26 +2091,46 @@ function dwCreateStore(translate) {
      * A tree action ("open table data") must never cost the user an unsaved
      * query, so an occupied console gets a second tab instead.
      */
+    /**
+     * Open one table's own console and append its base query.
+     *
+     * Requirement: one window per table per workspace. Double-clicking the same
+     * table again focuses that window and appends one more statement at the bottom
+     * instead of stacking numbered consoles; the user's text is only ever extended,
+     * never replaced.
+     */
     seedStatement(node, sql) {
-      const open = store.openDatabase(node)
-      if (open === undefined) return
-      if (!DW_SQL_EMPTY.test(String(open.sql ?? ''))) {
-        dwStatementSequence += 1
-        const sequence = dwStatementSequence
-        const id = `sql:${node.dbId}:${sequence}`
-        const tab = {
-          ...open,
-          id,
-          title: `${node.database} (${sequence})`,
-          sql,
-          result: undefined,
-          error: '',
-        }
-        patch({ tabs: [...state.tabs, tab], activeTab: id })
+      if (node === null || node === undefined || node.dbId === undefined || node.table === undefined) return
+      const statement = String(sql ?? '').trim()
+      if (statement === '') return
+      const id = `sql:${node.dbId}:tbl:${node.table}`
+      const existing = state.tabs.find((tab) => tab.id === id)
+      if (existing !== undefined) {
+        const current = String(existing.sql ?? '').replace(/\s+$/, '')
+        patch({
+          tabs: state.tabs.map((tab) => (tab.id === id
+            ? { ...tab, sql: current === '' ? statement : `${current}\n\n${statement}`, result: undefined, error: '' }
+            : tab)),
+        })
+        store.setActiveTab(id)
+        scheduleConsoles()
         return
       }
-      store.setTabSql(open.id, sql)
-      store.setActiveTab(open.id)
+      const tab = {
+        id,
+        kind: 'sql',
+        title: String(node.table),
+        env: node.env ?? '',
+        subtitle: [node.env, node.instanceLabel].filter((part) => typeof part === 'string' && part !== '').join(' · '),
+        dbId: node.dbId,
+        database: node.database,
+        instanceLabel: node.instanceLabel ?? '',
+        sql: statement,
+        result: undefined,
+        error: '',
+      }
+      patch({ tabs: [...state.tabs, tab], activeTab: id })
+      scheduleConsoles()
     },
 
     /**
@@ -1662,14 +2198,18 @@ function dwCreateStore(translate) {
         activeTab = neighbour?.id ?? ''
       }
       patch({ tabs, activeTab })
+      // Closing a console is deliberate: drop it from storage now, not later.
+      flushConsoles()
     },
 
     setActiveTab(id) {
       patch({ activeTab: id })
+      scheduleConsoles()
     },
 
     setTabSql(id, sql) {
       patch({ tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, sql } : tab)) })
+      scheduleConsoles()
     },
 
     setLimit(limit) {
@@ -1681,6 +2221,40 @@ function dwCreateStore(translate) {
     },
 
     /** Run the active tab's statement. */
+    /**
+     * Count every row of the statement that produced the current result.
+     *
+     * Deliberately on demand: COUNT(*) on a large table is a second full scan, so
+     * it runs when the user presses the refresh button, not after every query.
+     */
+    async refreshTotal(id) {
+      const tab = state.tabs.find((entry) => entry.id === id)
+      if (tab === undefined || tab.kind !== 'sql' || tab.counting === true) return
+      const sql = String(tab.lastStatement ?? tab.sql ?? '').trim()
+      if (sql === '') return
+      patch({ tabs: state.tabs.map((entry) => (entry.id === id ? { ...entry, counting: true, countError: '' } : entry)) })
+      try {
+        const value = await call('count', { id: tab.dbId, sql })
+        if (typeof value.sql === 'string' && value.sql !== '') pushLog('sql', value.sql)
+        pushLog('info', t('log.count', {
+          rows: dwRowCount(value.total),
+          ms: dwDuration(value.elapsedMs),
+        }))
+        patch({
+          tabs: state.tabs.map((entry) => (entry.id === id
+            ? { ...entry, counting: false, totalCount: Number(value.total ?? 0), countError: '' }
+            : entry)),
+        })
+      } catch (error) {
+        pushLog('error', dwExplainFailure(t, error))
+        patch({
+          tabs: state.tabs.map((entry) => (entry.id === id
+            ? { ...entry, counting: false, countError: dwExplainFailure(t, error) }
+            : entry)),
+        })
+      }
+    },
+
     /**
      * Run the workbench statement, or just the text the user selected.
      *
@@ -1697,11 +2271,20 @@ function dwCreateStore(translate) {
         pushLog('warn', t('log.noStatement'))
         return
       }
-      patch({ tabs: state.tabs.map((entry) => (entry.id === tab.id ? { ...entry, running: true, error: '' } : entry)) })
+      // Every executed statement goes to the run log, failures included: the log is
+      // the console history, not just a success report.
+      pushLog('sql', sql)
+      patch({
+        tabs: state.tabs.map((entry) => (entry.id === tab.id
+          ? { ...entry, running: true, error: '', counting: false, totalCount: undefined, countError: '' }
+          : entry)),
+      })
       try {
         const value = await call('query', { id: tab.dbId, sql, limit: state.limit })
         patch({
-          tabs: state.tabs.map((entry) => (entry.id === tab.id ? { ...entry, running: false, result: value, error: '' } : entry)),
+          tabs: state.tabs.map((entry) => (entry.id === tab.id
+            ? { ...entry, running: false, result: value, error: '', lastStatement: sql }
+            : entry)),
         })
         pushLog('info', t('log.query', {
           database: tab.database,
@@ -1904,8 +2487,11 @@ function DwTree({ store, state, tr, onContextMenu }) {
   const openTableData = (row) => {
     const node = row.node
     if (node.kind !== 'table' && node.kind !== 'view') return
-    store.seedStatement(node, `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`)
-    void store.runActiveTab()
+    const statement = `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`
+    store.seedStatement(node, statement)
+    // Run only the statement just appended: the tab may already hold earlier
+    // statements, and sending the whole buffer would be a multi-statement error.
+    void store.runActiveTab(statement)
   }
 
   if (rows.length === 0) {
@@ -2597,6 +3183,7 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
   const gutterRef = useRef(null)
   const areaRef = useRef(null)
   const highlightRef = useRef(null)
+  const completionRef = useRef(null)
   const [completion, setCompletion] = useState(null)
 
   useEffect(() => {
@@ -2649,6 +3236,19 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     if (area === null || document.activeElement !== area) return
     refreshCompletion(value, area.selectionStart)
   }, [schema])
+
+  // Arrow keys move the highlight through a list that can be taller than its box;
+  // scroll just the popup so the selected row never disappears below the fold.
+  useEffect(() => {
+    const popup = completionRef.current
+    if (popup === null || completion === null) return
+    const active = popup.querySelector('.dw-complete-row.active')
+    if (active === null) return
+    const top = active.offsetTop
+    const bottom = top + active.offsetHeight
+    if (top < popup.scrollTop) popup.scrollTop = top
+    else if (bottom > popup.scrollTop + popup.clientHeight) popup.scrollTop = bottom - popup.clientHeight
+  }, [completion])
 
   const applyCompletion = (item) => {
     const current = completion
@@ -2786,6 +3386,7 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
           ? null
           : h('div', {
             key: 'ac',
+            ref: completionRef,
             className: 'dw-complete',
             style: { left: completion.left, top: completion.top },
             role: 'listbox',
@@ -2955,6 +3556,32 @@ function DwResults({ store, state, tab, tr }) {
         h('b', { key: 'r', style: { color: 'var(--dsw-alias-state-success-primary)' } }, `${result.rowCount} ${tr('rows')}`),
         h('span', { key: 'd' }, `  ·  ${dwDuration(result.elapsedMs)}`),
         result.truncated === true ? h('span', { key: 't', className: 'dw-log-warn' }, `  ·  ${tr('truncated')} ${result.limit}`) : null,
+      ]),
+    result === undefined
+      ? null
+      : h('span', { key: 'count', className: 'dw-count' }, [
+        h('button', {
+          key: 'r',
+          type: 'button',
+          className: 'dw-count-btn',
+          title: tab.countError !== undefined && tab.countError !== '' ? tab.countError : tr('countRowsHint'),
+          'aria-label': tr('countRows'),
+          disabled: tab.counting === true
+            || tab.lastStatement === undefined
+            || !/^(select|with)\b/i.test(String(tab.lastStatement ?? '').trim()),
+          onClick: () => void store.refreshTotal(tab.id),
+        }, h(DwIcon, { key: 'i', name: tab.counting === true ? 'spinner' : 'refresh', size: 11 })),
+        h('span', {
+          key: 'v',
+          className: 'dw-count-value',
+          style: tab.countError !== undefined && tab.countError !== '' ? { color: 'var(--dsw-alias-state-error-primary)' } : undefined,
+        }, tab.counting === true
+          ? tr('countRowsRunning')
+          : tab.countError !== undefined && tab.countError !== ''
+            ? tr('countRowsFailed')
+            : tab.totalCount === undefined
+              ? tr('countRowsUnknown')
+              : tr('countRowsValue', { rows: Number(tab.totalCount).toLocaleString() })),
       ]),
     h('span', { key: 'sp', className: 'dw-spacer' }),
     result !== undefined && (result.rows ?? []).length > 0
@@ -3219,6 +3846,9 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   // explorer and the workbench get the whole frame. Leaving unfolds it again, but
   // only if it is still folded.
   useEffect(() => {
+    // The settings page can keep the shell's navigation column where it is; the
+    // toolbar button still folds it on demand.
+    if (dwReadPrefs().autoHideSidebar === false) return undefined
     if (dwHideSidebar(store)) {
       sidebarHiddenRef.current = true
       setSidebarHidden(true)
@@ -3312,6 +3942,10 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
 
   const activeTab = (state.tabs ?? []).find((tab) => tab.id === state.activeTab)
   const environments = state.environments ?? []
+  // The palette is owned by the code workspace; watch it so switching there
+  // recolours this panel without a reload.
+  const themeId = useSyncExternalStore(dwSubscribeTheme, dwSharedTheme, dwSharedTheme)
+  useEffect(() => { dwWatchTheme() }, [])
 
   // Every Workspace the shell knows, plus the current root when it is not a
   // registered Workspace yet (a directory picked by hand).
@@ -3494,9 +4128,10 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     ]),
     h('div', { key: 'body', className: 'dw-log-body', ref: logRef }, state.log.map((entry) => h('div', {
       key: entry.id,
-      className: `dw-log-line ${entry.level === 'error' ? 'dw-log-error' : entry.level === 'warn' ? 'dw-log-warn' : entry.level === 'ok' ? 'dw-log-ok' : ''}`,
+      className: `dw-log-line ${entry.level === 'error' ? 'dw-log-error' : entry.level === 'warn' ? 'dw-log-warn' : entry.level === 'ok' ? 'dw-log-ok' : entry.level === 'sql' ? 'dw-log-sql' : ''}`,
     }, [
       h('b', { key: 't' }, `[${dwClock(entry.at)}] `),
+      entry.level === 'sql' ? h('span', { key: 'tag', className: 'dw-log-tag' }, 'SQL') : null,
       entry.text,
     ]))),
   ])
@@ -3524,7 +4159,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     ])
   }
 
-  return h('div', { className: 'dw-root', ref: panelRef }, [
+  return h('div', { className: 'dw-root', ref: panelRef, 'data-dsh-theme': themeId === '' ? undefined : themeId }, [
     h(DwStyles, { key: 'style' }),
     toolbar,
     h('div', { key: 'body', className: 'dw-body' }, [
@@ -3568,8 +4203,9 @@ function dwMenuItems(node, store, tr, close) {
   if (node.kind === 'table' || node.kind === 'view') {
     add('ddl', tr('menuDdl'), 'F4', () => void store.openDdl(node))
     add('data', tr('menuOpenData'), '', () => {
-      store.seedStatement(node, `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`)
-      void store.runActiveTab()
+      const statement = `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`
+      store.seedStatement(node, statement)
+      void store.runActiveTab(statement)
     })
     add('name', tr('menuCopyName'), '', () => {
       const write = globalThis.navigator?.clipboard?.writeText?.(node.table)
@@ -3633,6 +4269,168 @@ function dwWarningText(code, tr) {
   return text === key ? `· ${code}` : `· ${text}`
 }
 
+
+// ---- 60-settings.js ------------------------------------------------------
+/**
+ * The plugin's own settings page.
+ *
+ * It is a `settings.section`, so it gets its own row in DSH's settings navigation
+ * (next to the other plugins' pages) instead of being buried in 通用设置. The
+ * preferences are display defaults, not project data, so they live in the browser:
+ * a different machine is expected to have its own window size and habits.
+ */
+
+/** Rows the settings page renders; a zero limit means "use the Host config". */
+const DW_LIMIT_CHOICES = [0, 50, 100, 200, 500, 1000, 2000]
+
+function DwSettingsSection({ translate, store }) {
+  const tr = typeof translate === 'function' ? translate : (key) => key
+  const [prefs, setPrefs] = useState(() => dwReadPrefs())
+  const [recording, setRecording] = useState(false)
+  const [recordError, setRecordError] = useState('')
+  const themeId = useSyncExternalStore(dwSubscribeTheme, dwSharedTheme, dwSharedTheme)
+  const binding = prefs.shortcutOpen ?? dwDefaultOpenShortcut()
+  useEffect(() => { dwWatchTheme() }, [])
+
+  const update = (changes) => {
+    const next = dwWritePrefs(changes)
+    setPrefs(next)
+    if (changes.defaultLimit !== undefined && store !== undefined) {
+      const configured = Number(store.getState?.()?.settings?.defaultLimit)
+      store.setLimit(next.defaultLimit > 0 ? next.defaultLimit : (Number.isFinite(configured) && configured > 0 ? configured : 200))
+    }
+  }
+
+  // Capture the next combination while "change" is armed. The window-level
+  // open-shortcut listener checks the same flag, so the new key does not fire
+  // while it is being recorded.
+  useEffect(() => {
+    globalThis.__dwShortcutRecording = recording
+    if (!recording) return undefined
+    const onKey = (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.key === 'Escape') {
+        setRecording(false)
+        setRecordError('')
+        return
+      }
+      if (DW_MODIFIER_KEYS.has(event.key)) return
+      const modifiers = dwShortcutModifiers(event)
+      if (!modifiers.includes('meta') && !modifiers.includes('ctrl') && !modifiers.includes('alt')) {
+        setRecordError(tr('settingsShortcutNeedsModifier'))
+        return
+      }
+      const next = dwWritePrefs({ shortcutOpen: { code: event.code, modifiers } })
+      setPrefs(next)
+      setRecording(false)
+      setRecordError('')
+    }
+    globalThis.addEventListener('keydown', onKey, true)
+    return () => {
+      globalThis.removeEventListener('keydown', onKey, true)
+      globalThis.__dwShortcutRecording = false
+    }
+  }, [recording])
+
+  const resetShortcut = () => {
+    const next = dwWritePrefs({ shortcutOpen: null })
+    setPrefs(next)
+    setRecording(false)
+    setRecordError('')
+  }
+
+  const row = (key, label, description, control) => h('div', { key, className: 'dw-settings-row' }, [
+    h('div', { key: 'head', className: 'dw-settings-head' }, [
+      h('span', { key: 'label', className: 'dw-settings-label' }, label),
+      control,
+    ]),
+    h('div', { key: 'desc', className: 'dw-settings-desc' }, description),
+  ])
+
+  const section = (key, title, children) => h('div', { key, className: 'dw-settings-section' }, [
+    h('div', { key: 'title', className: 'dw-settings-section-title' }, title),
+    ...children,
+  ])
+
+  return h('div', { className: 'dw-settings' }, [
+    h('p', { key: 'intro', className: 'dw-settings-intro' }, tr('settingsIntro')),
+    section('display', tr('settingsGroupDisplay'), [
+      row(
+        'sidebar',
+        tr('settingsAutoHide'),
+        tr('settingsAutoHideHint'),
+        h('input', {
+          key: 'control',
+          type: 'checkbox',
+          className: 'dw-settings-check',
+          checked: prefs.autoHideSidebar,
+          onChange: (event) => update({ autoHideSidebar: event.target.checked }),
+        }),
+      ),
+      row(
+        'limit',
+        tr('settingsLimit'),
+        tr('settingsLimitHint'),
+        h('select', {
+          key: 'control',
+          className: 'dw-settings-select',
+          value: String(prefs.defaultLimit),
+          onChange: (event) => update({ defaultLimit: Number(event.target.value) }),
+        }, DW_LIMIT_CHOICES.map((value) => h('option', {
+          key: value,
+          value: String(value),
+        }, value === 0 ? tr('settingsLimitAuto') : String(value)))),
+      ),
+      row(
+        'theme',
+        tr('settingsTheme'),
+        tr('settingsThemeHint'),
+        h('span', { key: 'control', className: 'dw-settings-value' }, themeId === '' ? tr('settingsThemeDsh') : themeId),
+      ),
+    ]),
+    section('shortcuts', tr('settingsShortcuts'), [
+      h('div', { key: 'hint', className: 'dw-settings-desc' }, tr('settingsShortcutsHint')),
+      h('div', { key: 'shortcut', className: 'dw-settings-row' }, [
+        h('div', { key: 'head', className: 'dw-settings-head' }, [
+          h('span', { key: 'label', className: 'dw-settings-label' }, tr('settingsShortcut')),
+          h('div', { key: 'right', className: 'dw-settings-shortcut-actions' }, [
+            h('span', { key: 'keys', className: recording ? 'dw-settings-key dw-settings-key-live' : 'dw-settings-key' },
+              recording ? tr('settingsShortcutRecording') : dwFormatShortcut(binding)),
+            h('button', {
+              key: 'edit',
+              type: 'button',
+              className: 'dw-btn',
+              onClick: () => {
+                setRecording(recording !== true)
+                setRecordError('')
+              },
+            }, recording ? tr('settingsShortcutCancel') : tr('settingsShortcutChange')),
+            h('button', {
+              key: 'reset',
+              type: 'button',
+              className: 'dw-btn',
+              disabled: prefs.shortcutOpen === null,
+              onClick: resetShortcut,
+            }, tr('settingsShortcutReset')),
+          ]),
+        ]),
+        h('div', { key: 'desc', className: 'dw-settings-desc' },
+          recording ? tr('settingsShortcutRecordingHint') : tr('settingsShortcutHint')),
+        recordError === '' ? null : h('div', { key: 'err', className: 'dw-settings-warn' }, recordError),
+      ]),
+    ]),
+    section('storage', tr('settingsGroupStorage'), [
+      h('div', { key: 'path', className: 'dw-settings-row' }, [
+        h('div', { key: 'head', className: 'dw-settings-head' }, [
+          h('span', { key: 'label', className: 'dw-settings-label' }, tr('settingsStorage')),
+        ]),
+        h('div', { key: 'desc', className: 'dw-settings-desc' }, tr('settingsStorageHint')),
+        h('code', { key: 'value', className: 'dw-settings-path' }, '~/.dsh/storages/dsh-data-window/workspaces/'),
+      ]),
+    ]),
+  ])
+}
 
 // ---- 90-apply.js ---------------------------------------------------------
 /**
@@ -3760,6 +4558,16 @@ function apply(ctx) {
     inject: () => ({ store, translate }),
   }, DwFooterAction)), 'dsh-data-window: footer action')
 
+  ctx.effect(() => ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section',
+    id: `${DW_NS}:settings`,
+    order: 60,
+    label: () => translate('settingsNav'),
+    registrant: DW_NS,
+    locale: DW_NS,
+    inject: () => ({ translate, store }),
+  }, DwSettingsSection)), 'dsh-data-window: settings section')
+
   ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',
     id: `${DW_NS}:tracker`,
@@ -3767,6 +4575,26 @@ function apply(ctx) {
     registrant: DW_NS,
     inject: () => ({ store }),
   }, DwTracker)), 'dsh-data-window: workspace tracker')
+
+  // Requirement: the open shortcut works from anywhere, with ⌘3 as its default.
+  // DSH's shortcut service owns its own catalog and the code workspace binds its
+  // panel the same way — a window-level listener, so the key works before the
+  // panel is open. The binding is editable in the plugin's settings section.
+  ctx.effect(() => {
+    dwWatchTheme()
+    const onKey = (event) => {
+      if (event.repeat === true) return
+      if (globalThis.__dwShortcutRecording === true) return
+      if (!dwShortcutMatches(dwOpenShortcut(), event)) return
+      const layout = layoutRef.current
+      if (layout === undefined || typeof layout.selectPanel !== 'function') return
+      event.preventDefault()
+      event.stopPropagation()
+      layout.selectPanel(DW_PANEL_ID)
+    }
+    globalThis.addEventListener('keydown', onKey, true)
+    return () => globalThis.removeEventListener('keydown', onKey, true)
+  }, 'dsh-data-window: open shortcut')
 }
 
 

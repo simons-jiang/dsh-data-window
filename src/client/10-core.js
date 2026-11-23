@@ -177,6 +177,78 @@ function dwPersistRoot(root) {
   }
 }
 
+/** Legacy local-storage prefix, read once to migrate consoles to the Host. */
+const DW_CONSOLE_KEY = 'dsh-data-window:consoles'
+
+/** Client-side preferences edited in the plugin's settings section. */
+const DW_PREFS_KEY = 'dsh-data-window:prefs'
+
+/** Read the display preferences, tolerating a blocked storage. */
+function dwReadPrefs() {
+  const fallback = { autoHideSidebar: true, defaultLimit: 0, shortcutOpen: null }
+  try {
+    const parsed = JSON.parse(globalThis.localStorage?.getItem(DW_PREFS_KEY) ?? '{}')
+    const limit = Number(parsed?.defaultLimit)
+    const raw = parsed?.shortcutOpen
+    const shortcutOpen = raw !== null && raw !== undefined && typeof raw.code === 'string' && raw.code !== ''
+      ? {
+        code: raw.code,
+        modifiers: (Array.isArray(raw.modifiers) ? raw.modifiers : []).filter((name) => ['meta', 'ctrl', 'alt', 'shift'].includes(name)),
+      }
+      : null
+    return {
+      autoHideSidebar: parsed?.autoHideSidebar !== false,
+      defaultLimit: Number.isFinite(limit) && limit > 0 ? limit : 0,
+      shortcutOpen,
+    }
+  } catch (error) {
+    return fallback
+  }
+}
+
+/** Merge and persist display preferences. */
+function dwWritePrefs(changes) {
+  const next = { ...dwReadPrefs(), ...changes }
+  try {
+    globalThis.localStorage?.setItem(DW_PREFS_KEY, JSON.stringify(next))
+  } catch (error) {
+    void error
+  }
+  return next
+}
+
+/** Restore the SQL consoles saved for one workspace. */
+function dwReadConsoles(root) {
+  const empty = { tabs: [], activeTab: '' }
+  if (typeof root !== 'string' || root === '') return empty
+  try {
+    const raw = globalThis.localStorage?.getItem(`${DW_CONSOLE_KEY}:${root}`)
+    if (raw === null || raw === undefined) return empty
+    const parsed = JSON.parse(raw)
+    const tabs = (Array.isArray(parsed?.tabs) ? parsed.tabs : [])
+      .filter((tab) => tab !== null && typeof tab === 'object' && typeof tab.id === 'string' && typeof tab.dbId === 'string')
+      .map((tab) => ({
+        id: tab.id,
+        kind: 'sql',
+        title: String(tab.title ?? tab.database ?? ''),
+        env: String(tab.env ?? ''),
+        subtitle: String(tab.subtitle ?? ''),
+        dbId: tab.dbId,
+        database: String(tab.database ?? ''),
+        instanceLabel: String(tab.instanceLabel ?? ''),
+        sql: String(tab.sql ?? ''),
+        result: undefined,
+        error: '',
+        running: false,
+      }))
+    const activeTab = tabs.some((tab) => tab.id === parsed?.activeTab) ? parsed.activeTab : (tabs[0]?.id ?? '')
+    return { tabs, activeTab }
+  } catch (error) {
+    return empty
+  }
+}
+
+
 function dwCreateStore(translate) {
   const t = typeof translate === 'function' ? translate : (key) => key
 
@@ -229,6 +301,7 @@ function dwCreateStore(translate) {
     emit()
   }
 
+
   const pushLog = (level, text) => {
     const next = [...state.log, dwLogEntry(level, text)]
     patch({ log: next.length > DW_LOG_LIMIT ? next.slice(next.length - DW_LOG_LIMIT) : next })
@@ -243,6 +316,106 @@ function dwCreateStore(translate) {
       pushLog('warn', t('log.hostRestarted'))
       await store.loadDiscovery({ refresh: true, quiet: true })
       return await dwRpc(action, payload)
+    }
+  }
+
+  // SQL is the user's work: the Host keeps one snapshot per workspace so switching
+  // workspaces or restarting DSH does not throw the statement away. Writes are
+  // debounced because they happen on every keystroke; results are never saved.
+  const consoleSnapshot = () => ({
+    activeTab: state.activeTab,
+    tabs: state.tabs
+      .filter((tab) => tab.kind === 'sql' && typeof tab.dbId === 'string')
+      .map((tab) => ({
+        id: tab.id,
+        title: tab.title,
+        env: tab.env,
+        subtitle: tab.subtitle,
+        dbId: tab.dbId,
+        database: tab.database,
+        instanceLabel: tab.instanceLabel,
+        sql: String(tab.sql ?? ''),
+      })),
+  })
+
+  const saveConsoles = async () => {
+    const root = state.root
+    if (root === '') return
+    try {
+      await call('saveConsoles', { root, value: consoleSnapshot() })
+    } catch (error) {
+      void error
+    }
+  }
+
+  let consoleTimer = null
+  const scheduleConsoles = () => {
+    if (consoleTimer !== null) clearTimeout(consoleTimer)
+    consoleTimer = setTimeout(() => {
+      consoleTimer = null
+      void saveConsoles()
+    }, 250)
+  }
+  const flushConsoles = () => {
+    if (consoleTimer !== null) {
+      clearTimeout(consoleTimer)
+      consoleTimer = null
+    }
+    void saveConsoles()
+  }
+
+  /** Merge a saved snapshot into whatever is already open, never clobbering it. */
+  const applyConsoles = (root, saved) => {
+    if (state.root !== root) return
+    const existing = new Set(state.tabs.map((tab) => tab.id))
+    const restored = (Array.isArray(saved?.tabs) ? saved.tabs : [])
+      .filter((tab) => tab !== null && typeof tab.id === 'string' && typeof tab.dbId === 'string' && !existing.has(tab.id))
+      .map((tab) => ({
+        id: tab.id,
+        kind: 'sql',
+        title: String(tab.title ?? ''),
+        env: String(tab.env ?? ''),
+        subtitle: String(tab.subtitle ?? ''),
+        dbId: tab.dbId,
+        database: String(tab.database ?? ''),
+        instanceLabel: String(tab.instanceLabel ?? ''),
+        sql: String(tab.sql ?? ''),
+        result: undefined,
+        error: '',
+        running: false,
+      }))
+    if (restored.length === 0) return
+    const sequence = restored.reduce((max, tab) => {
+      const match = /:(\d+)$/.exec(tab.id)
+      return match === null ? max : Math.max(max, Number(match[1]))
+    }, 0)
+    if (sequence > dwStatementSequence) dwStatementSequence = sequence
+    const tabs = [...restored, ...state.tabs]
+    const activeTab = state.activeTab === '' && tabs.some((tab) => tab.id === saved.activeTab) ? saved.activeTab : state.activeTab
+    patch({ tabs, activeTab })
+  }
+
+  const loadConsoles = async (root) => {
+    const local = dwReadConsoles(root)
+    let saved = null
+    try {
+      saved = await call('consoles', { root })
+    } catch (error) {
+      void error
+    }
+    if (saved !== null && Array.isArray(saved.tabs) && saved.tabs.length > 0) {
+      applyConsoles(root, saved)
+      return
+    }
+    // One-time migration: snapshots written by the localStorage build move to the
+    // Host the first time their workspace opens.
+    if (local.tabs.length === 0) return
+    applyConsoles(root, local)
+    try {
+      await call('saveConsoles', { root, value: { activeTab: local.activeTab, tabs: local.tabs } })
+      globalThis.localStorage?.removeItem(`${DW_CONSOLE_KEY}:${root}`)
+    } catch (error) {
+      void error
     }
   }
 
@@ -300,6 +473,7 @@ function dwCreateStore(translate) {
 
     /** Show the panel with nothing loaded yet. */
     reset() {
+      flushConsoles()
       patch({
         root: '',
         manual: false,
@@ -330,6 +504,7 @@ function dwCreateStore(translate) {
     setRoot(root) {
       const next = typeof root === 'string' ? root : ''
       if (next === state.root) return
+      flushConsoles()
       if (next === '') {
         store.reset()
         return
@@ -351,6 +526,7 @@ function dwCreateStore(translate) {
         activeTab: '',
         schemas: new Map(),
       })
+      void loadConsoles(next)
       void store.loadDiscovery({ refresh: false })
       void store.loadSettings()
     },
@@ -359,11 +535,10 @@ function dwCreateStore(translate) {
     async loadSettings() {
       try {
         const settings = await dwRpc('config')
-        const limit = Number(settings?.defaultLimit)
-        patch({
-          settings,
-          limit: Number.isFinite(limit) && limit > 0 ? limit : state.limit,
-        })
+        const configured = Number(settings?.defaultLimit)
+        const preferred = dwReadPrefs().defaultLimit
+        const limit = preferred > 0 ? preferred : (Number.isFinite(configured) && configured > 0 ? configured : state.limit)
+        patch({ settings, limit })
       } catch (error) {
         void error
       }
@@ -593,6 +768,7 @@ function dwCreateStore(translate) {
       const existing = state.tabs.find((tab) => tab.id === id)
       if (existing !== undefined) {
         patch({ activeTab: id })
+        scheduleConsoles()
         return existing
       }
       const tab = {
@@ -612,6 +788,7 @@ function dwCreateStore(translate) {
         running: false,
       }
       patch({ tabs: [...state.tabs, tab], activeTab: id })
+      scheduleConsoles()
       return tab
     },
 
@@ -621,26 +798,46 @@ function dwCreateStore(translate) {
      * A tree action ("open table data") must never cost the user an unsaved
      * query, so an occupied console gets a second tab instead.
      */
+    /**
+     * Open one table's own console and append its base query.
+     *
+     * Requirement: one window per table per workspace. Double-clicking the same
+     * table again focuses that window and appends one more statement at the bottom
+     * instead of stacking numbered consoles; the user's text is only ever extended,
+     * never replaced.
+     */
     seedStatement(node, sql) {
-      const open = store.openDatabase(node)
-      if (open === undefined) return
-      if (!DW_SQL_EMPTY.test(String(open.sql ?? ''))) {
-        dwStatementSequence += 1
-        const sequence = dwStatementSequence
-        const id = `sql:${node.dbId}:${sequence}`
-        const tab = {
-          ...open,
-          id,
-          title: `${node.database} (${sequence})`,
-          sql,
-          result: undefined,
-          error: '',
-        }
-        patch({ tabs: [...state.tabs, tab], activeTab: id })
+      if (node === null || node === undefined || node.dbId === undefined || node.table === undefined) return
+      const statement = String(sql ?? '').trim()
+      if (statement === '') return
+      const id = `sql:${node.dbId}:tbl:${node.table}`
+      const existing = state.tabs.find((tab) => tab.id === id)
+      if (existing !== undefined) {
+        const current = String(existing.sql ?? '').replace(/\s+$/, '')
+        patch({
+          tabs: state.tabs.map((tab) => (tab.id === id
+            ? { ...tab, sql: current === '' ? statement : `${current}\n\n${statement}`, result: undefined, error: '' }
+            : tab)),
+        })
+        store.setActiveTab(id)
+        scheduleConsoles()
         return
       }
-      store.setTabSql(open.id, sql)
-      store.setActiveTab(open.id)
+      const tab = {
+        id,
+        kind: 'sql',
+        title: String(node.table),
+        env: node.env ?? '',
+        subtitle: [node.env, node.instanceLabel].filter((part) => typeof part === 'string' && part !== '').join(' · '),
+        dbId: node.dbId,
+        database: node.database,
+        instanceLabel: node.instanceLabel ?? '',
+        sql: statement,
+        result: undefined,
+        error: '',
+      }
+      patch({ tabs: [...state.tabs, tab], activeTab: id })
+      scheduleConsoles()
     },
 
     /**
@@ -708,14 +905,18 @@ function dwCreateStore(translate) {
         activeTab = neighbour?.id ?? ''
       }
       patch({ tabs, activeTab })
+      // Closing a console is deliberate: drop it from storage now, not later.
+      flushConsoles()
     },
 
     setActiveTab(id) {
       patch({ activeTab: id })
+      scheduleConsoles()
     },
 
     setTabSql(id, sql) {
       patch({ tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, sql } : tab)) })
+      scheduleConsoles()
     },
 
     setLimit(limit) {
@@ -727,6 +928,40 @@ function dwCreateStore(translate) {
     },
 
     /** Run the active tab's statement. */
+    /**
+     * Count every row of the statement that produced the current result.
+     *
+     * Deliberately on demand: COUNT(*) on a large table is a second full scan, so
+     * it runs when the user presses the refresh button, not after every query.
+     */
+    async refreshTotal(id) {
+      const tab = state.tabs.find((entry) => entry.id === id)
+      if (tab === undefined || tab.kind !== 'sql' || tab.counting === true) return
+      const sql = String(tab.lastStatement ?? tab.sql ?? '').trim()
+      if (sql === '') return
+      patch({ tabs: state.tabs.map((entry) => (entry.id === id ? { ...entry, counting: true, countError: '' } : entry)) })
+      try {
+        const value = await call('count', { id: tab.dbId, sql })
+        if (typeof value.sql === 'string' && value.sql !== '') pushLog('sql', value.sql)
+        pushLog('info', t('log.count', {
+          rows: dwRowCount(value.total),
+          ms: dwDuration(value.elapsedMs),
+        }))
+        patch({
+          tabs: state.tabs.map((entry) => (entry.id === id
+            ? { ...entry, counting: false, totalCount: Number(value.total ?? 0), countError: '' }
+            : entry)),
+        })
+      } catch (error) {
+        pushLog('error', dwExplainFailure(t, error))
+        patch({
+          tabs: state.tabs.map((entry) => (entry.id === id
+            ? { ...entry, counting: false, countError: dwExplainFailure(t, error) }
+            : entry)),
+        })
+      }
+    },
+
     /**
      * Run the workbench statement, or just the text the user selected.
      *
@@ -743,11 +978,20 @@ function dwCreateStore(translate) {
         pushLog('warn', t('log.noStatement'))
         return
       }
-      patch({ tabs: state.tabs.map((entry) => (entry.id === tab.id ? { ...entry, running: true, error: '' } : entry)) })
+      // Every executed statement goes to the run log, failures included: the log is
+      // the console history, not just a success report.
+      pushLog('sql', sql)
+      patch({
+        tabs: state.tabs.map((entry) => (entry.id === tab.id
+          ? { ...entry, running: true, error: '', counting: false, totalCount: undefined, countError: '' }
+          : entry)),
+      })
       try {
         const value = await call('query', { id: tab.dbId, sql, limit: state.limit })
         patch({
-          tabs: state.tabs.map((entry) => (entry.id === tab.id ? { ...entry, running: false, result: value, error: '' } : entry)),
+          tabs: state.tabs.map((entry) => (entry.id === tab.id
+            ? { ...entry, running: false, result: value, error: '', lastStatement: sql }
+            : entry)),
         })
         pushLog('info', t('log.query', {
           database: tab.database,

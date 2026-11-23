@@ -51,6 +51,7 @@ alone because another plugin already occupies that single seat.
 | Key | Action |
 |---|---|
 | `⌘/Ctrl + Enter` | Run the statement in the active workbench (only the selection when there is one) |
+| `⌘3` / `Ctrl+3` | Open the data window from anywhere (editable in settings) |
 | `F4` / `⌘/Ctrl + Shift + D` | Show the selected table's create statement |
 | `Tab` in the editor | Insert two spaces (or accept the highlighted suggestion) |
 | `⌘/Ctrl + Space` | Open the suggestion list |

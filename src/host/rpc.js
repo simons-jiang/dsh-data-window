@@ -6,8 +6,9 @@
  * registered in the Host, and only this module holds the credential map.
  */
 import { existsSync, statSync } from 'node:fs'
-import { isAbsolute } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import { DiscoveryCache, fingerprint } from './cache.js'
+import { ConsoleStore } from './consoles.js'
 import { discoverProject } from './discovery.js'
 import { DataGateway, ReadOnlyViolation } from './mysql.js'
 
@@ -43,6 +44,7 @@ export class DataController {
     this.config = resolveConfig(options.config ?? {})
     this.gateway = options.gateway ?? createGateway(this.config)
     this.cache = options.cache ?? new DiscoveryCache(options.cacheDirectory ?? '', options.pluginVersion ?? '')
+    this.consoles = options.consoles ?? new ConsoleStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'workspaces'))
     this.pending = new Map()
   }
 
@@ -126,8 +128,14 @@ export class DataController {
         return this.gateway.listColumns(payload.id, payload.table)
       case 'schema':
         return this.gateway.schemaMap(payload.id)
+      case 'consoles':
+        return this.consoles.load(payload.root)
+      case 'saveConsoles':
+        return this.consoles.save(payload.root, payload.value)
       case 'ddl':
         return this.gateway.showCreate(payload.id, payload.table)
+      case 'count':
+        return this.gateway.countRows(payload.id, payload.sql)
       case 'query':
         return this.gateway.run(payload.id, payload.sql, { limit: payload.limit ?? this.config.defaultLimit })
       case 'forget':

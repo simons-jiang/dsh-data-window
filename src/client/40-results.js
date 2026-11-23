@@ -91,6 +91,32 @@ function DwResults({ store, state, tab, tr }) {
         h('span', { key: 'd' }, `  ·  ${dwDuration(result.elapsedMs)}`),
         result.truncated === true ? h('span', { key: 't', className: 'dw-log-warn' }, `  ·  ${tr('truncated')} ${result.limit}`) : null,
       ]),
+    result === undefined
+      ? null
+      : h('span', { key: 'count', className: 'dw-count' }, [
+        h('button', {
+          key: 'r',
+          type: 'button',
+          className: 'dw-count-btn',
+          title: tab.countError !== undefined && tab.countError !== '' ? tab.countError : tr('countRowsHint'),
+          'aria-label': tr('countRows'),
+          disabled: tab.counting === true
+            || tab.lastStatement === undefined
+            || !/^(select|with)\b/i.test(String(tab.lastStatement ?? '').trim()),
+          onClick: () => void store.refreshTotal(tab.id),
+        }, h(DwIcon, { key: 'i', name: tab.counting === true ? 'spinner' : 'refresh', size: 11 })),
+        h('span', {
+          key: 'v',
+          className: 'dw-count-value',
+          style: tab.countError !== undefined && tab.countError !== '' ? { color: 'var(--dsw-alias-state-error-primary)' } : undefined,
+        }, tab.counting === true
+          ? tr('countRowsRunning')
+          : tab.countError !== undefined && tab.countError !== ''
+            ? tr('countRowsFailed')
+            : tab.totalCount === undefined
+              ? tr('countRowsUnknown')
+              : tr('countRowsValue', { rows: Number(tab.totalCount).toLocaleString() })),
+      ]),
     h('span', { key: 'sp', className: 'dw-spacer' }),
     result !== undefined && (result.rows ?? []).length > 0
       ? h('button', {

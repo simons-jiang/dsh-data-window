@@ -123,6 +123,16 @@ function apply(ctx) {
     inject: () => ({ store, translate }),
   }, DwFooterAction)), 'dsh-data-window: footer action')
 
+  ctx.effect(() => ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section',
+    id: `${DW_NS}:settings`,
+    order: 60,
+    label: () => translate('settingsNav'),
+    registrant: DW_NS,
+    locale: DW_NS,
+    inject: () => ({ translate, store }),
+  }, DwSettingsSection)), 'dsh-data-window: settings section')
+
   ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',
     id: `${DW_NS}:tracker`,
@@ -130,6 +140,26 @@ function apply(ctx) {
     registrant: DW_NS,
     inject: () => ({ store }),
   }, DwTracker)), 'dsh-data-window: workspace tracker')
+
+  // Requirement: the open shortcut works from anywhere, with ⌘3 as its default.
+  // DSH's shortcut service owns its own catalog and the code workspace binds its
+  // panel the same way — a window-level listener, so the key works before the
+  // panel is open. The binding is editable in the plugin's settings section.
+  ctx.effect(() => {
+    dwWatchTheme()
+    const onKey = (event) => {
+      if (event.repeat === true) return
+      if (globalThis.__dwShortcutRecording === true) return
+      if (!dwShortcutMatches(dwOpenShortcut(), event)) return
+      const layout = layoutRef.current
+      if (layout === undefined || typeof layout.selectPanel !== 'function') return
+      event.preventDefault()
+      event.stopPropagation()
+      layout.selectPanel(DW_PANEL_ID)
+    }
+    globalThis.addEventListener('keydown', onKey, true)
+    return () => globalThis.removeEventListener('keydown', onKey, true)
+  }, 'dsh-data-window: open shortcut')
 }
 
 export { apply, DwFooterAction }

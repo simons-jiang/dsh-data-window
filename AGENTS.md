@@ -10,7 +10,7 @@ DataGrip 风格的 DSH 数据库窗口插件。本文件是这个工作区的**�
 
 1. **只读**。任何改动都不能放松 `src/host/mysql.js` 的四层拦截（白名单 / 单语句 / 写关键字 / `SET SESSION TRANSACTION READ ONLY`）。这是用户的硬约束，不是可选项。
 2. **密码不出 Host**。客户端只拿不透明连接 id（`i:…` / `d:…`），凭据只在 Host 进程内存与 0600 缓存文件里。
-3. **不覆盖用户 SQL**。树上的任何动作都不许改写用户已经写好的语句；需要新语句就开第二个工作台（`store.seedStatement`）。
+3. **不覆盖用户 SQL，只追加**。树上的动作只往控制台末尾追加语句，绝不改写已有内容。每张表在工作区里只有一个标签：双击表打开/聚焦 `sql:<dbId>:tbl:<table>`，并在最下方追加一条该表的基础查询；不再创建编号副本。
 
 ## 目录职责
 
@@ -20,8 +20,9 @@ DataGrip 风格的 DSH 数据库窗口插件。本文件是这个工作区的**�
 | `src/host/yaml.js` | YAML 子集解析（缩进映射/列表/多文档/注释/引号），`${a.b:default}` 占位符解析 |
 | `src/host/discovery.js` | 配置发现：`bootstrap.yml` → 应用名 → Nacos 快照 → 按占位符找定义变量的 data-id（不假定文件名），产出环境/实例/库与连接目标表 |
 | `src/host/mysql.js` | 只读网关：连接池、语句校验、元数据与 DDL 查询、行数上限 |
-| `src/host/rpc.js` | action 分发（discover/ping/databases/tables/columns/schema/ddl/query/config/forget）、错误→HTTP 映射 |
+| `src/host/rpc.js` | action 分发（discover/ping/databases/tables/columns/schema/ddl/query/consoles/saveConsoles/config/forget）、错误→HTTP 映射 |
 | `src/host/cache.js` | 每个工作区一份发现缓存（文件指纹 + 插件版本），0600，写临时文件再 rename |
+| `src/host/consoles.js` | 每个工作区一份 SQL 控制台快照（只存语句，0600，原子写） |
 | `src/client/*.js` | 面板源码，`node build.mjs` 拼成单文件 `client.js` |
 | `build.mjs` | 拼接 + 注入语言字典 + 未定义 helper 检查 + 去掉模块语法 |
 | `locale/{en,zh}.json` | 显示名（`meta`）+ 全部界面文案，客户端把它内联进 bundle |

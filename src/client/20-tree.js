@@ -178,8 +178,11 @@ function DwTree({ store, state, tr, onContextMenu }) {
   const openTableData = (row) => {
     const node = row.node
     if (node.kind !== 'table' && node.kind !== 'view') return
-    store.seedStatement(node, `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`)
-    void store.runActiveTab()
+    const statement = `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`
+    store.seedStatement(node, statement)
+    // Run only the statement just appended: the tab may already hold earlier
+    // statements, and sending the whole buffer would be a multi-statement error.
+    void store.runActiveTab(statement)
   }
 
   if (rows.length === 0) {

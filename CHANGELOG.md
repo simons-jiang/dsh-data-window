@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- The suggestion list follows the keyboard: moving the highlight with ↑/↓ scrolls the
+  popup so the selected column never slides out of view.
 - Completion resolves quoted table names in `db`.`table` form, so columns of a
   backtick-quoted table are suggested (they used to be dropped because the table
   name kept its leading backtick).
@@ -18,6 +20,22 @@
 
 ### Added
 
+- The settings page has a dedicated **Shortcuts** group. The open shortcut is
+  editable (record a new combination, reset to ⌘3 / Ctrl+3) and stored per browser.
+- The data window follows the palette chosen in `dsh-ide-window` through the same
+  `dsh-theme` contract `dsh-git-window` uses; with no theme chosen it keeps DSH's
+  colours.
+- The run log records every executed statement, including the `COUNT(*)` the total-row
+  refresh runs.
+- The result bar shows a total-row counter: the refresh button next to it runs one
+  `COUNT(*)` for the statement that produced the result.
+- The plugin has its own page in DSH's settings (`数据窗口`): auto-fold the sidebar,
+  the default row limit, the shortcut and the console snapshot path.
+- `⌘3` / `Ctrl+3` opens the data window from anywhere.
+- Workbench SQL is kept per workspace in a Host file
+  (`<workspace>/workspaces/<hash>-<name>.consoles.json`, mode 0600): switching to
+  another workspace, reloading the window or restarting DSH restores the console
+  with its text. Closing a tab deletes its snapshot; results are never restored.
 - Running with a selection executes **only the selected statement** (⌘/Ctrl+Enter or
   the Run button); running the whole buffer while a fragment was selected used to
   send several statements and end in a confusing `ER_PARSE_ERROR`.
@@ -37,6 +55,12 @@
   select item per line, joins and boolean operators indented; keyword case is kept.
 
 ### Changed
+
+- Each table has its own console tab (`sql:<dbId>:tbl:<table>`). Double-clicking a
+  table opens or focuses that tab and appends one base statement at the bottom;
+  numbered copies no longer pile up and existing text is never replaced. Only the
+  appended statement runs, so repeating the double-click cannot send several
+  statements in one request.
 
 - Discovery no longer hard-codes the data-id that carries hosts and passwords.
   Every YAML data-id in the snapshot is a candidate, and only the files that define
