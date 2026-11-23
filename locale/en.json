@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "Database window",
+    "title": "Data window",
     "description": "A DataGrip-style database window: the workspace's own configuration supplies each environment's host and credentials, so the tree shows instances, databases, tables and columns, F4 shows one table's create statement, and every database gets its own read-only SQL workbench.",
     "detail": "docs/DETAIL.md"
   },
-  "openPanel": "Database window",
-  "openPanelHint": "Open the database window",
+  "openPanel": "Data window",
+  "openPanelHint": "Open the data window",
   "treeTitle": "Explorer",
   "filterPlaceholder": "Filter the loaded databases and tables",
   "treeLoading": "Loading…",
@@ -96,5 +96,14 @@
   "warning.project-no-application-name": "The project's bootstrap.yml declares no spring.application.name, so the window matched configuration by directory name.",
   "warning.nacos-cache-missing": "No local Nacos cache was found under ~/nacos/config; start the service once so the Nacos client writes its snapshot.",
   "warning.no-environment": "No data source declared by this project could be resolved; only databases from this project's own configuration are read.",
-  "warning.unparsed-jdbc-url": "A datasource URL could not be parsed as jdbc:mysql."
+  "warning.unparsed-jdbc-url": "A datasource URL could not be parsed as jdbc:mysql.",
+  "projectSwitch": "Switch workspace",
+  "resizeTree": "Drag to resize the list (double-click resets)",
+  "hideSidebar": "Hide the DSH sidebar",
+  "showSidebar": "Show the DSH sidebar",
+  "formatSql": "Format",
+  "formatSqlHint": "Beautify the statement (keyword case is kept)",
+  "suggestColumn": "column",
+  "suggestTable": "table",
+  "suggestKeyword": "keyword"
 }

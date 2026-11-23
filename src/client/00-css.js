@@ -59,6 +59,59 @@ const DW_CSS = `
 }
 .dw-spacer { flex: 1 1 auto; }
 
+.dw-project { position: relative; display: inline-flex; align-items: center; min-width: 0; }
+.dw-project-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 280px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dw-project-btn:hover { background: var(--dsw-alias-bg-overlay, #2f333b); border-color: var(--dsw-alias-border-l1, #31353d); }
+.dw-project-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dw-project-caret { opacity: .7; font-size: 10px; }
+.dw-project-menu {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  z-index: 40;
+  min-width: 320px;
+  max-width: 480px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+.dw-project-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dw-project-row:hover { background: var(--dsw-alias-bg-overlay, #2f333b); }
+.dw-project-row.active { background: color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 18%, transparent); }
+.dw-project-row-title { font-size: 12.5px; }
+.dw-project-row-path { font-size: 11px; color: var(--dsw-alias-label-secondary, #8b919d); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dw-resizer { flex: 0 0 5px; align-self: stretch; cursor: col-resize; background: transparent; }
+.dw-resizer:hover { background: color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 45%, transparent); }
+
 .dw-btn {
   display: inline-flex;
   align-items: center;
@@ -297,6 +350,53 @@ const DW_CSS = `
   tab-size: 2;
 }
 .dw-code::placeholder { color: var(--dsw-alias-label-secondary, #6b7280); }
+
+/* SQL highlighting: the textarea stays the input surface; a pre behind it paints
+   the same text with token colours. Both must use identical metrics. */
+.dw-code-wrap { position: relative; flex: 1 1 auto; min-width: 0; display: flex; }
+.dw-code-wrap .dw-code { position: relative; z-index: 1; color: transparent; caret-color: var(--dsw-alias-label-primary, #e6e8ec); background: transparent; }
+.dw-code-wrap .dw-code::placeholder { color: var(--dsw-alias-label-secondary, #6b7280); }
+.dw-code-highlight {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 6px 10px;
+  overflow: hidden;
+  white-space: pre;
+  pointer-events: none;
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 12.5px;
+  line-height: 19px;
+  tab-size: 2;
+}
+.dw-tok-keyword { color: #cf8e6d; font-weight: 600; }
+.dw-tok-function { color: #56a8f5; }
+.dw-tok-string { color: #6aab73; }
+.dw-tok-number { color: #2aacb8; }
+.dw-tok-comment { color: #7a7e85; font-style: italic; }
+.dw-tok-literal { color: #c77dbb; }
+.dw-tok-operator { color: #b3b8c2; }
+.dw-tok-punct { color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-complete {
+  position: absolute;
+  z-index: 60;
+  min-width: 260px;
+  max-width: 440px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .45);
+}
+.dw-complete-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+.dw-complete-row:hover, .dw-complete-row.active { background: var(--dsw-alias-bg-overlay, #2f333b); }
+.dw-complete-row.active { outline: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 55%, transparent); }
+.dw-complete-label { flex: 1 1 auto; font-family: var(--ds-font-family-code, ui-monospace, Menlo, monospace); font-size: 12px; }
+.dw-complete-detail { flex: 0 1 auto; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 10.5px; }
+.dw-complete-kind { flex: 0 0 auto; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 10px; opacity: .8; }
 
 .dw-drag {
   height: 5px;

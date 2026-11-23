@@ -12,6 +12,74 @@
 const DW_EDITOR_MIN = 88
 const DW_EDITOR_MAX = 620
 
+/** Bounds for the explorer column, in pixels. */
+const DW_SIDE_MIN = 200
+const DW_SIDE_MAX = 720
+const DW_SIDE_DEFAULT = 268
+const DW_SIDE_KEY = 'dsh-data-window:side-width'
+
+/** Wide layouts collapse the navigation column; below this the toggle is a drawer. */
+const DW_WIDE_LAYOUT = 1024
+
+/** Last path segment, used when a Workspace has no title. */
+function dwBasename(path) {
+  const parts = String(path ?? '').split('/').filter((part) => part !== '')
+  return parts.length === 0 ? String(path ?? '') : parts[parts.length - 1]
+}
+
+/** `~/Documents/x` instead of an absolute home path. */
+function dwShortPath(path) {
+  return String(path ?? '').replace(/^\/(?:Users|home)\/[^/]+\//, '~/')
+}
+
+/** Stored explorer width, clamped so a bad value cannot hide the tree. */
+function dwReadSideWidth() {
+  const raw = Number(globalThis.localStorage?.getItem(DW_SIDE_KEY))
+  if (!Number.isFinite(raw) || raw <= 0) return DW_SIDE_DEFAULT
+  return Math.min(DW_SIDE_MAX, Math.max(DW_SIDE_MIN, raw))
+}
+
+/**
+ * Whether the shell's navigation column is collapsed.
+ *
+ * `layout.toggleSidebar()` is a bare toggle with no readable state, so the frame's
+ * own marker is the only way to avoid flipping a column the user had already
+ * folded.
+ */
+function dwSidebarCollapsed() {
+  try {
+    const layer = document.querySelector('[data-shell-overlay]')
+    const frame = layer === null ? null : layer.parentElement
+    return frame === null ? false : frame.hasAttribute('data-sidebar-collapsed')
+  } catch (error) {
+    void error
+    return false
+  }
+}
+
+/** Fold the navigation column; false when it was already folded or unavailable. */
+function dwHideSidebar(store) {
+  const layout = store.layout?.()
+  if (layout === undefined || typeof layout.toggleSidebar !== 'function') return false
+  if ((Number(globalThis.innerWidth) || 0) < DW_WIDE_LAYOUT) return false
+  if (dwSidebarCollapsed()) return false
+  layout.toggleSidebar()
+  return true
+}
+
+/** Unfold the navigation column, but only when it is still folded. */
+function dwShowSidebar(store) {
+  const layout = store.layout?.()
+  if (layout === undefined || typeof layout.toggleSidebar !== 'function') return
+  if (!dwSidebarCollapsed()) return
+  layout.toggleSidebar()
+  try {
+    globalThis.dispatchEvent(new Event('resize'))
+  } catch (error) {
+    void error
+  }
+}
+
 /** The workspace a Session belongs to, tolerating both snapshot spellings. */
 function dwResolveRoot(sessionsState, workspacesState) {
   const byId = sessionsState?.byId ?? {}
@@ -56,13 +124,68 @@ function DwTracker({ store, useSessions, useWorkspaces }) {
   return null
 }
 
+/** The workspace chip and its menu: switching here re-roots the window in place. */
+function DwProjectMenu({ state, projects, tr, onSelect }) {
+  const [open, setOpen] = useState(false)
+  const root = state.root === '' ? '' : state.root.replace(/\/+$/, '')
+  const current = projects.find((item) => item.path === root)
+  const label = current === undefined
+    ? (state.root === '' ? tr('noWorkspace') : dwBasename(state.root))
+    : current.title
+
+  useEffect(() => {
+    if (!open) return undefined
+    const onDown = (event) => {
+      const element = event.target
+      if (element instanceof Element && element.closest('.dw-project') !== null) return
+      setOpen(false)
+    }
+    globalThis.addEventListener('pointerdown', onDown, true)
+    return () => globalThis.removeEventListener('pointerdown', onDown, true)
+  }, [open])
+
+  return h('div', { className: 'dw-project' }, [
+    h('button', {
+      key: 'btn',
+      type: 'button',
+      className: 'dw-project-btn',
+      title: tr('projectSwitch'),
+      'aria-label': tr('projectSwitch'),
+      onClick: () => setOpen(!open),
+    }, [
+      h('span', { key: 'nm', className: 'dw-project-name' }, label),
+      h('span', { key: 'c', className: 'dw-project-caret' }, '\u25be'),
+    ]),
+    open
+      ? h('div', { key: 'menu', className: 'dw-project-menu', role: 'menu' }, projects.map((item) => h('button', {
+        key: item.path,
+        type: 'button',
+        role: 'menuitem',
+        className: item.path === root ? 'dw-project-row active' : 'dw-project-row',
+        title: item.path,
+        onClick: () => {
+          setOpen(false)
+          if (item.path !== root) onSelect(item.path)
+        },
+      }, [
+        h('span', { key: 't', className: 'dw-project-row-title' }, item.title),
+        h('span', { key: 'p', className: 'dw-project-row-path' }, dwShortPath(item.path)),
+      ])))
+      : null,
+  ])
+}
+
 function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }) {
   const tr = typeof translate === 'function' ? translate : (key) => key
   const state = useSyncExternalStore(store.subscribe, store.getState, store.getState)
   const [menu, setMenu] = useState(null)
   const [editorHeight, setEditorHeight] = useState(168)
+  const [sideWidth, setSideWidth] = useState(() => dwReadSideWidth())
+  const [sidebarHidden, setSidebarHidden] = useState(false)
   const panelRef = useRef(null)
   const logRef = useRef(null)
+  const sideWidthRef = useRef(sideWidth)
+  const sidebarHiddenRef = useRef(false)
 
   // The tracker in the overlay reports first; these hooks read the same data, so
   // whichever mounted first decides, and a Workspace switch updates both.
@@ -75,6 +198,66 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   useEffect(() => {
     if (detected !== '') store.setDetectedRoot(detected)
   }, [detected, store])
+
+  // Requirement: entering the window folds the shell's navigation column, so the
+  // explorer and the workbench get the whole frame. Leaving unfolds it again, but
+  // only if it is still folded.
+  useEffect(() => {
+    if (dwHideSidebar(store)) {
+      sidebarHiddenRef.current = true
+      setSidebarHidden(true)
+    }
+    return () => {
+      if (!sidebarHiddenRef.current) return
+      sidebarHiddenRef.current = false
+      dwShowSidebar(store)
+    }
+  }, [store])
+
+  const toggleSidebar = () => {
+    if (sidebarHiddenRef.current || dwSidebarCollapsed()) {
+      sidebarHiddenRef.current = false
+      setSidebarHidden(false)
+      dwShowSidebar(store)
+      return
+    }
+    if (dwHideSidebar(store)) {
+      sidebarHiddenRef.current = true
+      setSidebarHidden(true)
+    }
+  }
+
+  // Drag the divider between the explorer and the workbench; the width is stored
+  // per browser because it is a reading preference, not a per-project fact.
+  const startSideResize = (event) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    const startX = event.clientX
+    const startWidth = sideWidthRef.current
+    const panelWidth = panelRef.current?.getBoundingClientRect?.().width ?? globalThis.innerWidth
+    const max = Math.max(DW_SIDE_MIN + 40, Math.min(DW_SIDE_MAX, panelWidth - 360))
+    const previousSelect = document.body.style.userSelect
+    document.body.style.userSelect = 'none'
+    const move = (moveEvent) => {
+      const width = Math.min(max, Math.max(DW_SIDE_MIN, startWidth + moveEvent.clientX - startX))
+      sideWidthRef.current = width
+      setSideWidth(width)
+    }
+    const stop = () => {
+      globalThis.removeEventListener('pointermove', move)
+      globalThis.removeEventListener('pointerup', stop)
+      document.body.style.userSelect = previousSelect
+      globalThis.localStorage?.setItem(DW_SIDE_KEY, String(sideWidthRef.current))
+    }
+    globalThis.addEventListener('pointermove', move)
+    globalThis.addEventListener('pointerup', stop)
+  }
+
+  const resetSideWidth = () => {
+    sideWidthRef.current = DW_SIDE_DEFAULT
+    setSideWidth(DW_SIDE_DEFAULT)
+    globalThis.localStorage?.setItem(DW_SIDE_KEY, String(DW_SIDE_DEFAULT))
+  }
 
   // Requirement 3: one keystroke from the selected table to its create statement.
   useEffect(() => {
@@ -113,7 +296,22 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
 
   const activeTab = (state.tabs ?? []).find((tab) => tab.id === state.activeTab)
   const environments = state.environments ?? []
-  const project = state.project
+
+  // Every Workspace the shell knows, plus the current root when it is not a
+  // registered Workspace yet (a directory picked by hand).
+  const projectItems = []
+  const seenProjectPaths = new Set()
+  for (const item of Array.isArray(workspaces?.items) ? workspaces.items : []) {
+    const path = typeof item?.path === 'string' ? item.path.replace(/\/+$/, '') : ''
+    if (path === '' || seenProjectPaths.has(path)) continue
+    seenProjectPaths.add(path)
+    const title = typeof item?.title === 'string' && item.title.trim() !== '' ? item.title.trim() : dwBasename(path)
+    projectItems.push({ path, title })
+  }
+  const currentRoot = state.root === '' ? '' : state.root.replace(/\/+$/, '')
+  if (currentRoot !== '' && !seenProjectPaths.has(currentRoot)) {
+    projectItems.unshift({ path: currentRoot, title: dwBasename(currentRoot) })
+  }
 
   const pickWorkspace = async () => {
     if (typeof pickDirectory !== 'function') return
@@ -129,7 +327,13 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const toolbar = h('div', { key: 'toolbar', className: 'dw-toolbar' }, [
     h('span', { key: 'ic', className: 'dw-node-icon' }, h(DwIcon, { name: 'database-play', size: 15 })),
     h('div', { key: 'title', className: 'dw-toolbar-title' }, [
-      h('span', { key: 'p', className: 'dw-toolbar-project' }, project?.name ?? (state.phase === 'error' ? tr('stateError') : state.root === '' ? tr('noWorkspace') : tr('loading'))),
+      h(DwProjectMenu, {
+        key: 'ws',
+        state,
+        projects: projectItems,
+        tr,
+        onSelect: (path) => store.setManualRoot(path),
+      }),
       h('span', { key: 'path', className: 'dw-toolbar-path', title: state.root }, state.root),
     ]),
     environments.length > 0 ? h('span', { key: 'envs', className: 'dw-badge', style: { marginLeft: 0 } }, `${environments.length} ${tr('environments')}`) : null,
@@ -144,6 +348,14 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       h(DwIcon, { key: 'i', name: 'panel', size: 12 }),
       h('span', { key: 't' }, tr('pickWorkspace')),
     ]),
+    h('button', {
+      key: 'sidebar',
+      type: 'button',
+      className: 'dw-btn dw-btn-icon',
+      onClick: toggleSidebar,
+      title: sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
+      'aria-label': sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
+    }, h(DwIcon, { name: 'panel', size: 13 })),
     h('button', {
       key: 'refresh',
       type: 'button',
@@ -161,7 +373,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     && state.selectedNode !== undefined
     && (state.selectedNode.kind === 'table' || state.selectedNode.kind === 'view')
 
-  const side = h('aside', { key: 'side', className: 'dw-side' }, [
+  const side = h('aside', { key: 'side', className: 'dw-side', style: { width: sideWidth } }, [
     h('div', { key: 'head', className: 'dw-side-head' }, [
       h('span', { key: 't' }, tr('treeTitle')),
       h('span', { key: 'sp', className: 'dw-spacer' }),
@@ -224,7 +436,8 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
               tab: activeTab,
               tr,
               height: editorHeight,
-              onRun: () => void store.runActiveTab(),
+              schema: state.schemas?.get(activeTab.dbId),
+              onRun: (statement) => void store.runActiveTab(statement),
             }),
             h(DwDragHandle, {
               key: 'drag',
@@ -298,7 +511,19 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   return h('div', { className: 'dw-root', ref: panelRef }, [
     h(DwStyles, { key: 'style' }),
     toolbar,
-    h('div', { key: 'body', className: 'dw-body' }, [side, main]),
+    h('div', { key: 'body', className: 'dw-body' }, [
+      side,
+      h('div', {
+        key: 'resizer',
+        className: 'dw-resizer',
+        role: 'separator',
+        'aria-orientation': 'vertical',
+        title: tr('resizeTree'),
+        onPointerDown: startSideResize,
+        onDoubleClick: resetSideWidth,
+      }),
+      main,
+    ]),
     log,
     menuLayer,
   ])

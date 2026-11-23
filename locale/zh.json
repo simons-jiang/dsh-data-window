@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "数据库数据窗口",
+    "title": "数据窗口",
     "description": "DataGrip 风格的数据库窗口：从工作区自己的配置解析出各环境的主机与账号，树里能看到实例、库、表与字段，F4 直接查看建表语句，每个库都有自己的只读 SQL 工作台。",
     "detail": "docs/DETAIL.md"
   },
-  "openPanel": "数据库数据窗口",
-  "openPanelHint": "打开数据库数据窗口",
+  "openPanel": "数据窗口",
+  "openPanelHint": "打开数据窗口",
   "treeTitle": "资源管理器",
   "filterPlaceholder": "过滤已加载的库名与表名",
   "treeLoading": "加载中…",
@@ -96,5 +96,14 @@
   "warning.project-no-application-name": "项目的 bootstrap.yml 没有声明 spring.application.name，窗口改为按目录名匹配配置。",
   "warning.nacos-cache-missing": "在 ~/nacos/config 下没有找到本地 Nacos 缓存；先启动一次服务，Nacos 客户端才会写入快照。",
   "warning.no-environment": "当前工作区没有解析到本项目自己声明的数据源（窗口只读本项目配置里的库）。",
-  "warning.unparsed-jdbc-url": "有数据源地址无法解析为 jdbc:mysql。"
+  "warning.unparsed-jdbc-url": "有数据源地址无法解析为 jdbc:mysql。",
+  "projectSwitch": "切换工作区",
+  "resizeTree": "拖动调整列表宽度（双击还原）",
+  "hideSidebar": "隐藏 DSH 侧栏",
+  "showSidebar": "显示 DSH 侧栏",
+  "formatSql": "格式化",
+  "formatSqlHint": "一键美化当前 SQL（保留关键字大小写）",
+  "suggestColumn": "字段",
+  "suggestTable": "表",
+  "suggestKeyword": "关键字"
 }

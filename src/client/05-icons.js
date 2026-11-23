@@ -103,6 +103,11 @@ function DwIcon({ name, size = 14, className }) {
       return h('svg', { ...common, className: `dw-spin ${className ?? ''}` }, [
         h('path', { d: 'M8 2.2a5.8 5.8 0 1 0 5.8 5.8', opacity: .9 }),
       ])
+    case 'format':
+      return h('svg', common, [
+        h('path', { key: 'a', d: 'M2.5 4h11M2.5 8h7.5M2.5 12h4.5' }),
+        h('path', { key: 'b', d: 'M11.5 10.5v3M10 12h3' }),
+      ])
     case 'panel':
       return h('svg', common, [
         h('rect', { key: 'a', x: 1.8, y: 3, width: 12.4, height: 10, rx: 1.4 }),
