@@ -216,15 +216,19 @@ discover(root, {nacosHome, groups, envOrder}):
 
 ### 设置页与快捷键
 
-设置页是 `settings.section` 槽位，所以它在 DSH 设置左侧拿到独立的一行（和「代码工作区」并列），而不是塞进通用设置。页面里的选项都是**显示偏好**（进入时是否收起侧栏、默认行数上限、快捷键说明、快照路径），存在浏览器里；项目数据（数据源、语句）仍然各归各的工作区文件。
+设置页是 `settings.section` 槽位，所以它在 DSH 设置左侧拿到独立的一行（和「代码工作区」并列），而不是塞进通用设置。页面里的选项都是**显示偏好**（进入时是否收起侧栏、默认行数上限、快捷键、配色来源、快照路径），存在浏览器里；项目数据（数据源、语句）仍然各归各的工作区文件。
 
-快捷键 `⌘3` / `Ctrl+3` 没走 DSH 的快捷键目录，而是在窗口捕获阶段监听 `Digit3` + 主修饰键，再调用 `layout.selectPanel` 打开面板——和代码工作区绑定自己的面板是同一做法，这样在窗口还没打开时也能用。
+快捷键由一个注册表描述（`{ code, modifiers }`），默认 ⌘3 / Ctrl+3；设置页的「快捷键」组按注册表渲染，可录制新组合、可恢复默认，绑定存在浏览器偏好里。窗口级监听在捕获阶段匹配绑定并调用 `layout.selectPanel`——和代码工作区绑定自己的面板是同一做法，这样在窗口还没打开时也能用；录制期间用共享标记让打开逻辑让位。
 
 ### 主题联动与快捷键
 
 配色**不在本插件里选**：`dsh-ide-window` 是主题的所有者，它把选择发布成三个字符串——`localStorage['dsh-theme']`、`dsh-theme` window 事件、`<link id="dsh-theme-link">` 指向的 `/dsh-ide/theme?id=<id>` 样式表（样式只作用于 `[data-dsh-theme="<id>"]`）。本插件按 `dsh-git-window` 的同一套契约做**跟随者**：读取 id、把属性设在 `.dw-root` 上、监听事件即时换肤；id 为空就移除属性，回到 DSH 的 token。这样在代码工作区切主题，数据窗口立刻跟着变，不需要在这里再维护一份配色。
 
-快捷键由一个注册表描述（`{ code, modifiers }`），默认 ⌘3 / Ctrl+3；设置页的「快捷键」组按注册表渲染，可录制新组合、可恢复默认，绑定存在浏览器偏好里。窗口级监听在捕获阶段匹配绑定并调用 `layout.selectPanel`；录制期间用共享标记让打开逻辑让位，避免边录边触发。
+### 与代码工作区的联动
+
+代码工作区（`dsh-ide-window`）是独立 bundle，两个插件不能互相 import。桥用**窗口事件**：数据窗口激活时设置能力标记 `window.__DSH_DATA_WINDOW_BRIDGE__ = { v: 1 }`，并监听 `dsh-data-window:request`；代码工作区右键实体类（`@TableName`）发 `openTable`，右键 Mapper 方法发 `openSql`，数据窗口处理完回 `dsh-data-window:response`（带 `ok`/`reason`/`database`/`candidates`）。请求串行处理，避免工作区切换与发现竞争。
+
+定位库的规则：显式 schema 优先；否则 Host 的 `findTable` 只在项目已配置的库里查 `information_schema.TABLES`；多个候选按环境顺序取第一个，回执带全部候选。`openTable` 会执行生成的只读 `SELECT *`，`openSql` 只粘贴不执行（Mapper SQL 常带参数和动态片段）。完整的字段、失败码与扩展步骤见 `docs/BRIDGE.md`。
 
 ### 总行数
 
@@ -249,7 +253,7 @@ SQL 是用户的工作成果，工作区切换不能把它丢掉。快照放在 
 
 - 一库一台：`sql:<dbId>`，重复点同一个库只切标签，不再开一个。
 - 建表语句：`ddl:<dbId>:<table>`。
-- **树上"看数据"不覆盖已有语句**：若目标工作台的 SQL 还不是空模板，就开 `sql:<dbId>:<seq>` 第二个标签（`store.seedStatement`），并在标题加序号。这是"会丢失用户输入"的操作，必须特殊处理。
+- 每张表一个控制台：`sql:<dbId>:tbl:<table>`；双击只追加基础查询，不新开编号副本，也不覆盖已有内容。代码工作区跳转来的 Mapper SQL 用 `sql:<dbId>:code:<title>`，同名方法再次跳转聚焦同一标签并只追加不重复的块。
 
 ### 快捷键
 

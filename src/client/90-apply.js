@@ -123,6 +123,12 @@ function apply(ctx) {
     inject: () => ({ store, translate }),
   }, DwFooterAction)), 'dsh-data-window: footer action')
 
+  ctx.effect(() => dwInstallBridge({
+    store,
+    translate,
+    layout: () => layoutRef.current,
+  }), 'dsh-data-window: code workspace bridge')
+
   ctx.effect(() => ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
     id: `${DW_NS}:settings`,

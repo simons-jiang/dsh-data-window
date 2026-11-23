@@ -48,6 +48,46 @@ export class DataController {
     this.pending = new Map()
   }
 
+  /**
+   * Which configured databases contain a table.
+   *
+   * The code workspace only knows the table name from `@TableName`; resolving it
+   * here keeps the browser from guessing. Only the project's own databases are
+   * searched, one `information_schema` probe each.
+   */
+  async findTable(payload = {}) {
+    const root = typeof payload.root === 'string' ? payload.root.trim() : ''
+    if (root === '' || !isAbsolute(root)) throw new RouteFailure(400, 'invalid-root', 'workspace root must be an absolute path')
+    const table = typeof payload.table === 'string' ? payload.table.trim() : ''
+    if (table === '') throw new RouteFailure(400, 'invalid-table', 'table name is required')
+    const schema = typeof payload.schema === 'string' ? payload.schema.trim() : ''
+    const discovered = await this.discover({ root })
+    const candidates = []
+    for (const environment of Array.isArray(discovered.environments) ? discovered.environments : []) {
+      for (const instance of Array.isArray(environment.instances) ? environment.instances : []) {
+        for (const database of Array.isArray(instance.databases) ? instance.databases : []) {
+          const name = String(database.name ?? '')
+          if (name === '') continue
+          if (schema !== '' && name !== schema) continue
+          try {
+            if (await this.gateway.hasTable(database.id, name, table)) {
+              candidates.push({
+                dbId: database.id,
+                database: name,
+                env: environment.env,
+                envLabel: environment.label ?? environment.env,
+                instanceLabel: instance.label ?? '',
+              })
+            }
+          } catch (error) {
+            void error
+          }
+        }
+      }
+    }
+    return { root, table, schema, candidates }
+  }
+
   /** Re-read the workspace configuration, or serve it from the cache. */
   async discover(payload = {}) {
     const root = typeof payload.root === 'string' ? payload.root.trim() : ''
@@ -128,6 +168,8 @@ export class DataController {
         return this.gateway.listColumns(payload.id, payload.table)
       case 'schema':
         return this.gateway.schemaMap(payload.id)
+      case 'findTable':
+        return this.findTable(payload)
       case 'consoles':
         return this.consoles.load(payload.root)
       case 'saveConsoles':

@@ -28,6 +28,7 @@ DataGrip 风格的 DSH 数据库窗口插件。本文件是这个工作区的**�
 | `locale/{en,zh}.json` | 显示名（`meta`）+ 全部界面文案，客户端把它内联进 bundle |
 | `test/ui-verify.mjs` | CDP 驱动的界面验证脚本（真实鼠标/键盘） |
 | `docs/screenshots/` | 验证留档（工作台、建表语句） |
+| `docs/BRIDGE.md` | 与代码工作区（`dsh-ide-window`）的事件桥契约：能力标记、请求/回执、动作与失败码 |
 
 ## 开发循环
 

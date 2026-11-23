@@ -841,6 +841,46 @@ function dwCreateStore(translate) {
     },
 
     /**
+     * Open a console from the code workspace with a statement already pasted.
+     *
+     * Keyed by the caller's title, so jumping to the same mapper method twice
+     * focuses the same tab. Only appends: the user's existing text is never
+     * replaced, and the same block is not pasted twice.
+     */
+    openSqlConsole(input) {
+      const sql = String(input?.sql ?? '').trim()
+      if (sql === '' || typeof input?.dbId !== 'string' || input.dbId === '') return undefined
+      const title = String(input.title ?? '').trim() || 'SQL'
+      const id = `sql:${input.dbId}:code:${encodeURIComponent(title)}`
+      const block = `-- ${title}\n${sql}`
+      const existing = state.tabs.find((tab) => tab.id === id)
+      if (existing !== undefined) {
+        const current = String(existing.sql ?? '').replace(/\s+$/, '')
+        const next = current === '' ? block : current.includes(block) ? current : `${current}\n\n${block}`
+        patch({ tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, sql: next } : tab)) })
+        store.setActiveTab(id)
+        scheduleConsoles()
+        return state.tabs.find((tab) => tab.id === id)
+      }
+      const tab = {
+        id,
+        kind: 'sql',
+        title,
+        env: input.env ?? '',
+        subtitle: [input.env, input.instanceLabel].filter((part) => typeof part === 'string' && part !== '').join(' · '),
+        dbId: input.dbId,
+        database: input.database ?? '',
+        instanceLabel: input.instanceLabel ?? '',
+        sql: block,
+        result: undefined,
+        error: '',
+      }
+      patch({ tabs: [...state.tabs, tab], activeTab: id })
+      scheduleConsoles()
+      return tab
+    },
+
+    /**
      * Open the DDL of one table.
      *
      * Requirement: the create statement is one keystroke away. The tab is keyed by

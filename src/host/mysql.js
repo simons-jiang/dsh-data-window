@@ -471,6 +471,18 @@ export class DataGateway {
     }
   }
 
+  /** Whether one schema contains a table; used by the code-workspace bridge. */
+  async hasTable(id, schema, table) {
+    const result = await this.run(
+      id,
+      `SELECT 1 FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = ${sqlString(schema)} AND TABLE_NAME = ${sqlString(table)}
+        LIMIT 1`,
+      { limit: 1 },
+    )
+    return result.rowCount > 0
+  }
+
   /**
    * Count the rows of one statement without touching its filters.
    *

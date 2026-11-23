@@ -23,6 +23,10 @@
 
 ### Added
 
+- The data window answers the code workspace's bridge: `openTable` opens/focuses a
+  table's console, resolves the owning database through `findTable`, and runs the
+  base query; `openSql` pastes a mapper statement without running it. The contract
+  is versioned and documented in `docs/BRIDGE.md`.
 - The settings page has a dedicated **Shortcuts** group. The open shortcut is
   editable (record a new combination, reset to ⌘3 / Ctrl+3) and stored per browser.
 - The data window follows the palette chosen in `dsh-ide-window` through the same
