@@ -32,13 +32,13 @@
 
 本机 Nacos 快照
   ~/nacos/config/fixed-<server>-dev1_nacos/snapshot-tenant/dev1/${group}/demo-order-service
-    spring.datasource.url      = jdbc:mysql://${yibuyun.dbs.mysql-master}/demo_order
-    spring.datasource.username = ${yibuyun.dbs.demo_order_service.username}
-    spring.datasource.password = ${yibuyun.dbs.demo_order_service.passwd}
+    spring.datasource.url      = jdbc:mysql://${acme.dbs.mysql-master}/demo_order
+    spring.datasource.username = ${acme.dbs.demo_order_service.username}
+    spring.datasource.password = ${acme.dbs.demo_order_service.passwd}
 
-  ~/nacos/config/…/dev1/${group}/yunwei-db.yml
-    yibuyun.dbs.mysql-master = mysql.internal.example.com:3306          ← 主机别名 → 真实地址
-    yibuyun.dbs.demo_order_service:
+  ~/nacos/config/…/dev1/${group}/<定义这些变量的 data-id>（示例 yunwei-db.yml，名字由项目决定）
+    acme.dbs.mysql-master = mysql.internal.example.com:3306          ← 主机别名 → 真实地址
+    acme.dbs.demo_order_service:
       username: app_user
       passwd: …                                                          ← 按"库名"给的凭据
 ```
@@ -125,23 +125,29 @@ discover(root, {nacosHome, groups, envOrder}):
   servers   = 项目配置里 nacos.*.server-addr 的主机名
 
   for 每个 snapshot:
-      vars = 合并该 tenant 下各 group 的 yunwei-db.yml（扁平化 dotted map）
-      if vars 为空: skip
+      projectFiles = 该 tenant 下 data-id ∈ appNames 的文件（带不带 .yml 都认）
+      if projectFiles 没有任何 datasource: skip
+      needed = 这些 datasource 的 url/username/password 里引用的 ${…} 键
+      vars = {}
+      反复扫描同 group 的其它 data-id（同组优先）：
+          合并"定义了 needed 中某个键"的文件（扁平化 dotted map），
+          并把它值里新出现的 ${…} 键加入 needed，直到不再有新文件命中
+      项目自己 data-id 里的变量也参与解析（自包含的项目无需外部文件）
       candidate = {env, cache, serverMatch: 目录名含 servers 之一}
-      for 每个 group、每个文件:
-          if 文件名（去扩展名）∈ appNames 且含 jdbc:mysql:// 的 datasource:
-              解析 url → host/port/schema；解析 username/password 占位符
-              按 (host,port) 归并成实例，库挂到实例下
-      若一个库都没解析到：退化成该环境 yunwei-db.yml 里声明的全部实例（可浏览模式）
+      对每个 datasource:
+          用 vars 解析 url → host/port/schema；解析 username/password
+          按 (host,port) 归并成实例，库挂到实例下
+          实例别名 = 项目 URL 模板里那个占位符的最后一段（`${a.b.mysql-main}` → `mysql-main`）
+      没有项目 datasource 指向的实例不进树
 
   同名 env 的多个 candidate：serverMatch > 库多 > 目录名字典序
 
-  过滤：已经解析出库的环境，丢掉没有库的实例（避免把无关集群列出来）
+  过滤：只保留库数 > 0 的实例；一个实例都没有的环境整条丢掉
   排序：envOrder（默认 dev1/dev/qa2/qa1/uat/uat3/test/staging/prod）→ 名字
   产出 targets: Map<id, {host, port, user, password, database, env}>
 ```
 
-"退化成声明实例"这一步是刻意的：`sqlWorkspace`、`杂项` 这种没有数据源配置的目录，如果什么都不显示，工具在这些工作区里就是废的。退化后仍能展开实例 → 拉全部库 → 查。
+早期为了照顾 `sqlWorkspace`、`杂项` 这类没有数据源配置的目录，这里还会退化成列出快照里声明的全部实例。**这一版删掉了**：那些实例属于别的项目，账号也对不上——实测出现 `Access denied`（把共享文件里最常用的账号套到另一套实例上）和 `ENOTFOUND`（另一套集群里只在内网可解析的短名），树里还混进另一套集群的主机。现在工作区没有本项目数据源就什么都不列，空状态说明原因；某个实例上还有哪些库，用已列出的实例行上的「列出全部库」。
 
 ---
 
@@ -167,7 +173,7 @@ discover(root, {nacosHome, groups, envOrder}):
 - 位置：`$DSH_HOME/storages/dsh-data-window/discovery.json`，0600。
 - 键：工作区绝对路径。
 - 值：`{payload, targets[], fingerprintPaths[], fingerprint, version}`。
-- 失效：**文件指纹**（每个读过的配置文件 + 每个环境的 `yunwei-db.yml`，取 mtime+size）+ **插件版本**。任一变化就重解析。
+- 失效：**文件指纹**（每个读过的配置文件，含定义占位符的那些 data-id，取 mtime+size）+ **插件版本**。任一变化就重解析。
 - 写入：临时文件 + `rename`，崩溃不会留下半截 JSON。
 
 两个设计点值得记住：
@@ -220,7 +226,7 @@ Host 返回的是机器码（`write-keyword`、`read-only-violation`）。用户
 |---|---|---|
 | 没有工作区 | `root === ''` | 说明怎么开始 + 选择工作区 |
 | 有工作区但解析失败 | `phase === 'error'` | 显示错误原文 |
-| 解析成功但一个库都没有 | `environments === []` / `databaseCount === 0` | 说明"这些环境来自 yunwei-db.yml，不是本项目的数据源"，并给"列出第一个实例的全部库"按钮 |
+| 解析成功但没有本项目的数据源 | `environments === []` | 说明窗口只读本项目自己的 `spring.datasource`，并提示检查应用名与 Nacos 快照；不再列出别处的实例 |
 | 正常但没选库 | 有 tab 之前 | "选择一个数据库" + 操作提示 |
 
 另外两条：
@@ -254,6 +260,8 @@ Host 返回的是机器码（`write-keyword`、`read-only-violation`）。用户
 | 每个库一个独立 `connection` | 174 个库 × 池 = 连接爆炸；按 (host,port,user,database) 池化，且只有打开过的库才建池 |
 | 缓存里不存密码，每次现解析 | 每点一次展开都要重读整棵 nacos，且解析失败时体验退化；0600 + 与源文件同权限等级的缓存是等价取舍 |
 | 发现结果只按 `env` 合并多个 nacos | 见第 2 节：会把另一套集群的主机混进来 |
+| 用快照里其它 data-id 声明的全部实例兜底 | 混进其它项目的实例，账号只能猜（`Access denied` / `ENOTFOUND`），树很乱；改为只列本项目数据源声明的实例 |
+| 写死运维数据源文件名（`yunwei-db.yml`） | 别的项目把同样的变量放在 `db.yml` / `datasource.yml` / 自定义 data-id 里就解析不到；改为按占位符找定义它的文件 |
 
 ---
 
@@ -262,6 +270,9 @@ Host 返回的是机器码（`write-keyword`、`read-only-violation`）。用户
 | 项 | 方式 | 状态 |
 |---|---|---|
 | 配置解析（3 级引用、多缓存去重） | Node 直接跑 `discoverProject` | 已验（真实 nacos 缓存，4 环境） |
+| 只列本项目声明的实例 | `discoverProject` 分别跑无数据源工作区与真实项目 | 已验（无数据源：environments=0；项目：dev1 2 库 2 实例、qa2 3 库） |
+| 不依赖运维文件名 | 临时快照：变量写在 `team-db.yml`，项目 URL 引用 `${acme.dbs.main-db}` | 已验（解析出 10.0.0.9:3307、别名 `main-db`，只读该文件；改文件后缓存失效） |
+| 自包含项目 | 数据源与变量都在 app data-id 内 | 已验（无外部变量文件也能解析） |
 | 发现缓存命中/失效 | `DataController` 连续两次 discover | 已验（第二次 `cached=true`） |
 | 实例/库/表/字段/DDL/查询 | 对着 dev1 `demo_order` 真跑 | 已验（174 库 / 65 表 / DDL / 33ms 查询） |
 | 只读四层 | 构造 `UPDATE`、`SELECT 1; DROP`、`WITH … DELETE` | 已验（均被拒，且服务端也拒绝写） |
@@ -269,7 +280,7 @@ Host 返回的是机器码（`write-keyword`、`read-only-violation`）。用户
 | 行数截断判定 | `limit=2` 对恰好 2 行 / 3 行 | 已验（false / true） |
 | 插件槽位注册 | `cordis_inspect_query` Slots | 已验（main + footer 均 active） |
 | Host 路由存活与围栏 | 无令牌 POST 应得 403 自家 JSON | 已验 |
-| **界面渲染 / 交互观感** | 人工在应用里看 | **未验**（agent 无法登录页面） |
+| 界面渲染 / 交互观感 | CDP 驱动真实鼠标键盘 + 截图 | 已验（见 CHANGELOG 0.1.0） |
 
 ---
 

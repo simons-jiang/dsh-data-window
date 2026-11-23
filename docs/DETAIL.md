@@ -11,11 +11,11 @@ bootstrap.yml            spring.application.name = demo-order-service
                          spring.cloud.nacos.config.server-addr = ${nacos.config-server:https://nacos-dev...}
        ↓
 ~/nacos/config/.../snapshot-tenant/dev1/${group}/demo-order-service
-                         spring.datasource.url = jdbc:mysql://${yibuyun.dbs.mysql-master}/demo_order
+                         spring.datasource.url = jdbc:mysql://${acme.dbs.mysql-master}/demo_order
        ↓
-~/nacos/config/.../snapshot-tenant/dev1/${group}/yunwei-db.yml
-                         yibuyun.dbs.mysql-master = mysql.internal.example.com:3306
-                         yibuyun.dbs.demo_order_service.username / .passwd
+~/nacos/config/.../snapshot-tenant/dev1/${group}/<放变量的 data-id>（示例 yunwei-db.yml，名字由项目决定）
+                         acme.dbs.mysql-master = mysql.internal.example.com:3306
+                         acme.dbs.demo_order_service.username / .passwd
 ```
 
 窗口按同样的顺序解析，所以：
@@ -23,6 +23,8 @@ bootstrap.yml            spring.application.name = demo-order-service
 - **环境**来自本地 Nacos 快照（`dev1` / `qa2` / `uat3` …）；
 - 多个 Nacos 缓存都有同名租户时，以项目 `bootstrap.yml` 里 `server-addr` 指向的那个缓存为准，不会把另一套集群的主机混进来；
 - 解析结果按工作区缓存到 `$DSH_HOME/storages/dsh-data-window/discovery.json`（权限 0600），配置文件的时间戳变了才重新解析。
+
+**只列本项目声明的数据源**：快照里其它 data-id 声明的实例不会进树——它们属于别的项目，本窗口也没有它们的账号。占位符在哪个文件里定义由项目自己决定（`yunwei-db.yml`、`db.yml`、`datasource.yml` 或别的名字都行），窗口按占位符去找定义它的 data-id，不假定文件名；工作区自己没有 `spring.datasource` 时，树是空的，并提示检查应用名与 Nacos 快照。
 
 ## 功能
 
@@ -45,7 +47,7 @@ bootstrap.yml            spring.application.name = demo-order-service
 | 键 | 默认 | 说明 |
 |---|---|---|
 | `nacosHome` | `~/nacos` | Nacos 本地缓存根目录 |
-| `groups` | 全部 | 只读这些 group，例如 `[yibuyun]` |
+| `groups` | 全部 | 只读这些 group，例如 `[business]` |
 | `envOrder` | `dev1, dev, qa2, qa1, ...` | 环境在树里的排序 |
 | `connectTimeoutMs` | `8000` | 建连超时 |
 | `statementTimeoutMs` | `60000` | 单条语句超时（`max_execution_time`），`0` 关闭 |
@@ -59,11 +61,11 @@ bootstrap.yml            spring.application.name = demo-order-service
 
 ![建表语句](screenshots/ddl.png)
 
-> 截图裁掉了宿主的侧栏与 Git 面板，实例主机地址已涂黑。
+> 截图裁掉了宿主的侧栏与 Git 面板。示例是一个 `demo-shop` 演示工作区（`demo` 环境 / `mysql-main` 实例 / `mysql` 系统库，经本地 `127.0.0.1` 转发），不含真实主机、业务库表或个人信息。
 
 ## 已知边界
 
 - 只支持 MySQL / MariaDB（读的是 `jdbc:mysql://` 与 `information_schema`）。
-- 需要本机已有 Nacos 快照缓存；服务一次都没启动过时，树里只能列出实例、看不到项目配置的库。
+- 需要本机已有 Nacos 快照缓存，并且工作区自己的配置里有 `spring.datasource`；缺一个，树就是空的（不会再拿快照里其它 data-id 声明的实例兜底）。
 - 账号密码由工作区配置提供，窗口不保存第二份；缓存文件里含着解析结果，权限 0600，仅当前用户可读。
 - 同一时刻只连一个实例的库：跨库查询请用 `库名.表名`。

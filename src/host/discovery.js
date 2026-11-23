@@ -1,21 +1,31 @@
 /**
  * Workspace configuration discovery.
  *
- * A project never spells out its database host: `application.yml` names a Nacos
- * data-id, and the datasource block inside it references `yibuyun.dbs.<alias>`
- * placeholders that only exist in the operations data-id `yunwei-db.yml`. Both
- * halves are cached locally by the Nacos client under `~/nacos/config`, so the
- * plugin resolves the chain the same way the JVM does:
+ * A project rarely spells out its database host: the datasource block inside its
+ * Nacos data-id references `${some.namespace.<alias>}` placeholders whose values
+ * live in another data-id of the same snapshot. Both halves are cached locally by
+ * the Nacos client under `~/nacos/config`, so the plugin resolves the chain the
+ * same way the JVM does:
  *
  *   project bootstrap.yml  → spring.application.name
- *   nacos snapshot         → <group>/<app-name>        (jdbc url, schema name)
- *   nacos snapshot         → <group>/yunwei-db.yml     (host:port, username, passwd)
+ *   nacos snapshot         → <group>/<app-name>   (jdbc url, schema name)
+ *   nacos snapshot         → any other YAML file  (the values the placeholders need)
+ *
+ * The data-id that carries those values is a per-project decision: `yunwei-db.yml`
+ * in some repositories, `db.yml`, `datasource.yml` or an ops-specific name in
+ * others. Nothing here assumes a file name: every YAML file in the group is a
+ * candidate, and the placeholders in the project's own datasource decide which
+ * values matter.
  *
  * The result is one entry per environment, which is what the UI shows as
  * "环境 → 实例 → 库".
+ *
+ * Only the instances and databases this project's own `spring.datasource`
+ * entries name are returned. Hosts declared by other means never reach the tree,
+ * because those belong to other projects and this project has no account for them.
  */
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { homedir } from 'node:os'
 import { flattenYaml, parseYaml, readVariables, resolveTemplate } from './yaml.js'
@@ -28,9 +38,6 @@ const MAX_DEPTH = 7
 
 /** How many configuration files one project may contribute. */
 const MAX_PROJECT_FILES = 60
-
-/** The data-id that carries hosts and credentials in every group. */
-const CREDENTIAL_DATA_ID = 'yunwei-db'
 
 /** Schemas nobody browses in a work viewer. */
 const SYSTEM_SCHEMAS = new Set(['information_schema', 'mysql', 'performance_schema', 'sys', '__recycle_bin__'])
@@ -148,7 +155,7 @@ export function nacosSnapshots(home) {
   return snapshots
 }
 
-/** Group folders (`yibuyun`, `scf`, …) inside one snapshot. */
+/** Group folders (`business`, `ops`, …) inside one snapshot. */
 function groupDirectories(snapshotDir, groups) {
   let entries = []
   try {
@@ -161,19 +168,6 @@ function groupDirectories(snapshotDir, groups) {
   return entries
     .filter((entry) => allowed === undefined || allowed.has(entry.name))
     .map((entry) => ({ group: entry.name, dir: join(snapshotDir, entry.name) }))
-}
-
-/** Find `<data-id>` or `<data-id>.yml` inside a group folder. */
-function dataIdFile(groupDir, dataId) {
-  const candidates = [join(groupDir, dataId), join(groupDir, `${dataId}.yml`), join(groupDir, `${dataId}.yaml`)]
-  for (const candidate of candidates) {
-    try {
-      if (statSync(candidate).isFile()) return candidate
-    } catch (error) {
-      void error
-    }
-  }
-  return undefined
 }
 
 /** Every `jdbc:mysql://host:port/schema` datasource a document set declares. */
@@ -221,54 +215,36 @@ export function parseJdbcUrl(url) {
   return { host, port, schema }
 }
 
-/** Turn `host:3306` into its parts; a bare host means port 3306. */
-function parseHostAlias(value) {
-  const text = String(value).trim()
-  const separator = text.lastIndexOf(':')
-  if (separator > 0 && /^[0-9]+$/.test(text.slice(separator + 1))) {
-    return { host: text.slice(0, separator), port: Number(text.slice(separator + 1)) }
+/** The variable keys a template references, without their `:default` parts. */
+function placeholderKeys(text) {
+  const keys = []
+  for (const match of String(text ?? '').matchAll(/\$\{([^}]+)\}/g)) {
+    const key = match[1].split(':')[0].trim()
+    if (key !== '' && !keys.includes(key)) keys.push(key)
   }
-  return { host: text, port: 3306 }
+  return keys
 }
 
-/** The credential pair used most often in one environment's `yunwei-db.yml`. */
-function defaultCredentials(variables) {
-  const counts = new Map()
-  for (const [key, value] of variables) {
-    if (!/\.username$/.test(key) || typeof value !== 'string' || value.includes('${')) continue
-    const passwordKey = `${key.slice(0, -'.username'.length)}.passwd`
-    const password = variables.get(passwordKey) ?? variables.get(`${key.slice(0, -'.username'.length)}.password`)
-    if (typeof password !== 'string' || password.includes('${')) continue
-    const token = `${value}\u0000${password}`
-    const current = counts.get(token) ?? { user: value, password, count: 0 }
-    current.count += 1
-    counts.set(token, current)
-  }
-  let best
-  for (const candidate of counts.values()) {
-    if (best === undefined || candidate.count > best.count) best = candidate
-  }
-  return best
-}
+/** Placeholders whose last segment names nothing a user would recognise. */
+const GENERIC_PLACEHOLDER_NAMES = new Set(['host', 'hostname', 'url', 'addr', 'address', 'server', 'endpoint', 'port'])
 
-/** Hosts an environment's `yunwei-db.yml` declares, in declaration order. */
-function declaredInstances(variables) {
-  const instances = []
-  const seen = new Set()
-  for (const [key, value] of variables) {
-    if (typeof value !== 'string') continue
-    const match = /^yibuyun\.dbs\.([^.]+)$/.exec(key)
-    if (match === null) continue
-    if (!/^[A-Za-z0-9][A-Za-z0-9.-]*$/.test(value.split(':')[0])) continue
-    if (!/^[\w.-]+(:\d+)?$/.test(value)) continue
-    const alias = match[1]
-    const parsed = parseHostAlias(value)
-    const identity = `${parsed.host}:${parsed.port}`
-    if (seen.has(identity)) continue
-    seen.add(identity)
-    instances.push({ alias, ...parsed })
-  }
-  return instances
+/**
+ * The alias a project gives a host, read from its own URL template.
+ *
+ * `jdbc:mysql://${acme.dbs.mysql-main}/shop` names the host `mysql-main`. Nothing
+ * else has to know where that variable is defined or how the operations team names
+ * their file, which is why this replaced the old fixed-namespace alias scan.
+ */
+function hostAliasOf(template) {
+  const match = /^jdbc:mysql:\/\/([^/?#]+)\//i.exec(String(template ?? '').trim())
+  if (match === null) return undefined
+  const authority = match[1].split(',')[0].trim().replace(/:\d+$/, '')
+  const placeholder = /^\$\{([^}:]+)(?::[^}]*)?\}$/.exec(authority)
+  if (placeholder === null) return undefined
+  const alias = placeholder[1].split('.').filter(Boolean).pop()
+  if (alias === undefined || alias === '') return undefined
+  if (GENERIC_PLACEHOLDER_NAMES.has(alias.toLowerCase())) return undefined
+  return alias
 }
 
 /** Build the connection object the MySQL layer expects. */
@@ -353,30 +329,108 @@ export function discoverProject(root, options = {}) {
     const groupDirs = groupDirectories(snapshot.dir, groups)
     if (groupDirs.length === 0) continue
 
-    // Credentials are published per group; merging is last-wins, which matches how
-    // one environment configures every service the same way.
-    const variables = new Map()
-    const credentialFiles = []
+    // The project's data-ids are the ones named after `spring.application.name`;
+    // every other YAML file in the groups is a candidate variable source. Which
+    // data-id carries the host and credential map differs per project
+    // (`yunwei-db.yml` in some, `db.yml` / `datasource.yml` / … in others), so no
+    // file name is singled out: the placeholders in the project's own configuration
+    // decide which values are needed.
+    const projectFiles = []
+    const variableFiles = []
     for (const groupDir of groupDirs) {
-      const file = dataIdFile(groupDir.dir, CREDENTIAL_DATA_ID)
-      if (file === undefined) continue
+      let entries = []
+      try {
+        entries = readdirSync(groupDir.dir, { withFileTypes: true }).filter((entry) => entry.isFile())
+      } catch (error) {
+        void error
+        continue
+      }
+      for (const entry of entries) {
+        const name = entry.name
+        // Nacos keeps a data-id either as `name` or as `name.yml`; both spellings
+        // occur in the same snapshot, so neither may be assumed.
+        if (!/\.(ya?ml)$/i.test(name) && name.includes('.')) continue
+        const dataId = name.replace(/\.(ya?ml)$/i, '')
+        const file = join(groupDir.dir, name)
+        const item = { file, group: groupDir.group }
+        if (applicationNames.includes(dataId)) projectFiles.push(item)
+        else variableFiles.push(item)
+      }
+    }
+
+    // Read the project's own files first; without a datasource there is nothing to
+    // resolve and no reason to read the rest of the group.
+    const projectTexts = []
+    for (const { file } of projectFiles) {
       const text = readText(file)
       if (text === undefined) continue
-      credentialFiles.push(file)
-      for (const [key, value] of readVariables(text)) variables.set(key, value)
+      const datasources = datasourceEntries(text)
+      if (datasources.length === 0) continue
+      projectTexts.push({ file, text, datasources })
     }
-    if (variables.size === 0) continue
+    if (projectTexts.length === 0) continue
+
+    // Only files that define a placeholder the project actually references are
+    // read: a group holds every service's data-id, and reading them all would drag
+    // other services' values into the picture. One placeholder's value can name
+    // another key, so the search repeats until no new file matches.
+    const needed = new Set()
+    for (const { datasources } of projectTexts) {
+      for (const datasource of datasources) {
+        for (const value of [datasource.url, datasource.username, datasource.password]) {
+          for (const key of placeholderKeys(value)) needed.add(key)
+        }
+      }
+    }
+
+    // A value defined beside the project wins over the same key in another group:
+    // one environment often carries several teams' maps.
+    const projectGroups = new Set(projectFiles.map((entry) => entry.group))
+    const orderedFiles = [
+      ...variableFiles.filter((entry) => projectGroups.has(entry.group)),
+      ...variableFiles.filter((entry) => !projectGroups.has(entry.group)),
+    ]
+    const parsedFiles = new Map()
+    const variablesOf = (file) => {
+      if (!parsedFiles.has(file)) {
+        const text = readText(file)
+        parsedFiles.set(file, text === undefined ? undefined : readVariables(text))
+      }
+      return parsedFiles.get(file)
+    }
+    const variables = new Map()
+    const readVariableFiles = []
+    let merged = true
+    while (merged && needed.size > 0) {
+      merged = false
+      for (const { file } of orderedFiles) {
+        if (readVariableFiles.includes(file)) continue
+        const values = variablesOf(file)
+        if (values === undefined || values.size === 0) continue
+        let relevant = false
+        for (const key of values.keys()) {
+          if (!needed.has(key)) continue
+          relevant = true
+          break
+        }
+        if (!relevant) continue
+        merged = true
+        readVariableFiles.push(file)
+        for (const [key, value] of values) {
+          if (!variables.has(key)) variables.set(key, value)
+          for (const referenced of placeholderKeys(value)) needed.add(referenced)
+        }
+      }
+    }
 
     const candidate = {
       env: snapshot.env,
       cache: snapshot.cache,
       serverMatch: servers.some((server) => snapshot.cache.includes(server)),
-      credentialFile: credentialFiles[0],
+      variableFiles: [...new Set(readVariableFiles)],
       sources: [],
       instances: new Map(),
       configuredDatabases: [],
-      declared: declaredInstances(variables),
-      defaultCredentials: defaultCredentials(variables),
     }
 
     // The environment is part of the identity: one RDS host carries several
@@ -391,83 +445,51 @@ export function discoverProject(root, options = {}) {
       return created
     }
 
-    for (const groupDir of groupDirs) {
-      let files = []
-      try {
-        files = readdirSync(groupDir.dir, { withFileTypes: true }).filter((entry) => entry.isFile())
-      } catch (error) {
-        void error
-        continue
-      }
-      for (const entry of files) {
-        const dataId = entry.name.replace(/\.(ya?ml)$/i, '')
-        if (dataId === CREDENTIAL_DATA_ID) continue
-        if (!applicationNames.includes(dataId)) continue
-        const file = join(groupDir.dir, entry.name)
-        const text = readText(file)
-        if (text === undefined) continue
-        const datasources = datasourceEntries(text)
-        if (datasources.length === 0) continue
-        candidate.sources.push(file)
-        for (const datasource of datasources) {
-          const url = resolveTemplate(datasource.url, variables)
-          const target = parseJdbcUrl(url)
-          if (target === undefined) {
-            warnings.push(`unparsed-jdbc-url:${datasource.prefix}`)
-            continue
-          }
-          if (target.schema === '') continue
-          const user = resolveTemplate(String(datasource.username ?? ''), variables).trim()
-          const password = resolveTemplate(String(datasource.password ?? ''), variables)
-          const database = {
-            name: target.schema,
-            user,
-            password,
-            configured: true,
-            source: file,
-            alias: datasource.prefix,
-            id: `d:${stableId(candidate.env, target.host, String(target.port), user, target.schema)}`,
-          }
-          const instance = ensureInstance(target.host, target.port)
-          if (instance.databases.some((existing) => existing.name === database.name)) continue
-          instance.databases.push(database)
-          candidate.configuredDatabases.push(database)
-          // The first datasource of an instance names the credential the viewer
-          // uses when it opens a database this project's config never mentioned.
-          if (instance.user === undefined && user !== '') {
-            instance.user = user
-            instance.password = password
-          }
+    for (const { file, text, datasources } of projectTexts) {
+      // A project that keeps its values inline still resolves, and a key it states
+      // itself wins over the same key in a shared file.
+      const context = new Map(variables)
+      for (const [key, value] of readVariables(text)) context.set(key, value)
+      candidate.sources.push(file)
+      for (const datasource of datasources) {
+        const url = resolveTemplate(datasource.url, context)
+        const target = parseJdbcUrl(url)
+        if (target === undefined) {
+          warnings.push(`unparsed-jdbc-url:${datasource.prefix}`)
+          continue
+        }
+        if (target.schema === '') continue
+        const user = resolveTemplate(String(datasource.username ?? ''), context).trim()
+        const password = resolveTemplate(String(datasource.password ?? ''), context)
+        const database = {
+          name: target.schema,
+          user,
+          password,
+          configured: true,
+          source: file,
+          alias: datasource.prefix,
+          id: `d:${stableId(candidate.env, target.host, String(target.port), user, target.schema)}`,
+        }
+        const instance = ensureInstance(target.host, target.port)
+        if (instance.databases.some((existing) => existing.name === database.name)) continue
+        const alias = hostAliasOf(datasource.url)
+        if (alias !== undefined && !instance.aliases.includes(alias)) instance.aliases.push(alias)
+        instance.databases.push(database)
+        candidate.configuredDatabases.push(database)
+        // The first datasource of an instance names the credential the viewer
+        // uses when it opens a database this project's config never mentioned.
+        if (instance.user === undefined && user !== '') {
+          instance.user = user
+          instance.password = password
         }
       }
     }
 
-    // The name a user recognises is the alias `yunwei-db.yml` gives the host
-    // (`mysql8-master`), not the configuration path that pointed at it. Several
-    // aliases can name the same host, so the primary one is the shortest.
+    // The name a user recognises is the one its own URL gives the host
+    // (`mysql-main`); several aliases can point at one host, shortest wins.
     for (const instance of candidate.instances.values()) {
-      const aliases = candidate.declared
-        .filter((declared) => declared.host === instance.host && declared.port === instance.port)
-        .map((declared) => declared.alias)
-        .sort((left, right) => left.length - right.length)
-      instance.aliases = aliases.length > 0 ? aliases : [instance.host.split('.')[0]]
-    }
-
-    // A repository that keeps its Nacos documents under `docs/nacos` may not match
-    // the app name at all. Falling back to the environment's declared hosts keeps
-    // the tree usable for those projects and for plain SQL workspaces.
-    if (candidate.instances.size === 0) {
-      for (const declared of candidate.declared) {
-        const instance = ensureInstance(declared.host, declared.port)
-        if (!instance.aliases.includes(declared.alias)) instance.aliases.push(declared.alias)
-      }
-    }
-    if (candidate.defaultCredentials !== undefined) {
-      for (const instance of candidate.instances.values()) {
-        if (instance.user !== undefined) continue
-        instance.user = candidate.defaultCredentials.user
-        instance.password = candidate.defaultCredentials.password
-      }
+      instance.aliases.sort((left, right) => left.length - right.length)
+      if (instance.aliases.length === 0) instance.aliases.push(instance.host.split('.')[0])
     }
 
     const list = candidatesByEnv.get(candidate.env) ?? []
@@ -498,11 +520,11 @@ export function discoverProject(root, options = {}) {
   for (const [env, candidates] of candidatesByEnv) {
     candidates.sort(compareCandidates)
     const best = candidates[0]
-    // Once a project resolved real databases, an environment's unrelated hosts are
-    // noise: the tree shows the instances this project actually uses.
+    // The tree shows only the instances this project's own configuration names,
+    // and only when that configuration also supplied a usable account.
     const instances = [...best.instances.values()]
       .filter((instance) => typeof instance.user === 'string')
-      .filter((instance) => best.configuredDatabases.length === 0 || instance.databases.length > 0)
+      .filter((instance) => instance.databases.length > 0)
     if (instances.length === 0) continue
     chosen.push({ candidate: best, instances })
   }
@@ -529,7 +551,7 @@ export function discoverProject(root, options = {}) {
       env: environment.env,
       label: environment.env,
       cacheServerMatch: environment.serverMatch,
-      credentialFile: environment.credentialFile,
+      variableFiles: environment.variableFiles,
       sources: [...new Set(environment.sources)],
       databaseCount: environment.configuredDatabases.length,
       instances: entry.instances.map((instance) => {
@@ -588,4 +610,4 @@ export function discoverProject(root, options = {}) {
   }
 }
 
-export { connectionOf, parseHostAlias, SYSTEM_SCHEMAS }
+export { connectionOf, hostAliasOf, SYSTEM_SCHEMAS }

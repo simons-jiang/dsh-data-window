@@ -19,7 +19,6 @@ window.__ModuleLoader__.load({
     "clearFilter": "Clear the filter",
     "retry": "Failed — click to retry",
     "browseAllDatabases": "List every database on this instance",
-    "browseFirstInstance": "List every database on the first instance",
     "closeTab": "Close",
     "run": "Run",
     "running": "Running",
@@ -60,13 +59,11 @@ window.__ModuleLoader__.load({
     "menuEmpty": "No action",
     "emptyTitle": "No database window yet",
     "emptyHint": "Open a workspace and the window reads its own configuration: the Nacos cache supplies each environment's host and credentials, and every database in it gets a SQL workbench.",
-    "emptyNoConfigTitle": "This workspace's configuration names no database",
-    "emptyNoConfigHint": "The environments below come from the local Nacos cache (yunwei-db.yml), not from this project's own data sources. Expand an instance, or use the button, to list the databases it actually holds.",
     "emptyReadyTitle": "Pick a database",
     "emptyReadyHint": "Click a database in the explorer to open its SQL workbench, or a table to see its columns. Double-click a table to open its rows.",
     "shortcutSummary": "F4 or ⌘/Ctrl + Shift + D on a table shows its create statement · ⌘/Ctrl + Enter runs the statement · every statement is read-only",
     "discovering": "Reading the workspace configuration",
-    "discoveringHint": "Looking for bootstrap.yml, the Nacos snapshot cache and its yunwei-db.yml",
+    "discoveringHint": "Looking for bootstrap.yml, the Nacos snapshot cache and the data-ids that define the placeholders",
     "logTitle": "Run log",
     "logHasError": "errors",
     "clear": "Clear",
@@ -99,11 +96,11 @@ window.__ModuleLoader__.load({
     "error.interrupted": "The statement was interrupted by the server",
     "manualWorkspace": "manual",
     "followWorkspace": "Follow the workspace",
-    "emptyNoEnvTitle": "No environment could be resolved",
-    "emptyNoEnvHint": "Nothing under the Nacos cache matched this workspace. Start the service once so the Nacos client writes its snapshot, then press Reload — or choose another directory.",
+    "emptyNoEnvTitle": "This workspace resolved no data source",
+    "emptyNoEnvHint": "The window reads only this project's own spring.datasource entries: the application name in bootstrap.yml must match a Nacos snapshot, and the data source must be a jdbc:mysql URL. Other data-ids in the snapshot are read only for the ${…} values they define — no file name is assumed — and instances declared elsewhere are never listed.",
     "warning.project-no-application-name": "The project's bootstrap.yml declares no spring.application.name, so the window matched configuration by directory name.",
     "warning.nacos-cache-missing": "No local Nacos cache was found under ~/nacos/config; start the service once so the Nacos client writes its snapshot.",
-    "warning.no-environment": "No environment could be resolved from the local Nacos cache.",
+    "warning.no-environment": "No data source declared by this project could be resolved; only databases from this project's own configuration are read.",
     "warning.unparsed-jdbc-url": "A datasource URL could not be parsed as jdbc:mysql.",
   }
   const DW_TEXT_ZH = {
@@ -117,7 +114,6 @@ window.__ModuleLoader__.load({
     "clearFilter": "清空过滤",
     "retry": "加载失败，点此重试",
     "browseAllDatabases": "列出该实例上的全部库",
-    "browseFirstInstance": "列出第一个实例上的全部库",
     "closeTab": "关闭",
     "run": "运行",
     "running": "执行中",
@@ -158,13 +154,11 @@ window.__ModuleLoader__.load({
     "menuEmpty": "无可用操作",
     "emptyTitle": "还没有打开数据库",
     "emptyHint": "打开一个工作区，窗口会读取它自己的配置：Nacos 本地缓存提供各环境的主机与账号，配置里的每个库都会得到自己的 SQL 工作台。",
-    "emptyNoConfigTitle": "这个工作区的配置里没有数据源",
-    "emptyNoConfigHint": "下面这些环境来自本机 Nacos 缓存（yunwei-db.yml），不是本项目自己声明的数据源。展开实例，或点下面的按钮，就能看到该实例上真正有哪些库。",
     "emptyReadyTitle": "选择一个数据库",
     "emptyReadyHint": "在左侧点一下库名就能打开它的 SQL 工作台，点表名可以展开字段，双击表名直接查看数据。",
     "shortcutSummary": "选中表后按 F4 或 ⌘/Ctrl + Shift + D 查看建表语句 · ⌘/Ctrl + Enter 执行语句 · 所有语句都是只读的",
     "discovering": "正在读取工作区配置",
-    "discoveringHint": "查找 bootstrap.yml、Nacos 快照缓存与其 yunwei-db.yml",
+    "discoveringHint": "查找 bootstrap.yml、Nacos 快照缓存与定义占位符的配置",
     "logTitle": "运行日志",
     "logHasError": "有错误",
     "clear": "清空",
@@ -197,11 +191,11 @@ window.__ModuleLoader__.load({
     "error.interrupted": "语句被服务端中断",
     "manualWorkspace": "手动选择",
     "followWorkspace": "跟随工作区",
-    "emptyNoEnvTitle": "没有解析出可用环境",
-    "emptyNoEnvHint": "本地 Nacos 缓存里没有与这个工作区匹配的配置。先启动一次服务让 Nacos 客户端写入快照，再点「重新读取」；也可以换一个目录。",
+    "emptyNoEnvTitle": "这个工作区没有解析到数据源",
+    "emptyNoEnvHint": "窗口只读取本项目自己的 spring.datasource 配置：先确认 bootstrap.yml 的 spring.application.name 与 Nacos 快照对得上，且配置里写的是 jdbc:mysql 地址。快照里的其它配置只用来解析 ${…} 占位符（文件名由项目决定），不会把别处的实例列进来。",
     "warning.project-no-application-name": "项目的 bootstrap.yml 没有声明 spring.application.name，窗口改为按目录名匹配配置。",
     "warning.nacos-cache-missing": "在 ~/nacos/config 下没有找到本地 Nacos 缓存；先启动一次服务，Nacos 客户端才会写入快照。",
-    "warning.no-environment": "没能从本地 Nacos 缓存中解析出可用环境。",
+    "warning.no-environment": "当前工作区没有解析到本项目自己声明的数据源（窗口只读本项目配置里的库）。",
     "warning.unparsed-jdbc-url": "有数据源地址无法解析为 jdbc:mysql。",
   }
 
@@ -1636,7 +1630,7 @@ function dwBuildTree(state, tr) {
           key: instanceKey,
           kind: 'instance',
           // The alias is the name the project's own configuration uses
-          // (`mysql8-master`), so it is the one a user recognises; the hostname is
+          // (`mysql-main`), so it is the one a user recognises; the hostname is
           // kept as the detail because it is what actually identifies the machine.
           label: instance.aliases?.[0] ?? instance.host,
           detail: `${instance.databases.length} ${tr('envDatabases')}`,
@@ -2331,7 +2325,6 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const activeTab = (state.tabs ?? []).find((tab) => tab.id === state.activeTab)
   const environments = state.environments ?? []
   const project = state.project
-  const configured = environments.reduce((total, environment) => total + (environment.databaseCount ?? 0), 0)
 
   const pickWorkspace = async () => {
     if (typeof pickDirectory !== 'function') return
@@ -2342,21 +2335,6 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     } catch (error) {
       store.pushLog('error', tr('log.pickFailed', { message: error?.message ?? error }))
     }
-  }
-
-  /** Open the first instance of the default environment and list every schema. */
-  const browseFirstInstance = () => {
-    const environment = environments[0]
-    const instance = environment?.instances?.[0]
-    if (environment === undefined || instance === undefined) return
-    store.expand(dwNodeKey('env', environment.env))
-    void store.loadAllDatabases({
-      key: dwNodeKey('inst', instance.id),
-      id: instance.id,
-      label: instance.aliases?.[0] ?? instance.host,
-      env: environment.env,
-      databases: instance.databases,
-    })
   }
 
   const toolbar = h('div', { key: 'toolbar', className: 'dw-toolbar' }, [
@@ -2435,9 +2413,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     main = h('div', { key: 'main', className: 'dw-main' }, h(DwEmpty, {
       tr,
       state,
-      configured,
       onPick: pickWorkspace,
-      onBrowse: browseFirstInstance,
     }))
   } else if (state.phase === 'loading' && environments.length === 0) {
     main = h('div', { key: 'main', className: 'dw-main' }, h('div', { className: 'dw-empty' }, [
@@ -2449,7 +2425,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     main = h('div', { key: 'main', className: 'dw-main' }, [
       h(DwTabs, { key: 'tabs', store, state, tr }),
       activeTab === undefined
-        ? h(DwEmpty, { key: 'empty', tr, state, configured, onPick: pickWorkspace, onBrowse: browseFirstInstance })
+        ? h(DwEmpty, { key: 'empty', tr, state, onPick: pickWorkspace })
         : activeTab.kind === 'ddl'
           ? h(DwDdlView, { key: activeTab.id, tab: activeTab, tr, store })
           : h(React.Fragment, { key: activeTab.id }, [
@@ -2592,7 +2568,7 @@ function dwMenuItems(node, store, tr, close) {
  * a workspace whose configuration resolved no database, and a workspace whose
  * configuration failed. Each one now says what happened and what to do next.
  */
-function DwEmpty({ tr, state, configured, onPick, onBrowse }) {
+function DwEmpty({ tr, state, onPick }) {
   const warnings = state.warnings ?? []
   const states = []
   if (state.root === '') {
@@ -2601,8 +2577,6 @@ function DwEmpty({ tr, state, configured, onPick, onBrowse }) {
     states.push({ title: tr('stateError'), hint: state.discoveryError })
   } else if ((state.environments ?? []).length === 0) {
     states.push({ title: tr('emptyNoEnvTitle'), hint: tr('emptyNoEnvHint') })
-  } else if (configured === 0) {
-    states.push({ title: tr('emptyNoConfigTitle'), hint: tr('emptyNoConfigHint') })
   } else {
     states.push({ title: tr('emptyReadyTitle'), hint: tr('emptyReadyHint') })
   }
@@ -2611,9 +2585,6 @@ function DwEmpty({ tr, state, configured, onPick, onBrowse }) {
   return h('div', { className: 'dw-empty' }, [
     h('div', { key: 't', className: 'dw-empty-title' }, current.title),
     h('div', { key: 'h', className: 'dw-empty-hint' }, current.hint),
-    state.root !== '' && configured === 0
-      ? h('button', { key: 'browse', type: 'button', className: 'dw-btn dw-btn-accent', onClick: onBrowse }, tr('browseFirstInstance'))
-      : null,
     h('div', { key: 'k', className: 'dw-empty-hint', style: { fontSize: 11.5, opacity: .8 } }, tr('shortcutSummary')),
     h('button', { key: 'b', type: 'button', className: 'dw-btn', onClick: onPick }, tr('pickWorkspace')),
     warnings.length > 0

@@ -18,7 +18,7 @@ DataGrip 风格的 DSH 数据库窗口插件。本文件是这个工作区的**�
 |---|---|
 | `index.js` | Host 入口：注册 `POST /dsh-data/rpc`、构造控制器、读 package 版本用于缓存失效 |
 | `src/host/yaml.js` | YAML 子集解析（缩进映射/列表/多文档/注释/引号），`${a.b:default}` 占位符解析 |
-| `src/host/discovery.js` | 配置发现：`bootstrap.yml` → 应用名 → Nacos 快照 → `yunwei-db.yml`，产出环境/实例/库与连接目标表 |
+| `src/host/discovery.js` | 配置发现：`bootstrap.yml` → 应用名 → Nacos 快照 → 按占位符找定义变量的 data-id（不假定文件名），产出环境/实例/库与连接目标表 |
 | `src/host/mysql.js` | 只读网关：连接池、语句校验、元数据与 DDL 查询、行数上限 |
 | `src/host/rpc.js` | action 分发（discover/ping/databases/tables/columns/ddl/query/config/forget）、错误→HTTP 映射 |
 | `src/host/cache.js` | 按工作区的发现缓存（文件指纹 + 插件版本），0600，写临时文件再 rename |
@@ -86,7 +86,7 @@ node test/ui-verify.mjs "http://127.0.0.1:<port>/?token=<令牌>" \
 ## 已知边界
 
 - 只支持 MySQL/MariaDB。
-- 必须本机已有 Nacos 快照缓存，否则只能列实例、列不到项目配好的库。
+- 必须本机已有 Nacos 快照缓存，且工作区自己的配置里要有 `spring.datasource`；否则树是空的（不再用快照里其它 data-id 兜底列实例）。
 - 查询不能取消，最长 60 秒（`statementTimeoutMs`）。
 - 一次只连一个实例的库；跨库请写 `库名.表名`。
 - 远端是 `github.com/simons-jiang/dsh-data-window`（公开仓库，截图与文档已脱敏）；提交与推送仍需用户明确发话（全局规范）。

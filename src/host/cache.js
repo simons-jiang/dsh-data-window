@@ -5,14 +5,14 @@
  * switching back to it must not re-read the same YAML trees. The cache keeps the
  * resolved payload together with the connection targets (the payload the browser
  * receives never includes a password) and a fingerprint of every file it was
- * built from, so a changed `yunwei-db.yml` or a refreshed Nacos snapshot is
- * noticed instead of served stale.
+ * built from, so a changed data-id or a refreshed Nacos snapshot is noticed
+ * instead of served stale.
  */
 import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /** Bump when the payload shape changes so old entries are discarded. */
-const CACHE_VERSION = 3
+const CACHE_VERSION = 5
 
 /** One file before the entry is dropped rather than grown. */
 const MAX_CACHE_BYTES = 4 * 1024 * 1024

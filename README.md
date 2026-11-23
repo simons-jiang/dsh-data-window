@@ -7,9 +7,10 @@ that into a browsable tree plus one read-only SQL workbench per database.
 
 ## Features
 
-- **Workspace-driven discovery** — `bootstrap.yml` → Nacos data-id → `yunwei-db.yml`,
-  resolved the way the JVM does it. Results are cached per workspace and refreshed
-  when the underlying files change.
+- **Workspace-driven discovery** — `bootstrap.yml` → Nacos data-id → whichever
+  data-id defines each `${…}` placeholder, resolved the way the JVM does it. No
+  configuration file name is assumed. Only the data sources this project declares
+  are shown; results are cached per workspace and refreshed when the files change.
 - **Explorer** — environments → instances → databases → tables → columns, with type,
   primary key, nullability and comment. One button reveals every schema on an
   instance, not only the configured ones.
@@ -56,7 +57,7 @@ Set these under the plugin row's `config` in `cordis.patch.yml`:
 | Key | Default | Meaning |
 |---|---|---|
 | `nacosHome` | `~/nacos` | Root of the Nacos client's local cache |
-| `groups` | all | Only read these Nacos groups, e.g. `[yibuyun]` |
+| `groups` | all | Only read these Nacos groups, e.g. `[business]` |
 | `envOrder` | `dev1, dev, qa2, qa1, …` | Environment order in the tree |
 | `connectTimeoutMs` | `8000` | Connect timeout |
 | `statementTimeoutMs` | `60000` | Per-statement timeout; `0` disables |
@@ -67,8 +68,10 @@ Set these under the plugin row's `config` in `cordis.patch.yml`:
 ## Limits
 
 - MySQL / MariaDB only.
-- Requires a local Nacos snapshot cache; a service that has never started exposes
-  only its instances, not its configured databases.
+- Requires a local Nacos snapshot cache and the workspace's own `spring.datasource`
+  configuration. A project without one, or one that has never started, shows an empty
+  tree; the other data-ids in the snapshot are read only for the values the
+  project's placeholders name.
 - The discovery cache under `$DSH_HOME/storages/dsh-data-window/` contains the
   resolved credentials (mode `0600`); it is the same data the workspace config
   already holds in clear text.

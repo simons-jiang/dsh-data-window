@@ -79,7 +79,7 @@ export class DataController {
       this.gateway.setTargets(targets)
       const fingerprintPaths = []
       for (const environment of rest.environments) {
-        if (typeof environment.credentialFile === 'string') fingerprintPaths.push(environment.credentialFile)
+        for (const file of environment.variableFiles ?? []) fingerprintPaths.push(file)
         for (const source of environment.sources) fingerprintPaths.push(source)
       }
       for (const file of rest.project?.configFiles ?? []) fingerprintPaths.push(file)
@@ -89,7 +89,11 @@ export class DataController {
         generatedAt: Date.now(),
         elapsedMs: Date.now() - startedAt,
       }
-      if (this.config.cache) {
+      // An empty result is deliberately not cached: a service that starts after the
+      // first open, or a datasource added to a workspace that had none, must show up
+      // without the user having to press "reload". Scanning an empty workspace is
+      // cheap; a stale empty tree is not.
+      if (this.config.cache && rest.environments.length > 0) {
         this.cache.put(root, {
           payload: rest,
           targets: [...(targets instanceof Map ? targets : new Map())],

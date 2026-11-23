@@ -58,7 +58,7 @@ function dwBuildTree(state, tr) {
           key: instanceKey,
           kind: 'instance',
           // The alias is the name the project's own configuration uses
-          // (`mysql8-master`), so it is the one a user recognises; the hostname is
+          // (`mysql-main`), so it is the one a user recognises; the hostname is
           // kept as the detail because it is what actually identifies the machine.
           label: instance.aliases?.[0] ?? instance.host,
           detail: `${instance.databases.length} ${tr('envDatabases')}`,

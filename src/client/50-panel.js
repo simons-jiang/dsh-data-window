@@ -114,7 +114,6 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const activeTab = (state.tabs ?? []).find((tab) => tab.id === state.activeTab)
   const environments = state.environments ?? []
   const project = state.project
-  const configured = environments.reduce((total, environment) => total + (environment.databaseCount ?? 0), 0)
 
   const pickWorkspace = async () => {
     if (typeof pickDirectory !== 'function') return
@@ -125,21 +124,6 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     } catch (error) {
       store.pushLog('error', tr('log.pickFailed', { message: error?.message ?? error }))
     }
-  }
-
-  /** Open the first instance of the default environment and list every schema. */
-  const browseFirstInstance = () => {
-    const environment = environments[0]
-    const instance = environment?.instances?.[0]
-    if (environment === undefined || instance === undefined) return
-    store.expand(dwNodeKey('env', environment.env))
-    void store.loadAllDatabases({
-      key: dwNodeKey('inst', instance.id),
-      id: instance.id,
-      label: instance.aliases?.[0] ?? instance.host,
-      env: environment.env,
-      databases: instance.databases,
-    })
   }
 
   const toolbar = h('div', { key: 'toolbar', className: 'dw-toolbar' }, [
@@ -218,9 +202,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     main = h('div', { key: 'main', className: 'dw-main' }, h(DwEmpty, {
       tr,
       state,
-      configured,
       onPick: pickWorkspace,
-      onBrowse: browseFirstInstance,
     }))
   } else if (state.phase === 'loading' && environments.length === 0) {
     main = h('div', { key: 'main', className: 'dw-main' }, h('div', { className: 'dw-empty' }, [
@@ -232,7 +214,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     main = h('div', { key: 'main', className: 'dw-main' }, [
       h(DwTabs, { key: 'tabs', store, state, tr }),
       activeTab === undefined
-        ? h(DwEmpty, { key: 'empty', tr, state, configured, onPick: pickWorkspace, onBrowse: browseFirstInstance })
+        ? h(DwEmpty, { key: 'empty', tr, state, onPick: pickWorkspace })
         : activeTab.kind === 'ddl'
           ? h(DwDdlView, { key: activeTab.id, tab: activeTab, tr, store })
           : h(React.Fragment, { key: activeTab.id }, [
@@ -375,7 +357,7 @@ function dwMenuItems(node, store, tr, close) {
  * a workspace whose configuration resolved no database, and a workspace whose
  * configuration failed. Each one now says what happened and what to do next.
  */
-function DwEmpty({ tr, state, configured, onPick, onBrowse }) {
+function DwEmpty({ tr, state, onPick }) {
   const warnings = state.warnings ?? []
   const states = []
   if (state.root === '') {
@@ -384,8 +366,6 @@ function DwEmpty({ tr, state, configured, onPick, onBrowse }) {
     states.push({ title: tr('stateError'), hint: state.discoveryError })
   } else if ((state.environments ?? []).length === 0) {
     states.push({ title: tr('emptyNoEnvTitle'), hint: tr('emptyNoEnvHint') })
-  } else if (configured === 0) {
-    states.push({ title: tr('emptyNoConfigTitle'), hint: tr('emptyNoConfigHint') })
   } else {
     states.push({ title: tr('emptyReadyTitle'), hint: tr('emptyReadyHint') })
   }
@@ -394,9 +374,6 @@ function DwEmpty({ tr, state, configured, onPick, onBrowse }) {
   return h('div', { className: 'dw-empty' }, [
     h('div', { key: 't', className: 'dw-empty-title' }, current.title),
     h('div', { key: 'h', className: 'dw-empty-hint' }, current.hint),
-    state.root !== '' && configured === 0
-      ? h('button', { key: 'browse', type: 'button', className: 'dw-btn dw-btn-accent', onClick: onBrowse }, tr('browseFirstInstance'))
-      : null,
     h('div', { key: 'k', className: 'dw-empty-hint', style: { fontSize: 11.5, opacity: .8 } }, tr('shortcutSummary')),
     h('button', { key: 'b', type: 'button', className: 'dw-btn', onClick: onPick }, tr('pickWorkspace')),
     warnings.length > 0

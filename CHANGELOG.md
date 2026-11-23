@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Discovery no longer hard-codes the data-id that carries hosts and passwords.
+  Every YAML data-id in the snapshot is a candidate, and only the files that define
+  a `${…}` key referenced by the project's own datasource are read; the project's
+  own values win over shared ones. Data-ids are accepted with or without the `.yml`
+  suffix (Nacos stores both), and an instance alias now comes from the project's own
+  URL template (`${acme.dbs.mysql-main}` → `mysql-main`) instead of the
+  fixed `<namespace>.dbs.<alias>` shape.
+- Discovery now returns only the instances and databases the workspace's own
+  `spring.datasource` entries name. `yunwei-db.yml` is still read to resolve the
+  placeholders and to label a host with its alias, but the hosts it declares on its
+  own no longer reach the tree: they belong to other projects and the viewer has no
+  account for them, so browsing them only produced `Access denied` and
+  `ENOTFOUND` for a short host name that only resolves inside the cluster.
+- The empty state explains that only this project's data sources are read; the
+  "list every database on the first instance" fallback button is gone with it.
+- An empty discovery result is no longer cached, so a service that starts (or a
+  datasource that is added) shows up on the next open instead of needing a reload.
+- `docs/screenshots/` retaken against a neutral `demo-shop` workspace (system schema
+  through a local forwarder): no real host, business database, table or person is
+  visible in the images.
+
 ## 0.1.0
 
 First version.
@@ -17,7 +42,7 @@ First version.
   write-keyword scan, and `SET SESSION TRANSACTION READ ONLY` on every pooled
   connection, so the server refuses a write even if the static check is wrong.
 - `SHOW DATABASES`, `information_schema` table/column metadata, `SHOW CREATE TABLE`,
-  and every schema on an instance the project never configured.
+  and every schema on a listed instance, not only the configured ones.
 - Connection ids carry the environment, because one RDS host serves several tenants.
 
 ### Client
@@ -45,7 +70,7 @@ errors. Two screenshots in `docs/screenshots/`.
 Fixes found by that pass:
 
 - The instance row showed the configuration path (`spring.datasource`) instead of
-  the host alias from `yunwei-db.yml` (`mysql8-master`).
+  the host alias from `yunwei-db.yml` (`mysql-main`).
 - Column names were truncated to two characters because the `NOT NULL` badge and
   the type text competed for the row width; the badge moved into the tooltip.
 - `TEXT` columns were labelled `BLOB` (the protocol reports both under one code; the
