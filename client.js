@@ -9,8 +9,8 @@ window.__ModuleLoader__.load({
     const { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } = React
     const h = React.createElement
   const DW_TEXT_EN = {
-    "openPanel": "Database window",
-    "openPanelHint": "Open the database window",
+    "openPanel": "Data window",
+    "openPanelHint": "Open the data window",
     "treeTitle": "Explorer",
     "filterPlaceholder": "Filter the loaded databases and tables",
     "treeLoading": "Loading…",
@@ -102,10 +102,19 @@ window.__ModuleLoader__.load({
     "warning.nacos-cache-missing": "No local Nacos cache was found under ~/nacos/config; start the service once so the Nacos client writes its snapshot.",
     "warning.no-environment": "No data source declared by this project could be resolved; only databases from this project's own configuration are read.",
     "warning.unparsed-jdbc-url": "A datasource URL could not be parsed as jdbc:mysql.",
+    "projectSwitch": "Switch workspace",
+    "resizeTree": "Drag to resize the list (double-click resets)",
+    "hideSidebar": "Hide the DSH sidebar",
+    "showSidebar": "Show the DSH sidebar",
+    "formatSql": "Format",
+    "formatSqlHint": "Beautify the statement (keyword case is kept)",
+    "suggestColumn": "column",
+    "suggestTable": "table",
+    "suggestKeyword": "keyword",
   }
   const DW_TEXT_ZH = {
-    "openPanel": "数据库数据窗口",
-    "openPanelHint": "打开数据库数据窗口",
+    "openPanel": "数据窗口",
+    "openPanelHint": "打开数据窗口",
     "treeTitle": "资源管理器",
     "filterPlaceholder": "过滤已加载的库名与表名",
     "treeLoading": "加载中…",
@@ -197,6 +206,15 @@ window.__ModuleLoader__.load({
     "warning.nacos-cache-missing": "在 ~/nacos/config 下没有找到本地 Nacos 缓存；先启动一次服务，Nacos 客户端才会写入快照。",
     "warning.no-environment": "当前工作区没有解析到本项目自己声明的数据源（窗口只读本项目配置里的库）。",
     "warning.unparsed-jdbc-url": "有数据源地址无法解析为 jdbc:mysql。",
+    "projectSwitch": "切换工作区",
+    "resizeTree": "拖动调整列表宽度（双击还原）",
+    "hideSidebar": "隐藏 DSH 侧栏",
+    "showSidebar": "显示 DSH 侧栏",
+    "formatSql": "格式化",
+    "formatSqlHint": "一键美化当前 SQL（保留关键字大小写）",
+    "suggestColumn": "字段",
+    "suggestTable": "表",
+    "suggestKeyword": "关键字",
   }
 
 // ---- 00-css.js -----------------------------------------------------------
@@ -260,6 +278,59 @@ const DW_CSS = `
   text-align: left;
 }
 .dw-spacer { flex: 1 1 auto; }
+
+.dw-project { position: relative; display: inline-flex; align-items: center; min-width: 0; }
+.dw-project-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 280px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dw-project-btn:hover { background: var(--dsw-alias-bg-overlay, #2f333b); border-color: var(--dsw-alias-border-l1, #31353d); }
+.dw-project-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dw-project-caret { opacity: .7; font-size: 10px; }
+.dw-project-menu {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  z-index: 40;
+  min-width: 320px;
+  max-width: 480px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+.dw-project-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dw-project-row:hover { background: var(--dsw-alias-bg-overlay, #2f333b); }
+.dw-project-row.active { background: color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 18%, transparent); }
+.dw-project-row-title { font-size: 12.5px; }
+.dw-project-row-path { font-size: 11px; color: var(--dsw-alias-label-secondary, #8b919d); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dw-resizer { flex: 0 0 5px; align-self: stretch; cursor: col-resize; background: transparent; }
+.dw-resizer:hover { background: color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 45%, transparent); }
 
 .dw-btn {
   display: inline-flex;
@@ -499,6 +570,53 @@ const DW_CSS = `
   tab-size: 2;
 }
 .dw-code::placeholder { color: var(--dsw-alias-label-secondary, #6b7280); }
+
+/* SQL highlighting: the textarea stays the input surface; a pre behind it paints
+   the same text with token colours. Both must use identical metrics. */
+.dw-code-wrap { position: relative; flex: 1 1 auto; min-width: 0; display: flex; }
+.dw-code-wrap .dw-code { position: relative; z-index: 1; color: transparent; caret-color: var(--dsw-alias-label-primary, #e6e8ec); background: transparent; }
+.dw-code-wrap .dw-code::placeholder { color: var(--dsw-alias-label-secondary, #6b7280); }
+.dw-code-highlight {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 6px 10px;
+  overflow: hidden;
+  white-space: pre;
+  pointer-events: none;
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 12.5px;
+  line-height: 19px;
+  tab-size: 2;
+}
+.dw-tok-keyword { color: #cf8e6d; font-weight: 600; }
+.dw-tok-function { color: #56a8f5; }
+.dw-tok-string { color: #6aab73; }
+.dw-tok-number { color: #2aacb8; }
+.dw-tok-comment { color: #7a7e85; font-style: italic; }
+.dw-tok-literal { color: #c77dbb; }
+.dw-tok-operator { color: #b3b8c2; }
+.dw-tok-punct { color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-complete {
+  position: absolute;
+  z-index: 60;
+  min-width: 260px;
+  max-width: 440px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .45);
+}
+.dw-complete-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+.dw-complete-row:hover, .dw-complete-row.active { background: var(--dsw-alias-bg-overlay, #2f333b); }
+.dw-complete-row.active { outline: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 55%, transparent); }
+.dw-complete-label { flex: 1 1 auto; font-family: var(--ds-font-family-code, ui-monospace, Menlo, monospace); font-size: 12px; }
+.dw-complete-detail { flex: 0 1 auto; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 10.5px; }
+.dw-complete-kind { flex: 0 0 auto; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 10px; opacity: .8; }
 
 .dw-drag {
   height: 5px;
@@ -818,6 +936,11 @@ function DwIcon({ name, size = 14, className }) {
       return h('svg', { ...common, className: `dw-spin ${className ?? ''}` }, [
         h('path', { d: 'M8 2.2a5.8 5.8 0 1 0 5.8 5.8', opacity: .9 }),
       ])
+    case 'format':
+      return h('svg', common, [
+        h('path', { key: 'a', d: 'M2.5 4h11M2.5 8h7.5M2.5 12h4.5' }),
+        h('path', { key: 'b', d: 'M11.5 10.5v3M10 12h3' }),
+      ])
     case 'panel':
       return h('svg', common, [
         h('rect', { key: 'a', x: 1.8, y: 3, width: 12.4, height: 10, rx: 1.4 }),
@@ -1038,6 +1161,8 @@ function dwCreateStore(translate) {
     // workbench
     tabs: [],
     activeTab: '',
+    // Table/column maps for the editor's completion, one per database.
+    schemas: new Map(),
     limit: DW_DEFAULT_LIMIT,
     // log
     logOpen: false,
@@ -1146,6 +1271,7 @@ function dwCreateStore(translate) {
         selectedNode: null,
         tabs: [],
         activeTab: '',
+        schemas: new Map(),
       })
     },
 
@@ -1177,6 +1303,7 @@ function dwCreateStore(translate) {
         selectedNode: null,
         tabs: [],
         activeTab: '',
+        schemas: new Map(),
       })
       void store.loadDiscovery({ refresh: false })
       void store.loadSettings()
@@ -1343,6 +1470,25 @@ function dwCreateStore(translate) {
         nextState.set(node.key, 'error')
         patch({ loadState: nextState })
         pushLog('error', t('log.loadFailed', { name: node.label, message: dwExplainFailure(t, error) }))
+      }
+    },
+
+    /**
+     * Load the table/column map the editor completes against.
+     *
+     * Failure is silent: suggestions degrade to keywords instead of turning a
+     * focus event into an error banner.
+     */
+    async loadSchema(dbId) {
+      if (typeof dbId !== 'string' || dbId === '') return
+      if (state.schemas?.has(dbId)) return
+      try {
+        const value = await call('schema', { id: dbId })
+        const schemas = new Map(state.schemas ?? [])
+        schemas.set(dbId, value)
+        patch({ schemas })
+      } catch (error) {
+        void error
       }
     },
 
@@ -1535,10 +1681,18 @@ function dwCreateStore(translate) {
     },
 
     /** Run the active tab's statement. */
-    async runActiveTab() {
+    /**
+     * Run the workbench statement, or just the text the user selected.
+     *
+     * DataGrip runs the selection; running the whole buffer while the user has a
+     * fragment selected sends several statements to MySQL, which answers with a
+     * confusing ER_PARSE_ERROR at the second one.
+     */
+    async runActiveTab(statement) {
       const tab = state.tabs.find((entry) => entry.id === state.activeTab)
       if (tab === undefined || tab.kind !== 'sql' || tab.running === true) return
-      const sql = String(tab.sql ?? '').trim()
+      const override = typeof statement === 'string' ? statement.trim() : ''
+      const sql = override !== '' ? override : String(tab.sql ?? '').trim()
       if (DW_SQL_EMPTY.test(sql)) {
         pushLog('warn', t('log.noStatement'))
         return
@@ -1845,6 +1999,490 @@ function DwTree({ store, state, tr, onContextMenu }) {
 }
 
 
+// ---- 25-sql.js -----------------------------------------------------------
+/**
+ * SQL lexer, completion and formatter.
+ *
+ * The editor is a textarea, so highlighting is an overlay of tokens and the
+ * completion list is built from the schema the Host already exposes. All three
+ * features share one lexer: a single definition of strings, comments and
+ * keywords that cannot drift apart.
+ *
+ * Nothing here touches the DOM or React; the functions are pure so they can be
+ * exercised from Node.
+ */
+
+/** Words the editor colours as keywords. */
+const DW_SQL_KEYWORDS = new Set(`select from where group by order having limit offset union all distinct join inner left right outer full cross natural on using and or not in is null like between exists case when then else end as asc desc insert into values update set delete create drop alter table index view show describe explain with recursive partition over window`.split(' '))
+
+/** Words coloured as functions; the schema supplies the rest. */
+const DW_SQL_FUNCTIONS = new Set(`count sum avg min max coalesce ifnull nullif concat concat_ws substr substring length lower upper trim ltrim rtrim replace round floor ceil abs cast convert date_format str_to_date now curdate curtime datediff date_add date_sub timestampdiff if group_concat json_extract json_unquote unix_timestamp from_unixtime row_number rank dense_rank lag lead`.split(' '))
+
+/** Literals that are keywords in effect. */
+const DW_SQL_LITERALS = new Set(['null', 'true', 'false'])
+
+const DW_SQL_OPERATORS = ['<=>', '<=', '>=', '<>', '!=', '||', '&&', ':=', '=', '<', '>', '+', '-', '*', '/', '%', '!', '&', '|', '^', '~']
+const DW_SQL_PUNCT = new Set(['(', ')', ',', '.', ';', '[', ']'])
+
+/** Split SQL into tokens; whitespace is kept so highlighting reproduces it. */
+function dwSqlLex(text) {
+  const source = String(text ?? '')
+  const tokens = []
+  let index = 0
+  while (index < source.length) {
+    const start = index
+    const char = source[index]
+    if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
+      while (index < source.length && /[ \t\n\r]/.test(source[index])) index += 1
+      tokens.push({ type: 'space', value: source.slice(start, index), start, end: index })
+      continue
+    }
+    if (char === '-' && source[index + 1] === '-') {
+      index += 2
+      while (index < source.length && source[index] !== '\n') index += 1
+      tokens.push({ type: 'comment', value: source.slice(start, index), start, end: index })
+      continue
+    }
+    if (char === '#') {
+      index += 1
+      while (index < source.length && source[index] !== '\n') index += 1
+      tokens.push({ type: 'comment', value: source.slice(start, index), start, end: index })
+      continue
+    }
+    if (char === '/' && source[index + 1] === '*') {
+      index += 2
+      while (index < source.length && !(source[index] === '*' && source[index + 1] === '/')) index += 1
+      index = Math.min(source.length, index + 2)
+      tokens.push({ type: 'comment', value: source.slice(start, index), start, end: index })
+      continue
+    }
+    if (char === "'" || char === '"' || char === '`') {
+      index += 1
+      while (index < source.length) {
+        if (source[index] === '\\') {
+          index += 2
+          continue
+        }
+        if (source[index] === char) {
+          if (source[index + 1] === char) {
+            index += 2
+            continue
+          }
+          index += 1
+          break
+        }
+        index += 1
+      }
+      const value = source.slice(start, index)
+      const closed = value.length > 1 && value[value.length - 1] === char
+      tokens.push({ type: closed ? (char === '`' ? 'identifier' : 'string') : 'string', value, start, end: index })
+      continue
+    }
+    if (/[0-9]/.test(char)) {
+      while (index < source.length && /[0-9]/.test(source[index])) index += 1
+      if (source[index] === '.') {
+        index += 1
+        while (index < source.length && /[0-9]/.test(source[index])) index += 1
+      }
+      if (/[eE]/.test(source[index] ?? '')) {
+        index += 1
+        if (/[+-]/.test(source[index] ?? '')) index += 1
+        while (index < source.length && /[0-9]/.test(source[index])) index += 1
+      }
+      tokens.push({ type: 'number', value: source.slice(start, index), start, end: index })
+      continue
+    }
+    if (/[A-Za-z_$]/.test(char)) {
+      while (index < source.length && /[A-Za-z0-9_$]/.test(source[index])) index += 1
+      const value = source.slice(start, index)
+      const lower = value.toLowerCase()
+      const type = DW_SQL_LITERALS.has(lower)
+        ? 'literal'
+        : DW_SQL_KEYWORDS.has(lower)
+          ? 'keyword'
+          : DW_SQL_FUNCTIONS.has(lower) ? 'function' : 'identifier'
+      tokens.push({ type, value, start, end: index })
+      continue
+    }
+    const operator = DW_SQL_OPERATORS.find((candidate) => source.startsWith(candidate, index))
+    if (operator !== undefined) {
+      index += operator.length
+      tokens.push({ type: 'operator', value: operator, start, end: index })
+      continue
+    }
+    index += 1
+    tokens.push({ type: DW_SQL_PUNCT.has(char) ? 'punct' : 'identifier', value: char, start, end: index })
+  }
+  return tokens
+}
+
+/** Tokens that carry meaning for completion and formatting. */
+function dwSqlSignificant(tokens) {
+  return tokens.filter((token) => token.type !== 'space')
+}
+
+/** Strip the backticks/quoting one identifier carries. */
+function dwSqlUnquote(value) {
+  const text = String(value ?? '').trim()
+  if (text.length > 1 && (text[0] === '`' || text[0] === '"') && text[text.length - 1] === text[0]) {
+    return text.slice(1, -1)
+  }
+  return text
+}
+
+/**
+ * `db.table` → `table`, aware of per-part backticks.
+ *
+ * MySQL statements in this console usually quote both parts (`db`.`table`), so
+ * splitting on the raw string leaves a leading backtick on the table name and the
+ * schema lookup misses.
+ */
+function dwSqlTableName(value) {
+  const text = String(value ?? '').trim()
+  let quoted = false
+  let lastDot = -1
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    if (char === '`') quoted = !quoted
+    else if (char === '.' && !quoted) lastDot = index
+  }
+  return dwSqlUnquote(text.slice(lastDot + 1).trim())
+}
+
+/**
+ * Tables and aliases the statement mentions.
+ *
+ * Only `FROM` and `JOIN` are scanned; a comma-separated FROM list is rare in this
+ * console's queries and a miss only means fewer column suggestions.
+ */
+function dwSqlTableRefs(text) {
+  const refs = []
+  const seen = new Set()
+  const pattern = /\b(from|join)\s+((?:`[^`]+`|[A-Za-z0-9_$]+)(?:\.(?:`[^`]+`|[A-Za-z0-9_$]+))?)(?:\s+(?:as\s+)?(`[^`]+`|[A-Za-z_][A-Za-z0-9_$]*))?/gi
+  let match
+  while ((match = pattern.exec(String(text ?? ''))) !== null) {
+    const table = dwSqlTableName(match[2])
+    if (table === '') continue
+    let alias = match[3] === undefined ? table : dwSqlUnquote(match[3])
+    if (DW_SQL_KEYWORDS.has(alias.toLowerCase()) || alias === '') alias = table
+    const key = alias.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    refs.push({ table, alias })
+  }
+  return refs
+}
+
+/** The word being typed and the context around it. */
+function dwSqlCompletionPrefix(source, caret) {
+  let start = caret
+  while (start > 0 && /[A-Za-z0-9_$`]/.test(source[start - 1])) start -= 1
+  const prefix = source.slice(start, caret).replace(/`/g, '')
+  let qualifier = ''
+  let before = source.slice(0, start).replace(/\s+$/, '')
+  if (before.endsWith('.')) {
+    const match = /([A-Za-z0-9_$`]+)\.$/.exec(before)
+    qualifier = match === null ? '' : dwSqlUnquote(match[1])
+    before = before.slice(0, -1 - qualifier.length).replace(/\s+$/, '')
+  }
+  const previous = /([A-Za-z_][A-Za-z0-9_$]*)$/.exec(before)
+  return {
+    prefix,
+    qualifier,
+    startedAfterDot: qualifier !== '',
+    previousWord: previous === null ? '' : previous[1].toLowerCase(),
+    from: start,
+    to: caret,
+  }
+}
+
+/** Which family of suggestions a clause asks for. */
+function dwSqlSuggestionKind(context) {
+  if (context.qualifier !== '') return 'column'
+  const word = context.previousWord
+  if (['from', 'join', 'into', 'update', 'table'].includes(word)) return 'table'
+  if (['select', 'where', 'on', 'and', 'or', 'having', 'by', 'set', 'using', 'distinct', 'case', 'when', 'then', 'else', 'order', 'group', 'value'].includes(word)) return 'column'
+  return 'any'
+}
+
+/**
+ * Build the suggestion list for the caret.
+ *
+ * `schema` is the Host's map of the current database (`{ tables: [{ name,
+ * columns: [{ name, type }] }] }`); without it the list degrades to keywords.
+ */
+function dwSqlCompletion(text, caret, schema) {
+  const source = String(text ?? '')
+  const position = Math.max(0, Math.min(Number(caret) || 0, source.length))
+  const context = dwSqlCompletionPrefix(source, position)
+  const kind = dwSqlSuggestionKind(context)
+  const prefix = context.prefix.toLowerCase()
+  const tables = Array.isArray(schema?.tables) ? schema.tables : []
+  const refs = dwSqlTableRefs(source)
+  const items = []
+  const seen = new Set()
+
+  const add = (label, type, detail) => {
+    const key = `${type}\u0000${label.toLowerCase()}`
+    if (seen.has(key)) return
+    if (prefix !== '' && !label.toLowerCase().startsWith(prefix)) return
+    if (label.toLowerCase() === prefix) return
+    seen.add(key)
+    items.push({ label, kind: type, detail })
+  }
+
+  const tableWith = (name) => tables.find((table) => table.name.toLowerCase() === name.toLowerCase())
+
+  if (context.qualifier !== '') {
+    const ref = refs.find((entry) => entry.alias.toLowerCase() === context.qualifier.toLowerCase())
+      ?? refs.find((entry) => entry.table.toLowerCase() === context.qualifier.toLowerCase())
+    const table = tableWith(ref?.table ?? context.qualifier)
+    for (const column of Array.isArray(table?.columns) ? table.columns : []) {
+      add(column.name, 'column', `${table.name}.${column.type ?? ''}`)
+    }
+  } else if (kind === 'table') {
+    for (const table of tables) add(table.name, 'table', `${table.columns?.length ?? 0} 列`)
+    for (const ref of refs) add(ref.table, 'table', '已引用')
+  } else {
+    if (kind === 'column' || kind === 'any') {
+      for (const ref of refs) {
+        const table = tableWith(ref.table)
+        for (const column of Array.isArray(table?.columns) ? table.columns : []) {
+          add(column.name, 'column', `${ref.alias === ref.table ? ref.table : `${ref.alias} → ${ref.table}`}.${column.type ?? ''}`)
+        }
+      }
+      if (refs.length === 0) {
+        for (const table of tables) {
+          for (const column of Array.isArray(table.columns) ? table.columns : []) {
+            add(column.name, 'column', `${table.name}.${column.type ?? ''}`)
+          }
+        }
+      }
+    }
+    if (kind !== 'column') {
+      for (const keyword of DW_SQL_KEYWORDS) add(keyword.toUpperCase(), 'keyword', '关键字')
+    }
+  }
+
+  items.sort((left, right) => {
+    const weight = (item) => (item.kind === 'column' ? 0 : item.kind === 'table' ? 1 : 2)
+    if (weight(left) !== weight(right)) return weight(left) - weight(right)
+    return left.label.length - right.label.length || (left.label < right.label ? -1 : 1)
+  })
+
+  return {
+    items: items.slice(0, 50),
+    from: context.from,
+    to: context.to,
+    prefix: context.prefix,
+    kind,
+  }
+}
+
+const DW_SQL_JOIN_PREFIXES = new Set(['left', 'right', 'inner', 'outer', 'full', 'cross', 'natural'])
+
+/** Whether the select list starting at `index` carries a top-level comma. */
+function dwSqlSelectListHasComma(tokens, index) {
+  let depth = 0
+  for (let cursor = index; cursor < tokens.length; cursor += 1) {
+    const value = tokens[cursor].value
+    if (value === '(') {
+      depth += 1
+      continue
+    }
+    if (value === ')') {
+      if (depth === 0) return false
+      depth -= 1
+      continue
+    }
+    const lower = value.toLowerCase()
+    if (depth === 0 && ['from', 'where', 'group', 'order', 'having', 'limit', 'union'].includes(lower)) return false
+    if (depth === 0 && value === ',') return true
+  }
+  return false
+}
+
+/** Collapse the run of spaces/tabs one line may start with. */
+function dwSqlIndent(level) {
+  return ' '.repeat(Math.max(0, level))
+}
+
+/**
+ * Reindent a statement: clause keywords on their own line, one select item per
+ * line, joins and boolean operators indented one level. Keyword case and inline
+ * spacing are preserved; only line breaks and indentation move.
+ */
+function dwFormatSql(text) {
+  const tokens = dwSqlSignificant(dwSqlLex(text))
+  if (tokens.length === 0) return ''
+
+  const lines = []
+  let line = ''
+  let depth = 0
+  let clause = ''
+  let selectDepth = -1
+  const parens = []
+
+  const push = (value) => {
+    line += value
+  }
+  const pushWord = (value) => {
+    const last = line[line.length - 1]
+    if (line !== '' && last !== ' ' && last !== '.' && last !== '(' && value !== '.' && value !== ')' && value !== ',' && value !== '(') {
+      line += ' '
+    }
+    line += value
+  }
+  const newlineAt = (level) => {
+    lines.push(line.trimEnd())
+    line = dwSqlIndent(level)
+  }
+  const atIndex = (index) => (tokens[index] === undefined ? '' : tokens[index].value.toLowerCase())
+  const isWord = (index) => tokens[index] !== undefined && tokens[index].type === 'identifier'
+
+  let index = 0
+  while (index < tokens.length) {
+    const token = tokens[index]
+    const lower = token.value.toLowerCase()
+    const next = atIndex(index + 1)
+
+    if (token.type === 'comment') {
+      if (line.trim() !== '') newlineAt(depth * 2)
+      push(token.value)
+      newlineAt(depth * 2)
+      index += 1
+      continue
+    }
+
+    // Multi-word clause keywords: GROUP BY / ORDER BY / UNION ALL / JOIN prefixes.
+    if (lower === 'group' && next === 'by') {
+      newlineAt(depth * 2)
+      push(`${token.value} ${tokens[index + 1].value}`)
+      clause = 'group'
+      index += 2
+      continue
+    }
+    if (lower === 'order' && next === 'by') {
+      newlineAt(depth * 2)
+      push(`${token.value} ${tokens[index + 1].value}`)
+      clause = 'order'
+      index += 2
+      continue
+    }
+    if (lower === 'union') {
+      newlineAt(depth * 2)
+      push(token.value)
+      if (next === 'all' || next === 'distinct') {
+        push(` ${tokens[index + 1].value}`)
+        index += 2
+      } else {
+        index += 1
+      }
+      clause = 'union'
+      continue
+    }
+    if (
+      lower === 'join'
+      || (DW_SQL_JOIN_PREFIXES.has(lower) && ['join', 'outer'].includes(next))
+      || (DW_SQL_JOIN_PREFIXES.has(lower) && next === 'outer' && atIndex(index + 2) === 'join')
+    ) {
+      newlineAt(depth * 2 + 2)
+      let consumed = 1
+      if (lower !== 'join') consumed = 2
+      if (next === 'outer' && atIndex(index + 2) === 'join') consumed = 3
+      push(tokens.slice(index, index + consumed).map((entry) => entry.value).join(' '))
+      clause = 'join'
+      index += consumed
+      continue
+    }
+
+    if (token.type === 'keyword') {
+      if (lower === 'select') {
+        newlineAt(depth * 2)
+        push(token.value)
+        clause = 'select'
+        selectDepth = depth
+        if (dwSqlSelectListHasComma(tokens, index + 1)) newlineAt(depth * 2 + 2)
+        index += 1
+        continue
+      }
+      if (['from', 'where', 'having', 'limit', 'offset'].includes(lower)) {
+        newlineAt(depth * 2)
+        push(token.value)
+        clause = lower
+        if (lower === 'from') selectDepth = -1
+        index += 1
+        continue
+      }
+      if (lower === 'on') {
+        pushWord(token.value)
+        clause = 'on'
+        index += 1
+        continue
+      }
+      if ((lower === 'and' || lower === 'or') && ['where', 'having', 'on'].includes(clause)) {
+        newlineAt(depth * 2 + 2)
+        push(token.value)
+        index += 1
+        continue
+      }
+    }
+
+    if (token.value === '(') {
+      push('(')
+      depth += 1
+      const subquery = atIndex(index + 1) === 'select'
+      parens.push({ subquery })
+      if (subquery) {
+        newlineAt(depth * 2)
+        push(tokens[index + 1].value)
+        clause = 'select'
+        selectDepth = depth
+        index += 2
+        continue
+      }
+      index += 1
+      continue
+    }
+    if (token.value === ')') {
+      depth = Math.max(0, depth - 1)
+      const scope = parens.pop()
+      if (scope !== undefined && scope.subquery === true) {
+        newlineAt(depth * 2)
+      }
+      push(')')
+      index += 1
+      continue
+    }
+    if (token.value === ',') {
+      push(',')
+      if (clause === 'select' && selectDepth === depth) newlineAt(depth * 2 + 2)
+      else pushWord('')
+      index += 1
+      continue
+    }
+    if (token.value === ';') {
+      push(';')
+      newlineAt(0)
+      index += 1
+      continue
+    }
+
+    pushWord(token.value)
+    if (token.value === '.') line = line.replace(/ $/, '')
+    index += 1
+  }
+
+  lines.push(line.trimEnd())
+  return lines
+    .map((entry) => entry.replace(/\s+$/, ''))
+    .filter((entry, position, all) => entry !== '' || (position > 0 && position < all.length - 1))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+
 // ---- 30-editor.js --------------------------------------------------------
 /**
  * Workbench tabs, the SQL editor and the DDL document.
@@ -1918,12 +2556,48 @@ function DwDragHandle({ value, onChange, min, max }) {
   })
 }
 
-/** The SQL textarea with a line-number gutter that follows its scroll. */
-function DwEditor({ store, tab, tr, onRun, height }) {
+/** Caret position inside the textarea, measured with an in-place mirror. */
+function dwCaretPoint(area, text, caret) {
+  const wrap = area?.parentElement
+  if (area === null || area === undefined || wrap === null || wrap === undefined) return { left: 0, top: 0 }
+  const style = globalThis.getComputedStyle(area)
+  const mirror = document.createElement('div')
+  mirror.style.position = 'absolute'
+  mirror.style.visibility = 'hidden'
+  mirror.style.pointerEvents = 'none'
+  mirror.style.top = '0'
+  mirror.style.left = '0'
+  mirror.style.width = `${area.offsetWidth}px`
+  mirror.style.padding = style.padding
+  mirror.style.border = style.border
+  mirror.style.fontFamily = style.fontFamily
+  mirror.style.fontSize = style.fontSize
+  mirror.style.fontWeight = style.fontWeight
+  mirror.style.letterSpacing = style.letterSpacing
+  mirror.style.lineHeight = style.lineHeight
+  mirror.style.tabSize = style.tabSize
+  mirror.style.whiteSpace = 'pre'
+  mirror.style.overflow = 'hidden'
+  mirror.textContent = text.slice(0, caret)
+  const marker = document.createElement('span')
+  marker.textContent = '|'
+  mirror.append(marker)
+  wrap.append(mirror)
+  const left = marker.offsetLeft - area.scrollLeft
+  const top = marker.offsetTop - area.scrollTop
+  mirror.remove()
+  return { left, top }
+}
+
+/** The SQL editor: highlighted text, completion and one-keystroke formatting. */
+function DwEditor({ store, tab, tr, onRun, height, schema }) {
   const value = tab.sql ?? ''
+  const tokens = useMemo(() => dwSqlLex(value), [value])
   const lines = useMemo(() => value.split('\n').length, [value])
   const gutterRef = useRef(null)
   const areaRef = useRef(null)
+  const highlightRef = useRef(null)
+  const [completion, setCompletion] = useState(null)
 
   useEffect(() => {
     const area = areaRef.current
@@ -1934,27 +2608,108 @@ function DwEditor({ store, tab, tr, onRun, height }) {
     area.setSelectionRange(area.value.length, area.value.length)
   }, [tab.id])
 
+  // The completion list needs the schema of this database; one round trip, cached
+  // by the store. A failure only degrades the list to keywords.
+  useEffect(() => {
+    void store.loadSchema(tab.dbId)
+  }, [tab.dbId, store])
+
+  const syncScroll = (area) => {
+    const gutter = gutterRef.current
+    if (gutter !== null) {
+      gutter.scrollTop = area.scrollTop
+      gutter.scrollLeft = area.scrollLeft
+    }
+    const highlight = highlightRef.current
+    if (highlight !== null) {
+      highlight.scrollTop = area.scrollTop
+      highlight.scrollLeft = area.scrollLeft
+    }
+  }
+
+  const refreshCompletion = (text, caret) => {
+    const area = areaRef.current
+    if (area === null) return
+    const result = dwSqlCompletion(text, caret, schema)
+    const afterDot = /[A-Za-z0-9_$`]\.$/.test(text.slice(0, caret))
+    if (result.items.length === 0 || (result.prefix === '' && !afterDot)) {
+      setCompletion(null)
+      return
+    }
+    const point = dwCaretPoint(area, text, caret)
+    setCompletion({ ...result, index: 0, left: point.left, top: point.top + 20 })
+  }
+
+  // The schema map starts loading when the tab opens; a fast typist can type a whole
+  // word before it lands, which used to leave the list closed until the next key.
+  // Re-evaluate the caret once the map arrives so the popup appears on its own.
+  useEffect(() => {
+    if (schema === undefined) return
+    const area = areaRef.current
+    if (area === null || document.activeElement !== area) return
+    refreshCompletion(value, area.selectionStart)
+  }, [schema])
+
+  const applyCompletion = (item) => {
+    const current = completion
+    if (current === null || item === undefined) return
+    const next = `${value.slice(0, current.from)}${item.label}${value.slice(current.to)}`
+    const position = current.from + item.label.length
+    store.setTabSql(tab.id, next)
+    setCompletion(null)
+    requestAnimationFrame(() => {
+      const area = areaRef.current
+      if (area === null) return
+      area.focus()
+      area.setSelectionRange(position, position)
+    })
+  }
+
+  const runStatement = () => {
+    const area = areaRef.current
+    const selected = area !== null && area.selectionEnd > area.selectionStart
+      ? value.slice(area.selectionStart, area.selectionEnd)
+      : ''
+    onRun(selected.trim() === '' ? undefined : selected)
+  }
+
+  const format = () => {
+    const formatted = dwFormatSql(value)
+    if (formatted === value) return
+    store.setTabSql(tab.id, formatted)
+    requestAnimationFrame(() => areaRef.current?.focus())
+  }
+
   const gutter = []
   for (let index = 1; index <= Math.max(lines, 1); index += 1) gutter.push(`${index}\n`)
 
-  return h('div', { className: 'dw-editor-wrap', style: { height } }, [
-    h('div', { key: 'bar', className: 'dw-editor-bar' }, [
-      h('span', { key: 'db', style: { color: 'var(--dsw-alias-label-primary)', fontWeight: 600 } }, tab.database),
-      h('span', { key: 'env' }, tab.subtitle ?? ''),
-      h('span', { key: 'sp', className: 'dw-spacer' }),
-      h('span', { key: 'hint', style: { fontSize: 11 } }, tr('runHint')),
-      h('button', {
-        key: 'run',
-        type: 'button',
-        className: 'dw-btn dw-btn-accent',
-        disabled: tab.running === true,
-        title: tr('runHint'),
-        onClick: onRun,
-      }, [
-        h(DwIcon, { key: 'i', name: tab.running === true ? 'spinner' : 'play', size: 11 }),
-        h('span', { key: 't' }, tab.running === true ? tr('running') : tr('run')),
-      ]),
+  const bar = h('div', { key: 'bar', className: 'dw-editor-bar' }, [
+    h('span', { key: 'db', style: { color: 'var(--dsw-alias-label-primary)', fontWeight: 600 } }, tab.database),
+    h('span', { key: 'env' }, tab.subtitle ?? ''),
+    h('span', { key: 'sp', className: 'dw-spacer' }),
+    h('button', {
+      key: 'format',
+      type: 'button',
+      className: 'dw-btn',
+      title: tr('formatSqlHint'),
+      onClick: format,
+    }, [h(DwIcon, { key: 'i', name: 'format', size: 11 }), h('span', { key: 't' }, tr('formatSql'))]),
+    h('span', { key: 'hint', style: { fontSize: 11 } }, tr('runHint')),
+    h('button', {
+      key: 'run',
+      type: 'button',
+      className: 'dw-btn dw-btn-accent',
+      disabled: tab.running === true,
+      title: tr('runHint'),
+      onClick: runStatement,
+    }, [
+      h(DwIcon, { key: 'i', name: tab.running === true ? 'spinner' : 'play', size: 11 }),
+      h('span', { key: 't' }, tab.running === true ? tr('running') : tr('run')),
     ]),
+  ])
+
+  return h('div', { className: 'dw-editor-wrap', style: { height } }, [
+    bar,
     h('div', { key: 'editor', className: 'dw-editor' }, [
       h('div', {
         key: 'gutter',
@@ -1962,41 +2717,91 @@ function DwEditor({ store, tab, tr, onRun, height }) {
         ref: gutterRef,
         'aria-hidden': true,
       }, gutter.join('')),
-      h('textarea', {
-        key: 'area',
-        ref: areaRef,
-        className: 'dw-code',
-        value,
-        spellCheck: false,
-        placeholder: tr('sqlPlaceholder'),
-        onChange: (event) => store.setTabSql(tab.id, event.target.value),
-        onScroll: (event) => {
-          const gutterNode = gutterRef.current
-          if (gutterNode !== null) {
-            gutterNode.scrollTop = event.target.scrollTop
-            gutterNode.scrollLeft = event.target.scrollLeft
-          }
-        },
-        onKeyDown: (event) => {
-          const modifier = event.metaKey || event.ctrlKey
-          if (modifier && event.key === 'Enter') {
-            event.preventDefault()
-            onRun()
-            return
-          }
-          if (event.key === 'Tab' && !event.shiftKey && !modifier) {
-            event.preventDefault()
-            const area = event.target
-            const start = area.selectionStart
-            const end = area.selectionEnd
-            const next = `${value.slice(0, start)}  ${value.slice(end)}`
-            store.setTabSql(tab.id, next)
-            requestAnimationFrame(() => {
-              area.setSelectionRange(start + 2, start + 2)
-            })
-          }
-        },
-      }),
+      h('div', { key: 'wrap', className: 'dw-code-wrap' }, [
+        h('pre', { key: 'hl', className: 'dw-code-highlight', ref: highlightRef, 'aria-hidden': true },
+          tokens.map((token, index) => (token.type === 'space'
+            ? token.value
+            : h('span', { key: index, className: `dw-tok-${token.type}` }, token.value)))),
+        h('textarea', {
+          key: 'area',
+          ref: areaRef,
+          className: 'dw-code',
+          value,
+          spellCheck: false,
+          placeholder: tr('sqlPlaceholder'),
+          onChange: (event) => {
+            const text = event.target.value
+            const caret = event.target.selectionStart
+            store.setTabSql(tab.id, text)
+            refreshCompletion(text, caret)
+          },
+          onClick: (event) => refreshCompletion(event.target.value, event.target.selectionStart),
+          onBlur: () => setCompletion(null),
+          onScroll: (event) => syncScroll(event.target),
+          onKeyDown: (event) => {
+            const modifier = event.metaKey || event.ctrlKey
+            if (completion !== null) {
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault()
+                const size = completion.items.length
+                const delta = event.key === 'ArrowDown' ? 1 : -1
+                setCompletion({ ...completion, index: (completion.index + delta + size) % size })
+                return
+              }
+              if ((event.key === 'Enter' && !modifier) || event.key === 'Tab') {
+                event.preventDefault()
+                applyCompletion(completion.items[completion.index])
+                return
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                setCompletion(null)
+                return
+              }
+            }
+            if (modifier && event.key === 'Enter') {
+              event.preventDefault()
+              runStatement()
+              return
+            }
+            if (modifier && event.key === ' ') {
+              event.preventDefault()
+              refreshCompletion(value, event.target.selectionStart)
+              return
+            }
+            if (event.key === 'Tab' && !event.shiftKey && !modifier) {
+              event.preventDefault()
+              const area = event.target
+              const start = area.selectionStart
+              const end = area.selectionEnd
+              const next = `${value.slice(0, start)}  ${value.slice(end)}`
+              store.setTabSql(tab.id, next)
+              requestAnimationFrame(() => {
+                area.setSelectionRange(start + 2, start + 2)
+              })
+            }
+          },
+        }),
+        completion === null
+          ? null
+          : h('div', {
+            key: 'ac',
+            className: 'dw-complete',
+            style: { left: completion.left, top: completion.top },
+            role: 'listbox',
+          }, completion.items.map((item, index) => h('div', {
+            key: `${item.kind}:${item.label}`,
+            role: 'option',
+            'aria-selected': index === completion.index,
+            className: index === completion.index ? 'dw-complete-row active' : 'dw-complete-row',
+            onMouseDown: (event) => event.preventDefault(),
+            onClick: () => applyCompletion(item),
+          }, [
+            h('span', { key: 'l', className: 'dw-complete-label' }, item.label),
+            h('span', { key: 'd', className: 'dw-complete-detail' }, item.detail ?? ''),
+            h('span', { key: 'k', className: 'dw-complete-kind' }, item.kind === 'column' ? tr('suggestColumn') : item.kind === 'table' ? tr('suggestTable') : tr('suggestKeyword')),
+          ]))),
+      ]),
     ]),
   ])
 }
@@ -2223,6 +3028,74 @@ function DwResults({ store, state, tab, tr }) {
 const DW_EDITOR_MIN = 88
 const DW_EDITOR_MAX = 620
 
+/** Bounds for the explorer column, in pixels. */
+const DW_SIDE_MIN = 200
+const DW_SIDE_MAX = 720
+const DW_SIDE_DEFAULT = 268
+const DW_SIDE_KEY = 'dsh-data-window:side-width'
+
+/** Wide layouts collapse the navigation column; below this the toggle is a drawer. */
+const DW_WIDE_LAYOUT = 1024
+
+/** Last path segment, used when a Workspace has no title. */
+function dwBasename(path) {
+  const parts = String(path ?? '').split('/').filter((part) => part !== '')
+  return parts.length === 0 ? String(path ?? '') : parts[parts.length - 1]
+}
+
+/** `~/Documents/x` instead of an absolute home path. */
+function dwShortPath(path) {
+  return String(path ?? '').replace(/^\/(?:Users|home)\/[^/]+\//, '~/')
+}
+
+/** Stored explorer width, clamped so a bad value cannot hide the tree. */
+function dwReadSideWidth() {
+  const raw = Number(globalThis.localStorage?.getItem(DW_SIDE_KEY))
+  if (!Number.isFinite(raw) || raw <= 0) return DW_SIDE_DEFAULT
+  return Math.min(DW_SIDE_MAX, Math.max(DW_SIDE_MIN, raw))
+}
+
+/**
+ * Whether the shell's navigation column is collapsed.
+ *
+ * `layout.toggleSidebar()` is a bare toggle with no readable state, so the frame's
+ * own marker is the only way to avoid flipping a column the user had already
+ * folded.
+ */
+function dwSidebarCollapsed() {
+  try {
+    const layer = document.querySelector('[data-shell-overlay]')
+    const frame = layer === null ? null : layer.parentElement
+    return frame === null ? false : frame.hasAttribute('data-sidebar-collapsed')
+  } catch (error) {
+    void error
+    return false
+  }
+}
+
+/** Fold the navigation column; false when it was already folded or unavailable. */
+function dwHideSidebar(store) {
+  const layout = store.layout?.()
+  if (layout === undefined || typeof layout.toggleSidebar !== 'function') return false
+  if ((Number(globalThis.innerWidth) || 0) < DW_WIDE_LAYOUT) return false
+  if (dwSidebarCollapsed()) return false
+  layout.toggleSidebar()
+  return true
+}
+
+/** Unfold the navigation column, but only when it is still folded. */
+function dwShowSidebar(store) {
+  const layout = store.layout?.()
+  if (layout === undefined || typeof layout.toggleSidebar !== 'function') return
+  if (!dwSidebarCollapsed()) return
+  layout.toggleSidebar()
+  try {
+    globalThis.dispatchEvent(new Event('resize'))
+  } catch (error) {
+    void error
+  }
+}
+
 /** The workspace a Session belongs to, tolerating both snapshot spellings. */
 function dwResolveRoot(sessionsState, workspacesState) {
   const byId = sessionsState?.byId ?? {}
@@ -2267,13 +3140,68 @@ function DwTracker({ store, useSessions, useWorkspaces }) {
   return null
 }
 
+/** The workspace chip and its menu: switching here re-roots the window in place. */
+function DwProjectMenu({ state, projects, tr, onSelect }) {
+  const [open, setOpen] = useState(false)
+  const root = state.root === '' ? '' : state.root.replace(/\/+$/, '')
+  const current = projects.find((item) => item.path === root)
+  const label = current === undefined
+    ? (state.root === '' ? tr('noWorkspace') : dwBasename(state.root))
+    : current.title
+
+  useEffect(() => {
+    if (!open) return undefined
+    const onDown = (event) => {
+      const element = event.target
+      if (element instanceof Element && element.closest('.dw-project') !== null) return
+      setOpen(false)
+    }
+    globalThis.addEventListener('pointerdown', onDown, true)
+    return () => globalThis.removeEventListener('pointerdown', onDown, true)
+  }, [open])
+
+  return h('div', { className: 'dw-project' }, [
+    h('button', {
+      key: 'btn',
+      type: 'button',
+      className: 'dw-project-btn',
+      title: tr('projectSwitch'),
+      'aria-label': tr('projectSwitch'),
+      onClick: () => setOpen(!open),
+    }, [
+      h('span', { key: 'nm', className: 'dw-project-name' }, label),
+      h('span', { key: 'c', className: 'dw-project-caret' }, '\u25be'),
+    ]),
+    open
+      ? h('div', { key: 'menu', className: 'dw-project-menu', role: 'menu' }, projects.map((item) => h('button', {
+        key: item.path,
+        type: 'button',
+        role: 'menuitem',
+        className: item.path === root ? 'dw-project-row active' : 'dw-project-row',
+        title: item.path,
+        onClick: () => {
+          setOpen(false)
+          if (item.path !== root) onSelect(item.path)
+        },
+      }, [
+        h('span', { key: 't', className: 'dw-project-row-title' }, item.title),
+        h('span', { key: 'p', className: 'dw-project-row-path' }, dwShortPath(item.path)),
+      ])))
+      : null,
+  ])
+}
+
 function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }) {
   const tr = typeof translate === 'function' ? translate : (key) => key
   const state = useSyncExternalStore(store.subscribe, store.getState, store.getState)
   const [menu, setMenu] = useState(null)
   const [editorHeight, setEditorHeight] = useState(168)
+  const [sideWidth, setSideWidth] = useState(() => dwReadSideWidth())
+  const [sidebarHidden, setSidebarHidden] = useState(false)
   const panelRef = useRef(null)
   const logRef = useRef(null)
+  const sideWidthRef = useRef(sideWidth)
+  const sidebarHiddenRef = useRef(false)
 
   // The tracker in the overlay reports first; these hooks read the same data, so
   // whichever mounted first decides, and a Workspace switch updates both.
@@ -2286,6 +3214,66 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   useEffect(() => {
     if (detected !== '') store.setDetectedRoot(detected)
   }, [detected, store])
+
+  // Requirement: entering the window folds the shell's navigation column, so the
+  // explorer and the workbench get the whole frame. Leaving unfolds it again, but
+  // only if it is still folded.
+  useEffect(() => {
+    if (dwHideSidebar(store)) {
+      sidebarHiddenRef.current = true
+      setSidebarHidden(true)
+    }
+    return () => {
+      if (!sidebarHiddenRef.current) return
+      sidebarHiddenRef.current = false
+      dwShowSidebar(store)
+    }
+  }, [store])
+
+  const toggleSidebar = () => {
+    if (sidebarHiddenRef.current || dwSidebarCollapsed()) {
+      sidebarHiddenRef.current = false
+      setSidebarHidden(false)
+      dwShowSidebar(store)
+      return
+    }
+    if (dwHideSidebar(store)) {
+      sidebarHiddenRef.current = true
+      setSidebarHidden(true)
+    }
+  }
+
+  // Drag the divider between the explorer and the workbench; the width is stored
+  // per browser because it is a reading preference, not a per-project fact.
+  const startSideResize = (event) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    const startX = event.clientX
+    const startWidth = sideWidthRef.current
+    const panelWidth = panelRef.current?.getBoundingClientRect?.().width ?? globalThis.innerWidth
+    const max = Math.max(DW_SIDE_MIN + 40, Math.min(DW_SIDE_MAX, panelWidth - 360))
+    const previousSelect = document.body.style.userSelect
+    document.body.style.userSelect = 'none'
+    const move = (moveEvent) => {
+      const width = Math.min(max, Math.max(DW_SIDE_MIN, startWidth + moveEvent.clientX - startX))
+      sideWidthRef.current = width
+      setSideWidth(width)
+    }
+    const stop = () => {
+      globalThis.removeEventListener('pointermove', move)
+      globalThis.removeEventListener('pointerup', stop)
+      document.body.style.userSelect = previousSelect
+      globalThis.localStorage?.setItem(DW_SIDE_KEY, String(sideWidthRef.current))
+    }
+    globalThis.addEventListener('pointermove', move)
+    globalThis.addEventListener('pointerup', stop)
+  }
+
+  const resetSideWidth = () => {
+    sideWidthRef.current = DW_SIDE_DEFAULT
+    setSideWidth(DW_SIDE_DEFAULT)
+    globalThis.localStorage?.setItem(DW_SIDE_KEY, String(DW_SIDE_DEFAULT))
+  }
 
   // Requirement 3: one keystroke from the selected table to its create statement.
   useEffect(() => {
@@ -2324,7 +3312,22 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
 
   const activeTab = (state.tabs ?? []).find((tab) => tab.id === state.activeTab)
   const environments = state.environments ?? []
-  const project = state.project
+
+  // Every Workspace the shell knows, plus the current root when it is not a
+  // registered Workspace yet (a directory picked by hand).
+  const projectItems = []
+  const seenProjectPaths = new Set()
+  for (const item of Array.isArray(workspaces?.items) ? workspaces.items : []) {
+    const path = typeof item?.path === 'string' ? item.path.replace(/\/+$/, '') : ''
+    if (path === '' || seenProjectPaths.has(path)) continue
+    seenProjectPaths.add(path)
+    const title = typeof item?.title === 'string' && item.title.trim() !== '' ? item.title.trim() : dwBasename(path)
+    projectItems.push({ path, title })
+  }
+  const currentRoot = state.root === '' ? '' : state.root.replace(/\/+$/, '')
+  if (currentRoot !== '' && !seenProjectPaths.has(currentRoot)) {
+    projectItems.unshift({ path: currentRoot, title: dwBasename(currentRoot) })
+  }
 
   const pickWorkspace = async () => {
     if (typeof pickDirectory !== 'function') return
@@ -2340,7 +3343,13 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const toolbar = h('div', { key: 'toolbar', className: 'dw-toolbar' }, [
     h('span', { key: 'ic', className: 'dw-node-icon' }, h(DwIcon, { name: 'database-play', size: 15 })),
     h('div', { key: 'title', className: 'dw-toolbar-title' }, [
-      h('span', { key: 'p', className: 'dw-toolbar-project' }, project?.name ?? (state.phase === 'error' ? tr('stateError') : state.root === '' ? tr('noWorkspace') : tr('loading'))),
+      h(DwProjectMenu, {
+        key: 'ws',
+        state,
+        projects: projectItems,
+        tr,
+        onSelect: (path) => store.setManualRoot(path),
+      }),
       h('span', { key: 'path', className: 'dw-toolbar-path', title: state.root }, state.root),
     ]),
     environments.length > 0 ? h('span', { key: 'envs', className: 'dw-badge', style: { marginLeft: 0 } }, `${environments.length} ${tr('environments')}`) : null,
@@ -2355,6 +3364,14 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       h(DwIcon, { key: 'i', name: 'panel', size: 12 }),
       h('span', { key: 't' }, tr('pickWorkspace')),
     ]),
+    h('button', {
+      key: 'sidebar',
+      type: 'button',
+      className: 'dw-btn dw-btn-icon',
+      onClick: toggleSidebar,
+      title: sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
+      'aria-label': sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
+    }, h(DwIcon, { name: 'panel', size: 13 })),
     h('button', {
       key: 'refresh',
       type: 'button',
@@ -2372,7 +3389,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     && state.selectedNode !== undefined
     && (state.selectedNode.kind === 'table' || state.selectedNode.kind === 'view')
 
-  const side = h('aside', { key: 'side', className: 'dw-side' }, [
+  const side = h('aside', { key: 'side', className: 'dw-side', style: { width: sideWidth } }, [
     h('div', { key: 'head', className: 'dw-side-head' }, [
       h('span', { key: 't' }, tr('treeTitle')),
       h('span', { key: 'sp', className: 'dw-spacer' }),
@@ -2435,7 +3452,8 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
               tab: activeTab,
               tr,
               height: editorHeight,
-              onRun: () => void store.runActiveTab(),
+              schema: state.schemas?.get(activeTab.dbId),
+              onRun: (statement) => void store.runActiveTab(statement),
             }),
             h(DwDragHandle, {
               key: 'drag',
@@ -2509,7 +3527,19 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   return h('div', { className: 'dw-root', ref: panelRef }, [
     h(DwStyles, { key: 'style' }),
     toolbar,
-    h('div', { key: 'body', className: 'dw-body' }, [side, main]),
+    h('div', { key: 'body', className: 'dw-body' }, [
+      side,
+      h('div', {
+        key: 'resizer',
+        className: 'dw-resizer',
+        role: 'separator',
+        'aria-orientation': 'vertical',
+        title: tr('resizeTree'),
+        onPointerDown: startSideResize,
+        onDoubleClick: resetSideWidth,
+      }),
+      main,
+    ]),
     log,
     menuLayer,
   ])

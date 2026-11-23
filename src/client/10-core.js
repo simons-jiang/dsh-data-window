@@ -207,6 +207,8 @@ function dwCreateStore(translate) {
     // workbench
     tabs: [],
     activeTab: '',
+    // Table/column maps for the editor's completion, one per database.
+    schemas: new Map(),
     limit: DW_DEFAULT_LIMIT,
     // log
     logOpen: false,
@@ -315,6 +317,7 @@ function dwCreateStore(translate) {
         selectedNode: null,
         tabs: [],
         activeTab: '',
+        schemas: new Map(),
       })
     },
 
@@ -346,6 +349,7 @@ function dwCreateStore(translate) {
         selectedNode: null,
         tabs: [],
         activeTab: '',
+        schemas: new Map(),
       })
       void store.loadDiscovery({ refresh: false })
       void store.loadSettings()
@@ -512,6 +516,25 @@ function dwCreateStore(translate) {
         nextState.set(node.key, 'error')
         patch({ loadState: nextState })
         pushLog('error', t('log.loadFailed', { name: node.label, message: dwExplainFailure(t, error) }))
+      }
+    },
+
+    /**
+     * Load the table/column map the editor completes against.
+     *
+     * Failure is silent: suggestions degrade to keywords instead of turning a
+     * focus event into an error banner.
+     */
+    async loadSchema(dbId) {
+      if (typeof dbId !== 'string' || dbId === '') return
+      if (state.schemas?.has(dbId)) return
+      try {
+        const value = await call('schema', { id: dbId })
+        const schemas = new Map(state.schemas ?? [])
+        schemas.set(dbId, value)
+        patch({ schemas })
+      } catch (error) {
+        void error
       }
     },
 
@@ -704,10 +727,18 @@ function dwCreateStore(translate) {
     },
 
     /** Run the active tab's statement. */
-    async runActiveTab() {
+    /**
+     * Run the workbench statement, or just the text the user selected.
+     *
+     * DataGrip runs the selection; running the whole buffer while the user has a
+     * fragment selected sends several statements to MySQL, which answers with a
+     * confusing ER_PARSE_ERROR at the second one.
+     */
+    async runActiveTab(statement) {
       const tab = state.tabs.find((entry) => entry.id === state.activeTab)
       if (tab === undefined || tab.kind !== 'sql' || tab.running === true) return
-      const sql = String(tab.sql ?? '').trim()
+      const override = typeof statement === 'string' ? statement.trim() : ''
+      const sql = override !== '' ? override : String(tab.sql ?? '').trim()
       if (DW_SQL_EMPTY.test(sql)) {
         pushLog('warn', t('log.noStatement'))
         return

@@ -1,0 +1,483 @@
+/**
+ * SQL lexer, completion and formatter.
+ *
+ * The editor is a textarea, so highlighting is an overlay of tokens and the
+ * completion list is built from the schema the Host already exposes. All three
+ * features share one lexer: a single definition of strings, comments and
+ * keywords that cannot drift apart.
+ *
+ * Nothing here touches the DOM or React; the functions are pure so they can be
+ * exercised from Node.
+ */
+
+/** Words the editor colours as keywords. */
+const DW_SQL_KEYWORDS = new Set(`select from where group by order having limit offset union all distinct join inner left right outer full cross natural on using and or not in is null like between exists case when then else end as asc desc insert into values update set delete create drop alter table index view show describe explain with recursive partition over window`.split(' '))
+
+/** Words coloured as functions; the schema supplies the rest. */
+const DW_SQL_FUNCTIONS = new Set(`count sum avg min max coalesce ifnull nullif concat concat_ws substr substring length lower upper trim ltrim rtrim replace round floor ceil abs cast convert date_format str_to_date now curdate curtime datediff date_add date_sub timestampdiff if group_concat json_extract json_unquote unix_timestamp from_unixtime row_number rank dense_rank lag lead`.split(' '))
+
+/** Literals that are keywords in effect. */
+const DW_SQL_LITERALS = new Set(['null', 'true', 'false'])
+
+const DW_SQL_OPERATORS = ['<=>', '<=', '>=', '<>', '!=', '||', '&&', ':=', '=', '<', '>', '+', '-', '*', '/', '%', '!', '&', '|', '^', '~']
+const DW_SQL_PUNCT = new Set(['(', ')', ',', '.', ';', '[', ']'])
+
+/** Split SQL into tokens; whitespace is kept so highlighting reproduces it. */
+export function dwSqlLex(text) {
+  const source = String(text ?? '')
+  const tokens = []
+  let index = 0
+  while (index < source.length) {
+    const start = index
+    const char = source[index]
+    if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
+      while (index < source.length && /[ \t\n\r]/.test(source[index])) index += 1
+      tokens.push({ type: 'space', value: source.slice(start, index), start, end: index })
+      continue
+    }
+    if (char === '-' && source[index + 1] === '-') {
+      index += 2
+      while (index < source.length && source[index] !== '\n') index += 1
+      tokens.push({ type: 'comment', value: source.slice(start, index), start, end: index })
+      continue
+    }
+    if (char === '#') {
+      index += 1
+      while (index < source.length && source[index] !== '\n') index += 1
+      tokens.push({ type: 'comment', value: source.slice(start, index), start, end: index })
+      continue
+    }
+    if (char === '/' && source[index + 1] === '*') {
+      index += 2
+      while (index < source.length && !(source[index] === '*' && source[index + 1] === '/')) index += 1
+      index = Math.min(source.length, index + 2)
+      tokens.push({ type: 'comment', value: source.slice(start, index), start, end: index })
+      continue
+    }
+    if (char === "'" || char === '"' || char === '`') {
+      index += 1
+      while (index < source.length) {
+        if (source[index] === '\\') {
+          index += 2
+          continue
+        }
+        if (source[index] === char) {
+          if (source[index + 1] === char) {
+            index += 2
+            continue
+          }
+          index += 1
+          break
+        }
+        index += 1
+      }
+      const value = source.slice(start, index)
+      const closed = value.length > 1 && value[value.length - 1] === char
+      tokens.push({ type: closed ? (char === '`' ? 'identifier' : 'string') : 'string', value, start, end: index })
+      continue
+    }
+    if (/[0-9]/.test(char)) {
+      while (index < source.length && /[0-9]/.test(source[index])) index += 1
+      if (source[index] === '.') {
+        index += 1
+        while (index < source.length && /[0-9]/.test(source[index])) index += 1
+      }
+      if (/[eE]/.test(source[index] ?? '')) {
+        index += 1
+        if (/[+-]/.test(source[index] ?? '')) index += 1
+        while (index < source.length && /[0-9]/.test(source[index])) index += 1
+      }
+      tokens.push({ type: 'number', value: source.slice(start, index), start, end: index })
+      continue
+    }
+    if (/[A-Za-z_$]/.test(char)) {
+      while (index < source.length && /[A-Za-z0-9_$]/.test(source[index])) index += 1
+      const value = source.slice(start, index)
+      const lower = value.toLowerCase()
+      const type = DW_SQL_LITERALS.has(lower)
+        ? 'literal'
+        : DW_SQL_KEYWORDS.has(lower)
+          ? 'keyword'
+          : DW_SQL_FUNCTIONS.has(lower) ? 'function' : 'identifier'
+      tokens.push({ type, value, start, end: index })
+      continue
+    }
+    const operator = DW_SQL_OPERATORS.find((candidate) => source.startsWith(candidate, index))
+    if (operator !== undefined) {
+      index += operator.length
+      tokens.push({ type: 'operator', value: operator, start, end: index })
+      continue
+    }
+    index += 1
+    tokens.push({ type: DW_SQL_PUNCT.has(char) ? 'punct' : 'identifier', value: char, start, end: index })
+  }
+  return tokens
+}
+
+/** Tokens that carry meaning for completion and formatting. */
+function dwSqlSignificant(tokens) {
+  return tokens.filter((token) => token.type !== 'space')
+}
+
+/** Strip the backticks/quoting one identifier carries. */
+function dwSqlUnquote(value) {
+  const text = String(value ?? '').trim()
+  if (text.length > 1 && (text[0] === '`' || text[0] === '"') && text[text.length - 1] === text[0]) {
+    return text.slice(1, -1)
+  }
+  return text
+}
+
+/**
+ * `db.table` → `table`, aware of per-part backticks.
+ *
+ * MySQL statements in this console usually quote both parts (`db`.`table`), so
+ * splitting on the raw string leaves a leading backtick on the table name and the
+ * schema lookup misses.
+ */
+function dwSqlTableName(value) {
+  const text = String(value ?? '').trim()
+  let quoted = false
+  let lastDot = -1
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    if (char === '`') quoted = !quoted
+    else if (char === '.' && !quoted) lastDot = index
+  }
+  return dwSqlUnquote(text.slice(lastDot + 1).trim())
+}
+
+/**
+ * Tables and aliases the statement mentions.
+ *
+ * Only `FROM` and `JOIN` are scanned; a comma-separated FROM list is rare in this
+ * console's queries and a miss only means fewer column suggestions.
+ */
+export function dwSqlTableRefs(text) {
+  const refs = []
+  const seen = new Set()
+  const pattern = /\b(from|join)\s+((?:`[^`]+`|[A-Za-z0-9_$]+)(?:\.(?:`[^`]+`|[A-Za-z0-9_$]+))?)(?:\s+(?:as\s+)?(`[^`]+`|[A-Za-z_][A-Za-z0-9_$]*))?/gi
+  let match
+  while ((match = pattern.exec(String(text ?? ''))) !== null) {
+    const table = dwSqlTableName(match[2])
+    if (table === '') continue
+    let alias = match[3] === undefined ? table : dwSqlUnquote(match[3])
+    if (DW_SQL_KEYWORDS.has(alias.toLowerCase()) || alias === '') alias = table
+    const key = alias.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    refs.push({ table, alias })
+  }
+  return refs
+}
+
+/** The word being typed and the context around it. */
+function dwSqlCompletionPrefix(source, caret) {
+  let start = caret
+  while (start > 0 && /[A-Za-z0-9_$`]/.test(source[start - 1])) start -= 1
+  const prefix = source.slice(start, caret).replace(/`/g, '')
+  let qualifier = ''
+  let before = source.slice(0, start).replace(/\s+$/, '')
+  if (before.endsWith('.')) {
+    const match = /([A-Za-z0-9_$`]+)\.$/.exec(before)
+    qualifier = match === null ? '' : dwSqlUnquote(match[1])
+    before = before.slice(0, -1 - qualifier.length).replace(/\s+$/, '')
+  }
+  const previous = /([A-Za-z_][A-Za-z0-9_$]*)$/.exec(before)
+  return {
+    prefix,
+    qualifier,
+    startedAfterDot: qualifier !== '',
+    previousWord: previous === null ? '' : previous[1].toLowerCase(),
+    from: start,
+    to: caret,
+  }
+}
+
+/** Which family of suggestions a clause asks for. */
+function dwSqlSuggestionKind(context) {
+  if (context.qualifier !== '') return 'column'
+  const word = context.previousWord
+  if (['from', 'join', 'into', 'update', 'table'].includes(word)) return 'table'
+  if (['select', 'where', 'on', 'and', 'or', 'having', 'by', 'set', 'using', 'distinct', 'case', 'when', 'then', 'else', 'order', 'group', 'value'].includes(word)) return 'column'
+  return 'any'
+}
+
+/**
+ * Build the suggestion list for the caret.
+ *
+ * `schema` is the Host's map of the current database (`{ tables: [{ name,
+ * columns: [{ name, type }] }] }`); without it the list degrades to keywords.
+ */
+export function dwSqlCompletion(text, caret, schema) {
+  const source = String(text ?? '')
+  const position = Math.max(0, Math.min(Number(caret) || 0, source.length))
+  const context = dwSqlCompletionPrefix(source, position)
+  const kind = dwSqlSuggestionKind(context)
+  const prefix = context.prefix.toLowerCase()
+  const tables = Array.isArray(schema?.tables) ? schema.tables : []
+  const refs = dwSqlTableRefs(source)
+  const items = []
+  const seen = new Set()
+
+  const add = (label, type, detail) => {
+    const key = `${type}\u0000${label.toLowerCase()}`
+    if (seen.has(key)) return
+    if (prefix !== '' && !label.toLowerCase().startsWith(prefix)) return
+    if (label.toLowerCase() === prefix) return
+    seen.add(key)
+    items.push({ label, kind: type, detail })
+  }
+
+  const tableWith = (name) => tables.find((table) => table.name.toLowerCase() === name.toLowerCase())
+
+  if (context.qualifier !== '') {
+    const ref = refs.find((entry) => entry.alias.toLowerCase() === context.qualifier.toLowerCase())
+      ?? refs.find((entry) => entry.table.toLowerCase() === context.qualifier.toLowerCase())
+    const table = tableWith(ref?.table ?? context.qualifier)
+    for (const column of Array.isArray(table?.columns) ? table.columns : []) {
+      add(column.name, 'column', `${table.name}.${column.type ?? ''}`)
+    }
+  } else if (kind === 'table') {
+    for (const table of tables) add(table.name, 'table', `${table.columns?.length ?? 0} 列`)
+    for (const ref of refs) add(ref.table, 'table', '已引用')
+  } else {
+    if (kind === 'column' || kind === 'any') {
+      for (const ref of refs) {
+        const table = tableWith(ref.table)
+        for (const column of Array.isArray(table?.columns) ? table.columns : []) {
+          add(column.name, 'column', `${ref.alias === ref.table ? ref.table : `${ref.alias} → ${ref.table}`}.${column.type ?? ''}`)
+        }
+      }
+      if (refs.length === 0) {
+        for (const table of tables) {
+          for (const column of Array.isArray(table.columns) ? table.columns : []) {
+            add(column.name, 'column', `${table.name}.${column.type ?? ''}`)
+          }
+        }
+      }
+    }
+    if (kind !== 'column') {
+      for (const keyword of DW_SQL_KEYWORDS) add(keyword.toUpperCase(), 'keyword', '关键字')
+    }
+  }
+
+  items.sort((left, right) => {
+    const weight = (item) => (item.kind === 'column' ? 0 : item.kind === 'table' ? 1 : 2)
+    if (weight(left) !== weight(right)) return weight(left) - weight(right)
+    return left.label.length - right.label.length || (left.label < right.label ? -1 : 1)
+  })
+
+  return {
+    items: items.slice(0, 50),
+    from: context.from,
+    to: context.to,
+    prefix: context.prefix,
+    kind,
+  }
+}
+
+const DW_SQL_JOIN_PREFIXES = new Set(['left', 'right', 'inner', 'outer', 'full', 'cross', 'natural'])
+
+/** Whether the select list starting at `index` carries a top-level comma. */
+function dwSqlSelectListHasComma(tokens, index) {
+  let depth = 0
+  for (let cursor = index; cursor < tokens.length; cursor += 1) {
+    const value = tokens[cursor].value
+    if (value === '(') {
+      depth += 1
+      continue
+    }
+    if (value === ')') {
+      if (depth === 0) return false
+      depth -= 1
+      continue
+    }
+    const lower = value.toLowerCase()
+    if (depth === 0 && ['from', 'where', 'group', 'order', 'having', 'limit', 'union'].includes(lower)) return false
+    if (depth === 0 && value === ',') return true
+  }
+  return false
+}
+
+/** Collapse the run of spaces/tabs one line may start with. */
+function dwSqlIndent(level) {
+  return ' '.repeat(Math.max(0, level))
+}
+
+/**
+ * Reindent a statement: clause keywords on their own line, one select item per
+ * line, joins and boolean operators indented one level. Keyword case and inline
+ * spacing are preserved; only line breaks and indentation move.
+ */
+export function dwFormatSql(text) {
+  const tokens = dwSqlSignificant(dwSqlLex(text))
+  if (tokens.length === 0) return ''
+
+  const lines = []
+  let line = ''
+  let depth = 0
+  let clause = ''
+  let selectDepth = -1
+  const parens = []
+
+  const push = (value) => {
+    line += value
+  }
+  const pushWord = (value) => {
+    const last = line[line.length - 1]
+    if (line !== '' && last !== ' ' && last !== '.' && last !== '(' && value !== '.' && value !== ')' && value !== ',' && value !== '(') {
+      line += ' '
+    }
+    line += value
+  }
+  const newlineAt = (level) => {
+    lines.push(line.trimEnd())
+    line = dwSqlIndent(level)
+  }
+  const atIndex = (index) => (tokens[index] === undefined ? '' : tokens[index].value.toLowerCase())
+  const isWord = (index) => tokens[index] !== undefined && tokens[index].type === 'identifier'
+
+  let index = 0
+  while (index < tokens.length) {
+    const token = tokens[index]
+    const lower = token.value.toLowerCase()
+    const next = atIndex(index + 1)
+
+    if (token.type === 'comment') {
+      if (line.trim() !== '') newlineAt(depth * 2)
+      push(token.value)
+      newlineAt(depth * 2)
+      index += 1
+      continue
+    }
+
+    // Multi-word clause keywords: GROUP BY / ORDER BY / UNION ALL / JOIN prefixes.
+    if (lower === 'group' && next === 'by') {
+      newlineAt(depth * 2)
+      push(`${token.value} ${tokens[index + 1].value}`)
+      clause = 'group'
+      index += 2
+      continue
+    }
+    if (lower === 'order' && next === 'by') {
+      newlineAt(depth * 2)
+      push(`${token.value} ${tokens[index + 1].value}`)
+      clause = 'order'
+      index += 2
+      continue
+    }
+    if (lower === 'union') {
+      newlineAt(depth * 2)
+      push(token.value)
+      if (next === 'all' || next === 'distinct') {
+        push(` ${tokens[index + 1].value}`)
+        index += 2
+      } else {
+        index += 1
+      }
+      clause = 'union'
+      continue
+    }
+    if (
+      lower === 'join'
+      || (DW_SQL_JOIN_PREFIXES.has(lower) && ['join', 'outer'].includes(next))
+      || (DW_SQL_JOIN_PREFIXES.has(lower) && next === 'outer' && atIndex(index + 2) === 'join')
+    ) {
+      newlineAt(depth * 2 + 2)
+      let consumed = 1
+      if (lower !== 'join') consumed = 2
+      if (next === 'outer' && atIndex(index + 2) === 'join') consumed = 3
+      push(tokens.slice(index, index + consumed).map((entry) => entry.value).join(' '))
+      clause = 'join'
+      index += consumed
+      continue
+    }
+
+    if (token.type === 'keyword') {
+      if (lower === 'select') {
+        newlineAt(depth * 2)
+        push(token.value)
+        clause = 'select'
+        selectDepth = depth
+        if (dwSqlSelectListHasComma(tokens, index + 1)) newlineAt(depth * 2 + 2)
+        index += 1
+        continue
+      }
+      if (['from', 'where', 'having', 'limit', 'offset'].includes(lower)) {
+        newlineAt(depth * 2)
+        push(token.value)
+        clause = lower
+        if (lower === 'from') selectDepth = -1
+        index += 1
+        continue
+      }
+      if (lower === 'on') {
+        pushWord(token.value)
+        clause = 'on'
+        index += 1
+        continue
+      }
+      if ((lower === 'and' || lower === 'or') && ['where', 'having', 'on'].includes(clause)) {
+        newlineAt(depth * 2 + 2)
+        push(token.value)
+        index += 1
+        continue
+      }
+    }
+
+    if (token.value === '(') {
+      push('(')
+      depth += 1
+      const subquery = atIndex(index + 1) === 'select'
+      parens.push({ subquery })
+      if (subquery) {
+        newlineAt(depth * 2)
+        push(tokens[index + 1].value)
+        clause = 'select'
+        selectDepth = depth
+        index += 2
+        continue
+      }
+      index += 1
+      continue
+    }
+    if (token.value === ')') {
+      depth = Math.max(0, depth - 1)
+      const scope = parens.pop()
+      if (scope !== undefined && scope.subquery === true) {
+        newlineAt(depth * 2)
+      }
+      push(')')
+      index += 1
+      continue
+    }
+    if (token.value === ',') {
+      push(',')
+      if (clause === 'select' && selectDepth === depth) newlineAt(depth * 2 + 2)
+      else pushWord('')
+      index += 1
+      continue
+    }
+    if (token.value === ';') {
+      push(';')
+      newlineAt(0)
+      index += 1
+      continue
+    }
+
+    pushWord(token.value)
+    if (token.value === '.') line = line.replace(/ $/, '')
+    index += 1
+  }
+
+  lines.push(line.trimEnd())
+  return lines
+    .map((entry) => entry.replace(/\s+$/, ''))
+    .filter((entry, position, all) => entry !== '' || (position > 0 && position < all.length - 1))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+export { DW_SQL_KEYWORDS, DW_SQL_FUNCTIONS }

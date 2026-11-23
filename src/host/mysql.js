@@ -390,6 +390,47 @@ export class DataGateway {
     }
   }
 
+  /**
+   * Every table and column of one schema in one round trip.
+   *
+   * The SQL editor suggests table and column names; one map call per database
+   * beats a `columns` call per referenced table, and it is what lets the editor
+   * suggest columns of tables the tree has never expanded.
+   */
+  async schemaMap(id) {
+    const target = this.targetOf(id)
+    if (typeof target.database !== 'string') {
+      const error = new Error('database-required')
+      error.code = 'database-required'
+      throw error
+    }
+    const result = await this.run(
+      id,
+      `SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE
+         FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = ${sqlString(target.database)}
+        ORDER BY TABLE_NAME, ORDINAL_POSITION`,
+      { limit: MAX_LIMIT },
+    )
+    const tables = new Map()
+    for (const row of result.rows) {
+      const name = String(row[0] ?? '')
+      if (name === '') continue
+      let table = tables.get(name)
+      if (table === undefined) {
+        table = { name, columns: [] }
+        tables.set(name, table)
+      }
+      table.columns.push({ name: String(row[1] ?? ''), type: String(row[2] ?? '') })
+    }
+    return {
+      database: target.database,
+      tables: [...tables.values()],
+      truncated: result.truncated,
+      elapsedMs: result.elapsedMs,
+    }
+  }
+
   /** The DDL of one table, plus its indexes. */
   async showCreate(id, table) {
     const target = this.targetOf(id)

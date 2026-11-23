@@ -124,6 +124,8 @@ export class DataController {
         return this.gateway.listTables(payload.id)
       case 'columns':
         return this.gateway.listColumns(payload.id, payload.table)
+      case 'schema':
+        return this.gateway.schemaMap(payload.id)
       case 'ddl':
         return this.gateway.showCreate(payload.id, payload.table)
       case 'query':

@@ -70,12 +70,48 @@ function DwDragHandle({ value, onChange, min, max }) {
   })
 }
 
-/** The SQL textarea with a line-number gutter that follows its scroll. */
-function DwEditor({ store, tab, tr, onRun, height }) {
+/** Caret position inside the textarea, measured with an in-place mirror. */
+function dwCaretPoint(area, text, caret) {
+  const wrap = area?.parentElement
+  if (area === null || area === undefined || wrap === null || wrap === undefined) return { left: 0, top: 0 }
+  const style = globalThis.getComputedStyle(area)
+  const mirror = document.createElement('div')
+  mirror.style.position = 'absolute'
+  mirror.style.visibility = 'hidden'
+  mirror.style.pointerEvents = 'none'
+  mirror.style.top = '0'
+  mirror.style.left = '0'
+  mirror.style.width = `${area.offsetWidth}px`
+  mirror.style.padding = style.padding
+  mirror.style.border = style.border
+  mirror.style.fontFamily = style.fontFamily
+  mirror.style.fontSize = style.fontSize
+  mirror.style.fontWeight = style.fontWeight
+  mirror.style.letterSpacing = style.letterSpacing
+  mirror.style.lineHeight = style.lineHeight
+  mirror.style.tabSize = style.tabSize
+  mirror.style.whiteSpace = 'pre'
+  mirror.style.overflow = 'hidden'
+  mirror.textContent = text.slice(0, caret)
+  const marker = document.createElement('span')
+  marker.textContent = '|'
+  mirror.append(marker)
+  wrap.append(mirror)
+  const left = marker.offsetLeft - area.scrollLeft
+  const top = marker.offsetTop - area.scrollTop
+  mirror.remove()
+  return { left, top }
+}
+
+/** The SQL editor: highlighted text, completion and one-keystroke formatting. */
+function DwEditor({ store, tab, tr, onRun, height, schema }) {
   const value = tab.sql ?? ''
+  const tokens = useMemo(() => dwSqlLex(value), [value])
   const lines = useMemo(() => value.split('\n').length, [value])
   const gutterRef = useRef(null)
   const areaRef = useRef(null)
+  const highlightRef = useRef(null)
+  const [completion, setCompletion] = useState(null)
 
   useEffect(() => {
     const area = areaRef.current
@@ -86,27 +122,108 @@ function DwEditor({ store, tab, tr, onRun, height }) {
     area.setSelectionRange(area.value.length, area.value.length)
   }, [tab.id])
 
+  // The completion list needs the schema of this database; one round trip, cached
+  // by the store. A failure only degrades the list to keywords.
+  useEffect(() => {
+    void store.loadSchema(tab.dbId)
+  }, [tab.dbId, store])
+
+  const syncScroll = (area) => {
+    const gutter = gutterRef.current
+    if (gutter !== null) {
+      gutter.scrollTop = area.scrollTop
+      gutter.scrollLeft = area.scrollLeft
+    }
+    const highlight = highlightRef.current
+    if (highlight !== null) {
+      highlight.scrollTop = area.scrollTop
+      highlight.scrollLeft = area.scrollLeft
+    }
+  }
+
+  const refreshCompletion = (text, caret) => {
+    const area = areaRef.current
+    if (area === null) return
+    const result = dwSqlCompletion(text, caret, schema)
+    const afterDot = /[A-Za-z0-9_$`]\.$/.test(text.slice(0, caret))
+    if (result.items.length === 0 || (result.prefix === '' && !afterDot)) {
+      setCompletion(null)
+      return
+    }
+    const point = dwCaretPoint(area, text, caret)
+    setCompletion({ ...result, index: 0, left: point.left, top: point.top + 20 })
+  }
+
+  // The schema map starts loading when the tab opens; a fast typist can type a whole
+  // word before it lands, which used to leave the list closed until the next key.
+  // Re-evaluate the caret once the map arrives so the popup appears on its own.
+  useEffect(() => {
+    if (schema === undefined) return
+    const area = areaRef.current
+    if (area === null || document.activeElement !== area) return
+    refreshCompletion(value, area.selectionStart)
+  }, [schema])
+
+  const applyCompletion = (item) => {
+    const current = completion
+    if (current === null || item === undefined) return
+    const next = `${value.slice(0, current.from)}${item.label}${value.slice(current.to)}`
+    const position = current.from + item.label.length
+    store.setTabSql(tab.id, next)
+    setCompletion(null)
+    requestAnimationFrame(() => {
+      const area = areaRef.current
+      if (area === null) return
+      area.focus()
+      area.setSelectionRange(position, position)
+    })
+  }
+
+  const runStatement = () => {
+    const area = areaRef.current
+    const selected = area !== null && area.selectionEnd > area.selectionStart
+      ? value.slice(area.selectionStart, area.selectionEnd)
+      : ''
+    onRun(selected.trim() === '' ? undefined : selected)
+  }
+
+  const format = () => {
+    const formatted = dwFormatSql(value)
+    if (formatted === value) return
+    store.setTabSql(tab.id, formatted)
+    requestAnimationFrame(() => areaRef.current?.focus())
+  }
+
   const gutter = []
   for (let index = 1; index <= Math.max(lines, 1); index += 1) gutter.push(`${index}\n`)
 
-  return h('div', { className: 'dw-editor-wrap', style: { height } }, [
-    h('div', { key: 'bar', className: 'dw-editor-bar' }, [
-      h('span', { key: 'db', style: { color: 'var(--dsw-alias-label-primary)', fontWeight: 600 } }, tab.database),
-      h('span', { key: 'env' }, tab.subtitle ?? ''),
-      h('span', { key: 'sp', className: 'dw-spacer' }),
-      h('span', { key: 'hint', style: { fontSize: 11 } }, tr('runHint')),
-      h('button', {
-        key: 'run',
-        type: 'button',
-        className: 'dw-btn dw-btn-accent',
-        disabled: tab.running === true,
-        title: tr('runHint'),
-        onClick: onRun,
-      }, [
-        h(DwIcon, { key: 'i', name: tab.running === true ? 'spinner' : 'play', size: 11 }),
-        h('span', { key: 't' }, tab.running === true ? tr('running') : tr('run')),
-      ]),
+  const bar = h('div', { key: 'bar', className: 'dw-editor-bar' }, [
+    h('span', { key: 'db', style: { color: 'var(--dsw-alias-label-primary)', fontWeight: 600 } }, tab.database),
+    h('span', { key: 'env' }, tab.subtitle ?? ''),
+    h('span', { key: 'sp', className: 'dw-spacer' }),
+    h('button', {
+      key: 'format',
+      type: 'button',
+      className: 'dw-btn',
+      title: tr('formatSqlHint'),
+      onClick: format,
+    }, [h(DwIcon, { key: 'i', name: 'format', size: 11 }), h('span', { key: 't' }, tr('formatSql'))]),
+    h('span', { key: 'hint', style: { fontSize: 11 } }, tr('runHint')),
+    h('button', {
+      key: 'run',
+      type: 'button',
+      className: 'dw-btn dw-btn-accent',
+      disabled: tab.running === true,
+      title: tr('runHint'),
+      onClick: runStatement,
+    }, [
+      h(DwIcon, { key: 'i', name: tab.running === true ? 'spinner' : 'play', size: 11 }),
+      h('span', { key: 't' }, tab.running === true ? tr('running') : tr('run')),
     ]),
+  ])
+
+  return h('div', { className: 'dw-editor-wrap', style: { height } }, [
+    bar,
     h('div', { key: 'editor', className: 'dw-editor' }, [
       h('div', {
         key: 'gutter',
@@ -114,41 +231,91 @@ function DwEditor({ store, tab, tr, onRun, height }) {
         ref: gutterRef,
         'aria-hidden': true,
       }, gutter.join('')),
-      h('textarea', {
-        key: 'area',
-        ref: areaRef,
-        className: 'dw-code',
-        value,
-        spellCheck: false,
-        placeholder: tr('sqlPlaceholder'),
-        onChange: (event) => store.setTabSql(tab.id, event.target.value),
-        onScroll: (event) => {
-          const gutterNode = gutterRef.current
-          if (gutterNode !== null) {
-            gutterNode.scrollTop = event.target.scrollTop
-            gutterNode.scrollLeft = event.target.scrollLeft
-          }
-        },
-        onKeyDown: (event) => {
-          const modifier = event.metaKey || event.ctrlKey
-          if (modifier && event.key === 'Enter') {
-            event.preventDefault()
-            onRun()
-            return
-          }
-          if (event.key === 'Tab' && !event.shiftKey && !modifier) {
-            event.preventDefault()
-            const area = event.target
-            const start = area.selectionStart
-            const end = area.selectionEnd
-            const next = `${value.slice(0, start)}  ${value.slice(end)}`
-            store.setTabSql(tab.id, next)
-            requestAnimationFrame(() => {
-              area.setSelectionRange(start + 2, start + 2)
-            })
-          }
-        },
-      }),
+      h('div', { key: 'wrap', className: 'dw-code-wrap' }, [
+        h('pre', { key: 'hl', className: 'dw-code-highlight', ref: highlightRef, 'aria-hidden': true },
+          tokens.map((token, index) => (token.type === 'space'
+            ? token.value
+            : h('span', { key: index, className: `dw-tok-${token.type}` }, token.value)))),
+        h('textarea', {
+          key: 'area',
+          ref: areaRef,
+          className: 'dw-code',
+          value,
+          spellCheck: false,
+          placeholder: tr('sqlPlaceholder'),
+          onChange: (event) => {
+            const text = event.target.value
+            const caret = event.target.selectionStart
+            store.setTabSql(tab.id, text)
+            refreshCompletion(text, caret)
+          },
+          onClick: (event) => refreshCompletion(event.target.value, event.target.selectionStart),
+          onBlur: () => setCompletion(null),
+          onScroll: (event) => syncScroll(event.target),
+          onKeyDown: (event) => {
+            const modifier = event.metaKey || event.ctrlKey
+            if (completion !== null) {
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault()
+                const size = completion.items.length
+                const delta = event.key === 'ArrowDown' ? 1 : -1
+                setCompletion({ ...completion, index: (completion.index + delta + size) % size })
+                return
+              }
+              if ((event.key === 'Enter' && !modifier) || event.key === 'Tab') {
+                event.preventDefault()
+                applyCompletion(completion.items[completion.index])
+                return
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                setCompletion(null)
+                return
+              }
+            }
+            if (modifier && event.key === 'Enter') {
+              event.preventDefault()
+              runStatement()
+              return
+            }
+            if (modifier && event.key === ' ') {
+              event.preventDefault()
+              refreshCompletion(value, event.target.selectionStart)
+              return
+            }
+            if (event.key === 'Tab' && !event.shiftKey && !modifier) {
+              event.preventDefault()
+              const area = event.target
+              const start = area.selectionStart
+              const end = area.selectionEnd
+              const next = `${value.slice(0, start)}  ${value.slice(end)}`
+              store.setTabSql(tab.id, next)
+              requestAnimationFrame(() => {
+                area.setSelectionRange(start + 2, start + 2)
+              })
+            }
+          },
+        }),
+        completion === null
+          ? null
+          : h('div', {
+            key: 'ac',
+            className: 'dw-complete',
+            style: { left: completion.left, top: completion.top },
+            role: 'listbox',
+          }, completion.items.map((item, index) => h('div', {
+            key: `${item.kind}:${item.label}`,
+            role: 'option',
+            'aria-selected': index === completion.index,
+            className: index === completion.index ? 'dw-complete-row active' : 'dw-complete-row',
+            onMouseDown: (event) => event.preventDefault(),
+            onClick: () => applyCompletion(item),
+          }, [
+            h('span', { key: 'l', className: 'dw-complete-label' }, item.label),
+            h('span', { key: 'd', className: 'dw-complete-detail' }, item.detail ?? ''),
+            h('span', { key: 'k', className: 'dw-complete-kind' }, item.kind === 'column' ? tr('suggestColumn') : item.kind === 'table' ? tr('suggestTable') : tr('suggestKeyword')),
+          ]))),
+      ]),
     ]),
   ])
 }

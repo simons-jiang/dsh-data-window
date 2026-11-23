@@ -139,7 +139,7 @@ await send('Page.navigate', { url: `${ORIGIN}/` })
 await waitFor('document.querySelector("[data-shell-overlay]") !== null', 'shell 2')
 await sleep(3000)
 
-console.log('open panel:', await click('[aria-label="打开数据库数据窗口"]'))
+console.log('open panel:', await click('[aria-label="打开数据窗口"]'))
 await sleep(2500)
 await shot('01-panel')
 
