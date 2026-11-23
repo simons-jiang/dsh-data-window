@@ -4,6 +4,9 @@
 
 ### Fixed
 
+- The total-row `COUNT(*)` drops the statement's outermost `LIMIT` (limits inside
+  subqueries are kept), so it counts the whole result set instead of echoing the
+  preview size back.
 - The suggestion list follows the keyboard: moving the highlight with ↑/↓ scrolls the
   popup so the selected column never slides out of view.
 - Completion resolves quoted table names in `db`.`table` form, so columns of a

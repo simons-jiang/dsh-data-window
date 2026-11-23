@@ -146,6 +146,87 @@ export function assertReadOnly(sql) {
   return statement
 }
 
+/**
+ * Remove a trailing top-level LIMIT, so a count covers the whole result set.
+ *
+ * The scanner tracks quotes, comments and parenthesis depth: a LIMIT inside a
+ * string, a comment or a subquery must be kept. Only a LIMIT that ends the
+ * statement (after trimming) is dropped.
+ */
+export function stripTrailingLimit(statement) {
+  const text = String(statement ?? '')
+  let depth = 0
+  let quote = ''
+  let lineComment = false
+  let blockComment = false
+  let lastLimit = -1
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    const next = text[index + 1]
+    if (lineComment === true) {
+      if (char === '\n') lineComment = false
+      continue
+    }
+    if (blockComment === true) {
+      if (char === '*' && next === '/') {
+        blockComment = false
+        index += 1
+      }
+      continue
+    }
+    if (quote !== '') {
+      if (char === '\\') {
+        index += 1
+        continue
+      }
+      if (char === quote) {
+        if (next === quote) {
+          index += 1
+          continue
+        }
+        quote = ''
+      }
+      continue
+    }
+    if (char === '-' && next === '-') {
+      lineComment = true
+      index += 1
+      continue
+    }
+    if (char === '#') {
+      lineComment = true
+      continue
+    }
+    if (char === '/' && next === '*') {
+      blockComment = true
+      index += 1
+      continue
+    }
+    if (char === '\'' || char === '"' || char === '`') {
+      quote = char
+      continue
+    }
+    if (char === '(') {
+      depth += 1
+      continue
+    }
+    if (char === ')') {
+      depth = Math.max(0, depth - 1)
+      continue
+    }
+    if (depth !== 0 || !/[A-Za-z]/.test(char)) continue
+    if (index > 0 && /[A-Za-z0-9_$]/.test(text[index - 1])) continue
+    let end = index
+    while (end < text.length && /[A-Za-z]/.test(text[end])) end += 1
+    if (text.slice(index, end).toLowerCase() === 'limit') lastLimit = index
+    index = end - 1
+  }
+  if (lastLimit < 0) return text
+  const tail = text.slice(lastLimit)
+  if (!/^limit\s+\d+(\s*(,\s*\d+|offset\s+\d+))?\s*$/i.test(tail)) return text
+  return text.slice(0, lastLimit).replace(/\s+$/, '')
+}
+
 /** Append a LIMIT to a bare SELECT so MySQL itself stops early. */
 export function withRowLimit(statement, limit) {
   const trimmed = statement.replace(/;\s*$/, '').trim()
@@ -398,7 +479,9 @@ export class DataGateway {
    */
   async countRows(id, sql) {
     const statement = assertReadOnly(sql)
-    const normalized = statement.trim().replace(/;+\s*$/, '')
+    // A trailing LIMIT belongs to the preview, not to the data set: counting the
+    // wrapped statement with LIMIT would just return the limit back.
+    const normalized = stripTrailingLimit(statement.trim().replace(/;+\s*$/, ''))
     if (!/^(select|with)\b/i.test(normalized)) {
       const error = new Error('count-unsupported')
       error.code = 'count-unsupported'
