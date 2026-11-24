@@ -136,6 +136,39 @@ const DW_CSS = `
 }
 .dw-btn-accent:hover { filter: brightness(1.08); background: var(--dsw-alias-brand-primary, #4b8bf5); }
 .dw-btn-icon { width: 26px; padding: 0; justify-content: center; }
+/*
+ * The sidebar-foot action. DSH owns the selected-panel chrome and expects an
+ * occupant to bring hover chrome only, so the rest state stays transparent —
+ * a filled button down here reads as a permanently selected row. The highlight
+ * is reserved for the data window actually being the open panel.
+ */
+.dw-foot-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #98a0ad);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 90ms ease, color 90ms ease;
+}
+.dw-foot-btn:hover,
+.dw-foot-btn.on {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12));
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+}
+.dw-foot-btn:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary, #4b8bf5);
+  outline-offset: -2px;
+}
 .dw-select {
   height: 26px;
   padding: 0 6px;

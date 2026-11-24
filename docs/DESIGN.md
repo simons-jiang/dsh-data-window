@@ -295,6 +295,7 @@ Host 返回的是机器码（`write-keyword`、`read-only-violation`）。用户
 5. **link 安装的依赖从包目录解析**，所以 `mysql2` 必须 `npm install` 在本目录，不能只靠 profile 的 node_modules。
 6. **已安装的包再装同版本会被拒**（`already-installed`），换代码要 `remove_bundle` → `install_bundle`。
 7. **界面渲染无法自验**：agent 侧浏览器打不开运行中的页面（401 / 需要启动令牌，规则也不允许去找令牌）。所以 UI 改动只能静态自证 + 交给人工确认。
+8. **`sidebar.footer.action` 的按钮不能自带填充底色**。DSH 把"当前面板"的高亮画在自己的导航行上，页脚的占位只负责 hover chrome；这里原来复用了面板工具栏的 `.dw-btn`（浅色主题下就是一枚白底描边的胶囊），看起来永远是选中态。页脚改用透明的 `.dw-foot-btn`，只有数据窗口确实是当前面板时（读 `layout.panelInfo`）才加 `.on`。
 
 ---
 

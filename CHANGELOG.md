@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- The `数据窗口` control in the sidebar foot no longer reads as permanently selected.
+  DSH paints the selected panel on its own navigation rows and expects a footer
+  occupant to bring hover chrome only; the filled toolbar button this control reused
+  (white pill with a border in the light palette) therefore looked like a chosen row
+  at all times. It now sits transparent beside the code workspace's control, and the
+  highlight appears only while the data window is the open panel.
 - The total-row `COUNT(*)` drops the statement's outermost `LIMIT` (limits inside
   subqueries are kept), so it counts the whole result set instead of echoing the
   preview size back.

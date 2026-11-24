@@ -18,35 +18,47 @@
  */
 const DW_TRANSLATE_FALLBACK = (key) => key
 
-function dwPanelButton({ store, translate, label, wide }) {
-  const tr = typeof translate === 'function' ? translate : DW_TRANSLATE_FALLBACK
-  const onClick = () => {
-    const layout = store.layout?.()
-    if (layout !== undefined && typeof layout.selectPanel === 'function') layout.selectPanel(DW_PANEL_ID)
-  }
-  if (wide === true) {
-    return h('button', {
-      type: 'button',
-      className: 'dw-btn',
-      title: tr('openPanelHint'),
-      'aria-label': tr('openPanelHint'),
-      onClick,
-      style: { padding: '0 8px', gap: 6 },
-    }, [h(DwStyles, { key: 'style' }), h(DwIcon, { key: 'i', name: 'database', size: 15 }), h('span', { key: 't' }, label ?? tr('openPanel'))])
-  }
-  return h('button', {
-    type: 'button',
-    className: 'dw-btn',
-    title: tr('openPanelHint'),
-    'aria-label': tr('openPanelHint'),
-    onClick,
-    style: { minWidth: 26, padding: '0 4px', justifyContent: 'center' },
-  }, [h(DwStyles, { key: 'style' }), h(DwIcon, { key: 'i', name: 'database', size: 15 }), label === undefined ? null : h('span', { key: 't' }, label)])
+/**
+ * Whether the data window is the panel the main column is showing.
+ *
+ * The foot control is an action, not a navigation row: DSH paints the selected
+ * panel itself, and an occupant that brings a filled button reads as permanently
+ * selected. The highlight therefore follows `layout.panelInfo` — the source DSH's
+ * own panel rows read — and stays off where the layout service exposes none.
+ */
+function dwUsePanelActive(store) {
+  const info = store.layout?.()?.panelInfo
+  const subscribe = useCallback((onChange) => {
+    if (info === undefined || typeof info.subscribe !== 'function') return () => {}
+    return info.subscribe(onChange)
+  }, [info])
+  const getSnapshot = useCallback(() => info !== undefined
+    && typeof info.getSnapshot === 'function'
+    && info.getSnapshot()?.activePanelId === DW_PANEL_ID, [info])
+  return useSyncExternalStore(subscribe, getSnapshot, () => false)
 }
 
 /** The sidebar-foot control: icon-only, or with its label when the column is wide. */
 function DwFooterAction({ store, translate, wide }) {
-  return dwPanelButton({ store, translate, wide: wide === true })
+  const tr = typeof translate === 'function' ? translate : DW_TRANSLATE_FALLBACK
+  const active = dwUsePanelActive(store)
+  const onClick = () => {
+    const layout = store.layout?.()
+    if (layout !== undefined && typeof layout.selectPanel === 'function') layout.selectPanel(DW_PANEL_ID)
+  }
+  return h('button', {
+    type: 'button',
+    className: active ? 'dw-foot-btn on' : 'dw-foot-btn',
+    title: tr('openPanelHint'),
+    'aria-label': tr('openPanelHint'),
+    'aria-current': active ? 'page' : undefined,
+    onClick,
+    style: wide === true ? { padding: '0 8px', gap: 6 } : { minWidth: 26, padding: '0 4px' },
+  }, [
+    h(DwStyles, { key: 'style' }),
+    h(DwIcon, { key: 'i', name: 'database', size: 15 }),
+    wide === true ? h('span', { key: 't' }, tr('openPanel')) : null,
+  ])
 }
 
 function apply(ctx) {
