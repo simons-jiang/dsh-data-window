@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## [0.1.1] — 2026-11-25
 
 ### Fixed
 
@@ -33,7 +33,6 @@
   character, and every query failed with `Access denied` even though the configuration
   was correct.
 
-### Fixed
 
 - INSERT export stays limited to single-table SELECT; a join is not made to guess a
   target table. Refusing now opens a dialog explaining why (it used to only append a
