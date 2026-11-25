@@ -2495,11 +2495,16 @@ function dwCreateStore(translate) {
         if (state.root !== root) return
         const environments = Array.isArray(discovery.environments) ? discovery.environments : []
         const defaultEnv = discovery.defaultEnv ?? environments[0]?.env
+        const focus = Array.isArray(discovery.focus?.envs) ? discovery.focus.envs : []
         const base = refreshing ? new Set() : new Set(state.expanded)
         for (const environment of environments) {
-          // Manually added connections are the ones the user just created, so they
-          // open expanded; the rule-based default environment opens too.
+          // Manual environments are the ones the user just created, so they open
+          // expanded; the shared tree also opens the environments this workspace
+          // contributes (or its default one when the Host reports no focus).
           if (environment.env === defaultEnv || environment.manual === true) base.add(dwNodeKey('env', environment.env))
+        }
+        for (const env of focus) {
+          if (typeof env === 'string' && env !== '') base.add(dwNodeKey('env', env))
         }
         patch({
           phase: environments.length === 0 ? 'empty' : 'ready',

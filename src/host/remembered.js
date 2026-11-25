@@ -12,7 +12,7 @@
  * discovery cache, so a remembered database needs no secret of its own.
  */
 import { createHash } from 'node:crypto'
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
 import { basename, isAbsolute, join } from 'node:path'
 
 /** Bump when the document shape changes so old files are ignored. */
@@ -20,6 +20,9 @@ const REMEMBERED_VERSION = 1
 
 /** A user who opened more schemas than this has a different problem. */
 const MAX_REMEMBERED = 200
+
+/** The shared document: the databases picked anywhere on this machine. */
+const SHARED_FILE = 'databases.json'
 
 /** One workspace's file, named so a human can tell them apart. */
 function rememberedFile(directory, root) {
@@ -40,20 +43,66 @@ function normalizeEntry(value) {
 
 /** Remembered extra databases, one small JSON file per workspace. */
 export class RememberedStore {
-  constructor(directory) {
+  /**
+   * @param directory the `remembered/` storage directory
+   * @param options `{ shared: true }` keeps one list for the whole machine; the
+   *   tree is shared, so a schema picked in one workspace applies everywhere
+   */
+  constructor(directory, options = {}) {
     this.directory = directory
-    if (this.directory !== '') mkdirSync(this.directory, { recursive: true, mode: 0o700 })
+    this.shared = options.shared === true
+    if (this.directory !== '') {
+      mkdirSync(this.directory, { recursive: true, mode: 0o700 })
+      if (this.shared) this.migrateLegacy()
+    }
   }
 
-  /** The file one workspace's remembered databases live in. */
+  /** The document these entries live in. */
   fileFor(root) {
+    if (this.shared) return join(this.directory, SHARED_FILE)
     return rememberedFile(this.directory, root)
+  }
+
+  /** Fold the per-workspace files into the shared one, once. */
+  migrateLegacy() {
+    const shared = this.fileFor('')
+    if (existsSync(shared)) return
+    let names = []
+    try {
+      names = readdirSync(this.directory).filter((name) => name.endsWith('.databases.json'))
+    } catch (error) {
+      void error
+      return
+    }
+    if (names.length === 0) return
+    const databases = []
+    for (const name of names) {
+      try {
+        const document = JSON.parse(readFileSync(join(this.directory, name), 'utf8'))
+        for (const raw of Array.isArray(document?.databases) ? document.databases : []) {
+          const entry = normalizeEntry(raw)
+          if (entry === undefined) continue
+          if (databases.some((existing) => existing.instanceId === entry.instanceId && existing.database === entry.database)) continue
+          databases.push(entry)
+        }
+      } catch (error) {
+        void error
+      }
+    }
+    this.save('', databases)
+    for (const name of names) {
+      try {
+        renameSync(join(this.directory, name), join(this.directory, `${name}.migrated`))
+      } catch (error) {
+        void error
+      }
+    }
   }
 
   /** Read the entries; a missing or unreadable file means "none remembered yet". */
   load(root) {
     if (this.directory === '') return { databases: [] }
-    if (typeof root !== 'string' || root === '' || !isAbsolute(root)) return { databases: [] }
+    if (!this.shared && (typeof root !== 'string' || root === '' || !isAbsolute(root))) return { databases: [] }
     try {
       const parsed = JSON.parse(readFileSync(this.fileFor(root), 'utf8'))
       if (parsed?.version !== REMEMBERED_VERSION) return { databases: [] }
@@ -78,14 +127,14 @@ export class RememberedStore {
       error.code = 'remembered-unavailable'
       throw error
     }
-    if (typeof root !== 'string' || root === '' || !isAbsolute(root)) {
+    if (!this.shared && (typeof root !== 'string' || root === '' || !isAbsolute(root))) {
       const error = new Error('workspace root must be an absolute path')
       error.code = 'invalid-root'
       throw error
     }
     const document = JSON.stringify({
       version: REMEMBERED_VERSION,
-      root,
+      ...(this.shared ? {} : { root }),
       savedAt: Date.now(),
       databases: databases.slice(0, MAX_REMEMBERED),
     })

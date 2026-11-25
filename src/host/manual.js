@@ -17,7 +17,7 @@
  *    browser renders; the browser only ever names a target id.
  */
 import { createHash } from 'node:crypto'
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
 import { basename, isAbsolute, join } from 'node:path'
 import { stableId } from './discovery.js'
 
@@ -29,6 +29,9 @@ const MAX_ENTRIES = 60
 
 /** A label long enough to tell two connections apart, short enough for the tree. */
 const MAX_LABEL = 40
+
+/** The shared document: one list of manual connections for the whole machine. */
+const SHARED_FILE = 'connections.json'
 
 /** One workspace's file, named so a human can tell them apart. */
 function manualFile(directory, root) {
@@ -61,20 +64,68 @@ export function normalizeManualEntry(value) {
 
 /** Manual entries, one small JSON file per workspace. */
 export class ManualStore {
-  constructor(directory) {
+  /**
+   * @param directory the `manual/` storage directory
+   * @param options `{ shared: true }` keeps one list for the whole machine instead
+   *   of one per workspace; the tree is shared, so its manual entries are too
+   */
+  constructor(directory, options = {}) {
     this.directory = directory
-    if (this.directory !== '') mkdirSync(this.directory, { recursive: true, mode: 0o700 })
+    this.shared = options.shared === true
+    if (this.directory !== '') {
+      mkdirSync(this.directory, { recursive: true, mode: 0o700 })
+      if (this.shared) this.migrateLegacy()
+    }
   }
 
-  /** The file one workspace's manual connections live in. */
+  /** The document these entries live in. */
   fileFor(root) {
+    if (this.shared) return join(this.directory, SHARED_FILE)
     return manualFile(this.directory, root)
+  }
+
+  /** Fold the per-workspace files into the shared one, once. */
+  migrateLegacy() {
+    const shared = this.fileFor('')
+    if (existsSync(shared)) return
+    let names = []
+    try {
+      names = readdirSync(this.directory).filter((name) => name.endsWith('.manual.json'))
+    } catch (error) {
+      void error
+      return
+    }
+    if (names.length === 0) return
+    const entries = []
+    for (const name of names) {
+      try {
+        const document = JSON.parse(readFileSync(join(this.directory, name), 'utf8'))
+        for (const raw of Array.isArray(document?.entries) ? document.entries : []) {
+          const entry = normalizeManualEntry(raw)
+          if (entry === undefined) continue
+          if (entries.some((existing) => existing.id === entry.id)) continue
+          entries.push(entry)
+        }
+      } catch (error) {
+        void error
+      }
+    }
+    this.save('', entries)
+    // The legacy files stay as a readable backup, but stop being sources: a deleted
+    // connection must not come back from a file nothing updates any more.
+    for (const name of names) {
+      try {
+        renameSync(join(this.directory, name), join(this.directory, `${name}.migrated`))
+      } catch (error) {
+        void error
+      }
+    }
   }
 
   /** Read the entries; a missing or unreadable file means "none added yet". */
   load(root) {
     if (this.directory === '') return { entries: [] }
-    if (typeof root !== 'string' || root === '' || !isAbsolute(root)) return { entries: [] }
+    if (!this.shared && (typeof root !== 'string' || root === '' || !isAbsolute(root))) return { entries: [] }
     try {
       const parsed = JSON.parse(readFileSync(this.fileFor(root), 'utf8'))
       if (parsed?.version !== MANUAL_VERSION) return { entries: [] }
@@ -99,14 +150,14 @@ export class ManualStore {
       error.code = 'manual-unavailable'
       throw error
     }
-    if (typeof root !== 'string' || root === '' || !isAbsolute(root)) {
+    if (!this.shared && (typeof root !== 'string' || root === '' || !isAbsolute(root))) {
       const error = new Error('workspace root must be an absolute path')
       error.code = 'invalid-root'
       throw error
     }
     const document = JSON.stringify({
       version: MANUAL_VERSION,
-      root,
+      ...(this.shared ? {} : { root }),
       savedAt: Date.now(),
       entries: entries.slice(0, MAX_ENTRIES),
     })

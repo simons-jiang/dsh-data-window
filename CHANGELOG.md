@@ -29,6 +29,13 @@
 
 ### Added
 
+- The resource tree is now shared by every workspace: opening a workspace adds its
+  environments to the one tree (and expands them) instead of replacing it. Manual
+  connections and picked databases moved to machine-wide files
+  (`manual/connections.json`, `remembered/databases.json`); the old per-workspace
+  documents are merged once and renamed `*.migrated`. Console snapshots and the
+  discovery cache stay per workspace, and target ids are unchanged, so saved tabs
+  keep working.
 - The instance row opens a **database picker** instead of dumping every schema into
   the tree: a searchable checkbox list where the configured databases are locked on,
   and only checked schemas appear. The selection is remembered per workspace

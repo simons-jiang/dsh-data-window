@@ -86,6 +86,36 @@ export class DiscoveryCache {
     }
   }
 
+  /**
+   * Every valid cache document this plugin wrote.
+   *
+   * The shared tree is the union of what each workspace found, so a workspace switch
+   * no longer has to forget the other projects' instances.
+   */
+  list() {
+    const documents = []
+    let names = []
+    try {
+      names = readdirSync(this.directory)
+    } catch (error) {
+      void error
+      return documents
+    }
+    for (const name of names) {
+      if (!name.endsWith('.json') || name.endsWith('.consoles.json')) continue
+      try {
+        const document = JSON.parse(readFileSync(join(this.directory, name), 'utf8'))
+        if (document?.version !== this.version) continue
+        if (typeof document?.root !== 'string' || document.root === '') continue
+        if (document?.payload === undefined || !Array.isArray(document.payload?.environments)) continue
+        documents.push(document)
+      } catch (error) {
+        void error
+      }
+    }
+    return documents
+  }
+
   put(root, entry) {
     if (typeof root !== 'string' || root === '') return
     try {

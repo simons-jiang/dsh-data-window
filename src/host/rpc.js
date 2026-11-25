@@ -15,6 +15,7 @@ import { discoverProject } from './discovery.js'
 import { ManualStore, manualEnvironments, normalizeManualEntry } from './manual.js'
 import { stableId } from './discovery.js'
 import { RememberedStore } from './remembered.js'
+import { buildSharedTree } from './shared.js'
 import { DataGateway, ReadOnlyViolation } from './mysql.js'
 
 /** Payload ceiling for one request. */
@@ -50,8 +51,10 @@ export class DataController {
     this.gateway = options.gateway ?? createGateway(this.config)
     this.cache = options.cache ?? new DiscoveryCache(options.cacheDirectory ?? '', options.pluginVersion ?? '')
     this.consoles = options.consoles ?? new ConsoleStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'workspaces'))
-    this.manual = options.manual ?? new ManualStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'manual'))
-    this.remembered = options.remembered ?? new RememberedStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'remembered'))
+    // Manual connections and picked databases are shared by every workspace: the
+    // resource tree is one tree, so its user-owned parts cannot be per workspace.
+    this.manual = options.manual ?? new ManualStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'manual'), { shared: true })
+    this.remembered = options.remembered ?? new RememberedStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'remembered'), { shared: true })
     this.catalog = options.catalog ?? new ConnectionCatalog(options.cacheDirectory ?? '')
     // `llm` is a getter: the Host may provide the LLM service after this plugin
     // activates, and the fallback must not pin a service that is still arriving.
@@ -117,8 +120,7 @@ export class DataController {
         const paths = Array.isArray(cached.fingerprintPaths) ? cached.fingerprintPaths : []
         if (this.config.cache && fingerprint(paths) === cached.fingerprint) {
           const targets = new Map(Array.isArray(cached.targets) ? cached.targets : [])
-          this.gateway.setTargets(targets)
-          return this.withRemembered(root, this.withManual(root, { ...cached.payload, cached: true, generatedAt: cached.at }))
+          return this.withSharedTree(root, { ...cached.payload, cached: true, generatedAt: cached.at }, targets)
         }
       }
     }
@@ -159,7 +161,7 @@ export class DataController {
           fingerprint: fingerprint(fingerprintPaths),
         })
       }
-      return this.withRemembered(root, this.withManual(root, value))
+      return this.withSharedTree(root, value, targets)
     })()
     this.pending.set(root, task)
     try {
@@ -170,67 +172,35 @@ export class DataController {
   }
 
   /**
-   * Merge the manually added connections into a discovery payload.
+   * Merge this workspace into the machine-wide resource tree.
    *
-   * Deliberately *not* part of the cached document: adding or removing one entry
-   * must show up on the next read, while the (expensive) configuration scan stays
-   * cached. Only `targets` carries the passwords.
+   * The tree is the union of every workspace's discovery cache, the shared manual
+   * connections and the shared database picks; the workspace being opened only
+   * contributes its own part and names it in `focus` so the panel can expand it.
+   * Ids are unchanged, so saved consoles keep resolving their targets.
+   *
+   * @param root the workspace being opened
+   * @param payload its own discovery payload
+   * @param targets its own connection targets (the union's credentials come from
+   *   every cache, so this is the most recent word on this workspace's hosts)
    */
-  withManual(root, payload) {
-    const { entries } = this.manual.load(root)
-    if (entries.length === 0) return payload
-    const { environments, targets } = manualEnvironments(entries)
-    this.gateway.addTargets(targets)
-    const merged = [...(Array.isArray(payload.environments) ? payload.environments : []), ...environments]
+  withSharedTree(root, payload, targets) {
+    const tree = buildSharedTree({
+      caches: this.cache.list().filter((document) => document.root !== root),
+      current: payload,
+      currentTargets: targets instanceof Map ? targets : new Map(),
+      manualEntries: this.manual.load(root).entries,
+      remembered: this.remembered.load(root).databases,
+      envOrder: this.config.envOrder,
+    })
+    this.gateway.setTargets(tree.targets)
     return {
       ...payload,
-      environments: merged,
-      defaultEnv: payload.defaultEnv ?? environments[0]?.env,
-      warnings: payload.warnings ?? [],
+      environments: tree.environments,
+      focus: tree.focus,
+      shared: true,
+      defaultEnv: payload.defaultEnv ?? tree.focus.envs[0],
     }
-  }
-
-  /**
-   * Put the databases the user opened before next to the configured ones.
-   *
-   * Only the instance id and schema name are stored; the connection itself comes
-   * from the instance entry that already exists in this payload, which is why a
-   * remembered database needs no credential of its own.
-   */
-  withRemembered(root, payload) {
-    const { databases } = this.remembered.load(root)
-    if (databases.length === 0) return payload
-    // Copy the level being edited: a cached payload must never be mutated in place,
-    // or the next workspace read would see entries that were added after it.
-    const environments = (Array.isArray(payload.environments) ? payload.environments : []).map((environment) => ({
-      ...environment,
-      instances: (Array.isArray(environment.instances) ? environment.instances : []).map((instance) => ({
-        ...instance,
-        databases: [...(Array.isArray(instance.databases) ? instance.databases : [])],
-      })),
-    }))
-    for (const environment of environments) {
-      let added = 0
-      for (const instance of environment.instances) {
-        for (const entry of databases) {
-          if (entry.instanceId !== instance.id) continue
-          if (instance.databases.some((database) => database.name === entry.database)) continue
-          instance.databases.push({
-            // The derived form the gateway already understands: it resolves the
-            // schema against the instance's own credentials on demand.
-            id: `${instance.id}~${entry.database}`,
-            name: entry.database,
-            user: instance.user,
-            alias: entry.database,
-            configured: true,
-            remembered: true,
-          })
-          added += 1
-        }
-      }
-      if (added > 0) environment.databaseCount = (environment.databaseCount ?? 0) + added
-    }
-    return { ...payload, environments }
   }
 
   /** Remember one database the user opened from an instance's full list. */

@@ -104,7 +104,9 @@ export class ConnectionCatalog {
     }
 
     for (const file of listFiles(join(this.directory, 'manual'))) {
-      if (!file.endsWith('.manual.json')) continue
+      // Shared manual connections live in `connections.json`; the per-workspace
+      // files are only read before the one-time migration renames them.
+      if (!file.endsWith('.manual.json') && file !== 'connections.json') continue
       const document = readJson(join(this.directory, 'manual', file))
       const workspace = typeof document?.root === 'string' ? basename(document.root) : ''
       for (const stored of Array.isArray(document?.entries) ? document.entries : []) {
