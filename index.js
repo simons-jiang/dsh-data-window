@@ -104,7 +104,45 @@ export function apply(ctx, config) {
     void error
   }
 
-  const controller = new DataController({ config: settings, cacheDirectory, pluginVersion: PLUGIN_VERSION })
+  // The AI fallback is optional: a profile without an LLM provider still runs the
+  // whole window, it just cannot offer 「用 AI 再找一遍」.
+  const llmRef = { current: undefined }
+  try {
+    if (typeof ctx.inject === 'function') {
+      ctx.inject(['llm'], (scoped) => {
+        llmRef.current = scoped.llm
+      })
+    }
+  } catch (error) {
+    void error
+  }
+
+  // DSH's own default selection, so the first AI run pre-selects the model the
+  // user already works with instead of an arbitrary first entry of the catalog.
+  const defaultModelRef = { current: undefined }
+  try {
+    if (typeof ctx.inject === 'function') {
+      ctx.inject(['agentDefaultModel'], (scoped) => {
+        defaultModelRef.current = scoped.agentDefaultModel
+      })
+    }
+  } catch (error) {
+    void error
+  }
+
+  const controller = new DataController({
+    config: settings,
+    cacheDirectory,
+    pluginVersion: PLUGIN_VERSION,
+    llm: () => llmRef.current,
+    defaultModel: () => {
+      const service = defaultModelRef.current
+      if (service === undefined || typeof service.currentSelection !== 'function') return null
+      const selection = service.currentSelection()
+      if (selection === null || typeof selection !== 'object') return null
+      return { provider: String(selection.provider ?? ''), model: String(selection.model ?? '') }
+    },
+  })
 
   const handler = async (request, response) => {
     try {

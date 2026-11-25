@@ -7,9 +7,12 @@
  */
 import { existsSync, statSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
+import { AiDiscovery } from './ai.js'
 import { DiscoveryCache, fingerprint } from './cache.js'
 import { ConsoleStore } from './consoles.js'
 import { discoverProject } from './discovery.js'
+import { ManualStore, manualEnvironments, normalizeManualEntry } from './manual.js'
+import { RememberedStore } from './remembered.js'
 import { DataGateway, ReadOnlyViolation } from './mysql.js'
 
 /** Payload ceiling for one request. */
@@ -45,6 +48,16 @@ export class DataController {
     this.gateway = options.gateway ?? createGateway(this.config)
     this.cache = options.cache ?? new DiscoveryCache(options.cacheDirectory ?? '', options.pluginVersion ?? '')
     this.consoles = options.consoles ?? new ConsoleStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'workspaces'))
+    this.manual = options.manual ?? new ManualStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'manual'))
+    this.remembered = options.remembered ?? new RememberedStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'remembered'))
+    // `llm` is a getter: the Host may provide the LLM service after this plugin
+    // activates, and the fallback must not pin a service that is still arriving.
+    this.ai = options.ai ?? new AiDiscovery({
+      llm: options.llm,
+      defaultModel: options.defaultModel,
+      gateway: this.gateway,
+      config: this.config,
+    })
     this.pending = new Map()
   }
 
@@ -102,7 +115,7 @@ export class DataController {
         if (this.config.cache && fingerprint(paths) === cached.fingerprint) {
           const targets = new Map(Array.isArray(cached.targets) ? cached.targets : [])
           this.gateway.setTargets(targets)
-          return { ...cached.payload, cached: true, generatedAt: cached.at }
+          return this.withRemembered(root, this.withManual(root, { ...cached.payload, cached: true, generatedAt: cached.at }))
         }
       }
     }
@@ -143,7 +156,7 @@ export class DataController {
           fingerprint: fingerprint(fingerprintPaths),
         })
       }
-      return value
+      return this.withRemembered(root, this.withManual(root, value))
     })()
     this.pending.set(root, task)
     try {
@@ -153,11 +166,190 @@ export class DataController {
     }
   }
 
+  /**
+   * Merge the manually added connections into a discovery payload.
+   *
+   * Deliberately *not* part of the cached document: adding or removing one entry
+   * must show up on the next read, while the (expensive) configuration scan stays
+   * cached. Only `targets` carries the passwords.
+   */
+  withManual(root, payload) {
+    const { entries } = this.manual.load(root)
+    if (entries.length === 0) return payload
+    const { environments, targets } = manualEnvironments(entries)
+    this.gateway.addTargets(targets)
+    const merged = [...(Array.isArray(payload.environments) ? payload.environments : []), ...environments]
+    return {
+      ...payload,
+      environments: merged,
+      defaultEnv: payload.defaultEnv ?? environments[0]?.env,
+      warnings: payload.warnings ?? [],
+    }
+  }
+
+  /**
+   * Put the databases the user opened before next to the configured ones.
+   *
+   * Only the instance id and schema name are stored; the connection itself comes
+   * from the instance entry that already exists in this payload, which is why a
+   * remembered database needs no credential of its own.
+   */
+  withRemembered(root, payload) {
+    const { databases } = this.remembered.load(root)
+    if (databases.length === 0) return payload
+    // Copy the level being edited: a cached payload must never be mutated in place,
+    // or the next workspace read would see entries that were added after it.
+    const environments = (Array.isArray(payload.environments) ? payload.environments : []).map((environment) => ({
+      ...environment,
+      instances: (Array.isArray(environment.instances) ? environment.instances : []).map((instance) => ({
+        ...instance,
+        databases: [...(Array.isArray(instance.databases) ? instance.databases : [])],
+      })),
+    }))
+    for (const environment of environments) {
+      let added = 0
+      for (const instance of environment.instances) {
+        for (const entry of databases) {
+          if (entry.instanceId !== instance.id) continue
+          if (instance.databases.some((database) => database.name === entry.database)) continue
+          instance.databases.push({
+            // The derived form the gateway already understands: it resolves the
+            // schema against the instance's own credentials on demand.
+            id: `${instance.id}~${entry.database}`,
+            name: entry.database,
+            user: instance.user,
+            alias: entry.database,
+            configured: true,
+            remembered: true,
+          })
+          added += 1
+        }
+      }
+      if (added > 0) environment.databaseCount = (environment.databaseCount ?? 0) + added
+    }
+    return { ...payload, environments }
+  }
+
+  /** Remember one database the user opened from an instance's full list. */
+  rememberDatabase(payload = {}) {
+    const root = typeof payload.root === 'string' ? payload.root.trim() : ''
+    if (root === '' || !isAbsolute(root)) throw new RouteFailure(400, 'invalid-root', 'workspace root must be an absolute path')
+    const entry = { instanceId: String(payload.instanceId ?? '').trim(), database: String(payload.database ?? '').trim() }
+    if (!/^i:[\w-]+$/.test(entry.instanceId) || entry.database === '') {
+      throw new RouteFailure(400, 'invalid-database', 'an instance id and a database name are required')
+    }
+    return { remembered: this.remembered.add(root, entry) }
+  }
+
+  /** Replace the databases shown for one instance (the picker's Apply). */
+  selectDatabases(payload = {}) {
+    const root = typeof payload.root === 'string' ? payload.root.trim() : ''
+    if (root === '' || !isAbsolute(root)) throw new RouteFailure(400, 'invalid-root', 'workspace root must be an absolute path')
+    const instanceId = String(payload.instanceId ?? '').trim()
+    if (!/^i:[\w-]+$/.test(instanceId)) throw new RouteFailure(400, 'invalid-database', 'an instance id is required')
+    const names = Array.isArray(payload.databases) ? payload.databases : []
+    if (names.length > 200) throw new RouteFailure(400, 'invalid-database', 'too many databases selected')
+    const value = this.remembered.replaceInstance(root, instanceId, names)
+    return { databases: value.databases }
+  }
+
+  /** Forget one remembered database. */
+  forgetDatabase(payload = {}) {
+    const root = typeof payload.root === 'string' ? payload.root.trim() : ''
+    if (root === '' || !isAbsolute(root)) throw new RouteFailure(400, 'invalid-root', 'workspace root must be an absolute path')
+    const entry = { instanceId: String(payload.instanceId ?? '').trim(), database: String(payload.database ?? '').trim() }
+    if (!/^i:[\w-]+$/.test(entry.instanceId) || entry.database === '') {
+      throw new RouteFailure(400, 'invalid-database', 'an instance id and a database name are required')
+    }
+    return { forgotten: this.remembered.remove(root, entry) }
+  }
+
+  /**
+   * Save one manually entered connection after proving it.
+   *
+   * The connection test uses the same read-only gateway as everything else, so a
+   * mistyped host or account fails here with the server's message instead of
+   * becoming a row that never opens.
+   */
+  async manualSave(payload = {}) {
+    const root = typeof payload.root === 'string' ? payload.root.trim() : ''
+    if (root === '' || !isAbsolute(root)) throw new RouteFailure(400, 'invalid-root', 'workspace root must be an absolute path')
+    const entry = normalizeManualEntry(payload.entry)
+    if (entry === undefined) throw new RouteFailure(400, 'invalid-connection', 'host, port and user are required')
+    const probeId = `m:${entry.id.slice(2)}:probe`
+    try {
+      this.gateway.addTargets(new Map([[probeId, {
+        id: probeId,
+        env: 'manual',
+        host: entry.host,
+        port: entry.port,
+        user: entry.user,
+        password: entry.password,
+        database: entry.database === '' ? undefined : entry.database,
+        manual: true,
+      }]]))
+      await this.gateway.ping(probeId)
+    } catch (error) {
+      await this.gateway.forget(probeId).catch(() => undefined)
+      throw new RouteFailure(400, 'manual-connect-failed', error?.message ?? String(error))
+    }
+    await this.gateway.forget(probeId).catch(() => undefined)
+    this.manual.upsert(root, entry)
+    return { entry: { ...entry, password: undefined }, environments: manualEnvironments(this.manual.load(root).entries).environments }
+  }
+
+  /** Drop one manually added connection. */
+  async manualRemove(payload = {}) {
+    const root = typeof payload.root === 'string' ? payload.root.trim() : ''
+    const id = typeof payload.id === 'string' ? payload.id.trim() : ''
+    if (root === '' || !isAbsolute(root)) throw new RouteFailure(400, 'invalid-root', 'workspace root must be an absolute path')
+    if (id === '') throw new RouteFailure(400, 'invalid-connection', 'a connection id is required')
+    const before = manualEnvironments(this.manual.load(root).entries).targets
+    const removed = this.manual.remove(root, id)
+    const after = manualEnvironments(this.manual.load(root).entries).targets
+    if (removed && typeof this.gateway.removeTargets === 'function') {
+      // The tree no longer names these ids, so their pools must not stay open.
+      const stale = [...before.keys()].filter((key) => !after.has(key))
+      this.gateway.removeTargets(stale)
+    }
+    return { removed, environments: manualEnvironments(this.manual.load(root).entries).environments }
+  }
+
+  /**
+   * Analyze the workspace with one model. Model text is only a proposal: the
+   * answer is parsed, its cited paths are confined to the workspace, and every
+   * candidate is proven with a real connection before it reaches the tree.
+   */
+  async aiDiscover(payload = {}) {
+    try {
+      return await this.ai.run(payload)
+    } catch (error) {
+      const code = typeof error?.code === 'string' ? error.code : 'ai-failed'
+      if (code === 'llm-unavailable') throw new RouteFailure(503, code, error?.message ?? String(error))
+      if (code === 'invalid-ai-request') throw new RouteFailure(400, code, error?.message ?? String(error))
+      throw new RouteFailure(502, 'ai-failed', error?.message ?? String(error))
+    }
+  }
+
   /** Dispatch one action. */
   async handle(action, payload = {}) {
     switch (String(action ?? '')) {
       case 'discover':
         return this.discover(payload)
+      case 'models':
+        return this.ai.models()
+      case 'aiDiscover':
+        return this.aiDiscover(payload)
+      case 'manualSave':
+        return this.manualSave(payload)
+      case 'manualRemove':
+        return this.manualRemove(payload)
+      case 'rememberDatabase':
+        return this.rememberDatabase(payload)
+      case 'forgetDatabase':
+        return this.forgetDatabase(payload)
+      case 'selectDatabases':
+        return this.selectDatabases(payload)
       case 'ping':
         return this.gateway.ping(payload.id)
       case 'databases':

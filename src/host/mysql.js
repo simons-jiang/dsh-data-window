@@ -294,6 +294,40 @@ export class DataGateway {
     }
   }
 
+  /**
+   * Register extra targets without dropping the pools the current tree uses.
+   *
+   * The AI fallback resolves an address the configuration scan never saw, and its
+   * connection must be usable by the tab that later opens it; a full `setTargets`
+   * replacement would close the pools behind every already-open console.
+   */
+  addTargets(entries) {
+    if (entries === null || entries === undefined || typeof entries !== 'object') return
+    for (const [id, target] of entries instanceof Map ? entries : Object.entries(entries)) {
+      if (typeof id !== 'string' || id === '' || target === null || typeof target !== 'object') continue
+      this.targets.set(id, target)
+    }
+  }
+
+  /** Drop targets and the pools only they used (removed manual connections). */
+  removeTargets(ids) {
+    const pools = new Set()
+    for (const id of Array.isArray(ids) ? ids : []) {
+      const target = this.targets.get(String(id))
+      if (target === undefined) continue
+      pools.add(poolKey(target))
+      this.targets.delete(String(id))
+    }
+    for (const key of pools) {
+      const stillUsed = [...this.targets.values()].some((target) => poolKey(target) === key)
+      if (stillUsed) continue
+      const pool = this.pools.get(key)
+      if (pool === undefined) continue
+      this.pools.delete(key)
+      pool.end().catch(() => undefined)
+    }
+  }
+
   targetOf(id) {
     const key = String(id ?? '')
     const direct = this.targets.get(key)

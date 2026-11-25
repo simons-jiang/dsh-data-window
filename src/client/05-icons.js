@@ -108,6 +108,18 @@ function DwIcon({ name, size = 14, className }) {
         h('path', { key: 'a', d: 'M2.5 4h11M2.5 8h7.5M2.5 12h4.5' }),
         h('path', { key: 'b', d: 'M11.5 10.5v3M10 12h3' }),
       ])
+    case 'plus':
+      return h('svg', common, [h('path', { d: 'M8 3.2v9.6M3.2 8h9.6' })])
+    case 'link':
+      return h('svg', common, [
+        h('path', { key: 'a', d: 'M6.6 9.4a2.6 2.6 0 0 0 3.7 0l2-2a2.6 2.6 0 0 0-3.7-3.7l-1 1' }),
+        h('path', { key: 'b', d: 'M9.4 6.6a2.6 2.6 0 0 0-3.7 0l-2 2a2.6 2.6 0 0 0 3.7 3.7l1-1' }),
+      ])
+    case 'ai':
+      return h('svg', common, [
+        h('path', { key: 'a', d: 'M8 1.9l1.4 3.7 3.7 1.4-3.7 1.4L8 12.1 6.6 8.4 2.9 7l3.7-1.4z' }),
+        h('path', { key: 'b', d: 'M12.4 10.9l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z' }),
+      ])
     case 'panel':
       return h('svg', common, [
         h('rect', { key: 'a', x: 1.8, y: 3, width: 12.4, height: 10, rx: 1.4 }),

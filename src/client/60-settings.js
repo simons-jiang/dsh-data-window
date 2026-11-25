@@ -14,6 +14,7 @@ function DwSettingsSection({ translate, store }) {
   const tr = typeof translate === 'function' ? translate : (key) => key
   const [prefs, setPrefs] = useState(() => dwReadPrefs())
   const [recording, setRecording] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
   const [recordError, setRecordError] = useState('')
   const themeId = useSyncExternalStore(dwSubscribeTheme, dwSharedTheme, dwSharedTheme)
   const binding = prefs.shortcutOpen ?? dwDefaultOpenShortcut()
@@ -116,6 +117,14 @@ function DwSettingsSection({ translate, store }) {
         h('span', { key: 'control', className: 'dw-settings-value' }, themeId === '' ? tr('settingsThemeDsh') : themeId),
       ),
     ]),
+    section('ai', tr('settingsGroupAi'), [
+      h(DwAiSettingsRow, {
+        key: 'model',
+        tr,
+        prefs,
+        onOpen: () => setAiOpen(true),
+      }),
+    ]),
     section('shortcuts', tr('settingsShortcuts'), [
       h('div', { key: 'hint', className: 'dw-settings-desc' }, tr('settingsShortcutsHint')),
       h('div', { key: 'shortcut', className: 'dw-settings-row' }, [
@@ -156,5 +165,16 @@ function DwSettingsSection({ translate, store }) {
         h('code', { key: 'value', className: 'dw-settings-path' }, '~/.dsh/storages/dsh-data-window/workspaces/'),
       ]),
     ]),
+    aiOpen === true
+      ? h(DwAiDialog, {
+        key: 'ai-dialog',
+        store,
+        tr,
+        onClose: () => {
+          setAiOpen(false)
+          setPrefs(dwReadPrefs())
+        },
+      })
+      : null,
   ])
 }

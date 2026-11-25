@@ -29,6 +29,23 @@
 
 ### Added
 
+- The instance row opens a **database picker** instead of dumping every schema into
+  the tree: a searchable checkbox list where the configured databases are locked on,
+  and only checked schemas appear. The selection is remembered per workspace
+  (instance id + schema name, 0600) and reappears on the next open; the schema reuses
+  the instance's credentials, so no second copy of a password exists.
+- Manually added connections: a toolbar button opens a small form (environment name,
+  host, port, user, password, optional database) for databases described nowhere in
+  the workspace. The Host proves the connection with a read-only `SELECT VERSION()`
+  before saving it, keeps the entries in a 0600 file per workspace, groups them by
+  environment name, and offers “Remove this connection” in the tree's context menu.
+- An optional AI fallback for workspaces whose configuration shape the rule-based
+  scan does not recognise. The model (chosen the first time it is needed, from the
+  providers configured in DSH, and changeable in settings) only points at files and
+  key paths; password values are redacted before the prompt, the Host reads the
+  secret itself inside the workspace, and each proposed address is proven with a
+  read-only connection before it joins an “AI” group in the tree. Failures are
+  reported in the run log instead of leaving broken entries behind.
 - The data window answers the code workspace's bridge: `openTable` opens/focuses a
   table's console, resolves the owning database through `findTable`, and runs the
   base query; `openSql` pastes a mapper statement without running it. The contract

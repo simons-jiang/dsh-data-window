@@ -32,13 +32,7 @@ function dwBuildTree(state, tr) {
     const instanceRows = []
     for (const instance of environment.instances) {
       const instanceKey = dwNodeKey('inst', instance.id)
-      const extra = state.children.get(instanceKey) ?? []
       const databases = [...instance.databases]
-      const known = new Set(databases.map((database) => database.name))
-      for (const discovered of extra) {
-        if (known.has(discovered.label)) continue
-        databases.push({ name: discovered.label, id: discovered.dbId, discovered: true })
-      }
       const databaseRows = databases.map((database) => {
         const databaseNode = {
           key: dwNodeKey('db', database.id),
@@ -50,6 +44,7 @@ function dwBuildTree(state, tr) {
           env: environment.env,
           instanceLabel: instance.label,
           configured: database.discovered !== true,
+          remembered: database.remembered === true,
         }
         return { node: databaseNode, children: childrenOf(databaseNode, 3) }
       })
@@ -72,7 +67,8 @@ function dwBuildTree(state, tr) {
           user: instance.user,
           databases: instance.databases,
           aliases: instance.aliases ?? [],
-          allLoaded: extra.length > 0,
+          manual: instance.manual === true,
+          entryId: instance.entryId,
         },
         children: databaseRows,
       })
@@ -86,6 +82,7 @@ function dwBuildTree(state, tr) {
         env: environment.env,
         instanceCount: environment.instances.length,
         databaseCount: environment.databaseCount,
+        manual: environment.manual === true,
       },
       children: instanceRows,
     })
@@ -152,7 +149,7 @@ function dwNodeIconName(node) {
   }
 }
 
-function DwTree({ store, state, tr, onContextMenu }) {
+function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
   const rows = useMemo(
     () => dwVisibleRows(state, tr),
     [state.environments, state.expanded, state.children, state.loadState, state.filter],
@@ -170,6 +167,10 @@ function DwTree({ store, state, tr, onContextMenu }) {
       // Opening the workbench also reveals its tables: that is the list the user
       // came for, and one click is better than two.
       if (row.open !== true) void store.toggleNode(node)
+      return
+    }
+    if (node.kind === 'instance' && (node.databases ?? []).length === 0) {
+      onChooseDatabases(node)
       return
     }
     if (row.expandable === true) void store.toggleNode(node)
@@ -255,19 +256,21 @@ function DwTree({ store, state, tr, onContextMenu }) {
       h('span', { key: 'lb', className: 'dw-node-label' }, node.kind === 'retry'
         ? tr('retry')
         : node.label),
+      node.manual === true ? dwManualBadge(tr) : null,
+      node.remembered === true ? h('span', { key: 'saved', className: 'dw-node-tag' }, tr('rememberedBadge')) : null,
       node.detail !== '' && node.detail !== undefined && node.kind !== 'retry'
         ? h('span', { key: 'dt', className: 'dw-node-detail' }, detail)
         : null,
-      node.kind === 'instance' && node.allLoaded !== true
+      node.kind === 'instance'
         ? h('button', {
-          key: 'all',
+          key: 'pick',
           type: 'button',
           className: 'dw-node-more',
-          title: tr('browseAllDatabases'),
+          title: tr('chooseDatabases'),
           onClick: (event) => {
             event.stopPropagation()
             store.select(node)
-            void store.loadAllDatabases(node)
+            onChooseDatabases(node)
           },
         }, h(DwIcon, { name: 'grid', size: 12 }))
         : null,

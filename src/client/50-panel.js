@@ -182,6 +182,10 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const [editorHeight, setEditorHeight] = useState(168)
   const [sideWidth, setSideWidth] = useState(() => dwReadSideWidth())
   const [sidebarHidden, setSidebarHidden] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
+  const [manualOpen, setManualOpen] = useState(false)
+  const [schemaTarget, setSchemaTarget] = useState(null)
+  const aiPrompted = useRef(false)
   const panelRef = useRef(null)
   const logRef = useRef(null)
   const sideWidthRef = useRef(sideWidth)
@@ -198,6 +202,17 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   useEffect(() => {
     if (detected !== '') store.setDetectedRoot(detected)
   }, [detected, store])
+
+  // First open of a workspace the rule-based scan cannot read: offer the model
+  // picker instead of leaving the user with an empty tree and no next step. It
+  // asks once per mount and only while no model has been chosen yet.
+  useEffect(() => {
+    if (aiPrompted.current) return
+    if (state.root === '' || state.phase !== 'empty') return
+    if (dwAiModel() !== null) return
+    aiPrompted.current = true
+    setAiOpen(true)
+  }, [state.phase, state.root])
 
   // Requirement: entering the window folds the shell's navigation column, so the
   // explorer and the workbench get the whole frame. Leaving unfolds it again, but
@@ -364,6 +379,31 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       'aria-label': sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
     }, h(DwIcon, { name: 'panel', size: 13 })),
     h('button', {
+      key: 'ai',
+      type: 'button',
+      className: 'dw-btn',
+      disabled: state.root === '' || state.aiRunning === true,
+      onClick: () => setAiOpen(true),
+      title: tr('aiOpenHint'),
+    }, [
+      h(DwIcon, { key: 'i', name: 'ai', size: 12 }),
+      h('span', { key: 't' }, state.aiRunning === true ? tr('aiRunningShort') : tr('aiOpen')),
+    ]),
+    h('button', {
+      // A distinct key: the manual-workspace badge above already owns 'manual',
+      // and duplicate keys make React reuse one node for both, which surfaced as a
+      // row of repeated badges on every re-render.
+      key: 'add-manual',
+      type: 'button',
+      className: 'dw-btn',
+      disabled: state.root === '',
+      onClick: () => setManualOpen(true),
+      title: tr('manualOpenHint'),
+    }, [
+      h(DwIcon, { key: 'i', name: 'plus', size: 12 }),
+      h('span', { key: 't' }, tr('manualOpen')),
+    ]),
+    h('button', {
       key: 'refresh',
       type: 'button',
       className: 'dw-btn',
@@ -413,6 +453,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       state,
       tr,
       onContextMenu: (event, node) => setMenu({ x: event.clientX, y: event.clientY, node }),
+      onChooseDatabases: (node) => setSchemaTarget(node),
     }),
   ])
 
@@ -422,6 +463,8 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       tr,
       state,
       onPick: pickWorkspace,
+      onOpenAi: () => setAiOpen(true),
+      onOpenManual: () => setManualOpen(true),
     }))
   } else if (state.phase === 'loading' && environments.length === 0) {
     main = h('div', { key: 'main', className: 'dw-main' }, h('div', { className: 'dw-empty' }, [
@@ -433,7 +476,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     main = h('div', { key: 'main', className: 'dw-main' }, [
       h(DwTabs, { key: 'tabs', store, state, tr }),
       activeTab === undefined
-        ? h(DwEmpty, { key: 'empty', tr, state, onPick: pickWorkspace })
+        ? h(DwEmpty, { key: 'empty', tr, state, onPick: pickWorkspace, onOpenAi: () => setAiOpen(true), onOpenManual: () => setManualOpen(true) })
         : activeTab.kind === 'ddl'
           ? h(DwDdlView, { key: activeTab.id, tab: activeTab, tr, store })
           : h(React.Fragment, { key: activeTab.id }, [
@@ -512,7 +555,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
           left: Math.max(rect === undefined ? 0 : rect.left, left),
           top: Math.max(rect === undefined ? 0 : rect.top, top),
         },
-      }, dwMenuItems(menu.node, store, tr, () => setMenu(null))),
+      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node))),
     ])
   }
 
@@ -534,6 +577,30 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     ]),
     log,
     menuLayer,
+    aiOpen ? h(DwAiDialog, {
+      key: 'ai-dialog',
+      store,
+      tr,
+      onClose: () => setAiOpen(false),
+      onManual: () => {
+        setAiOpen(false)
+        setManualOpen(true)
+      },
+    }) : null,
+    manualOpen ? h(DwManualDialog, {
+      key: 'manual-dialog',
+      store,
+      tr,
+      onClose: () => setManualOpen(false),
+      onSaved: () => void store.loadDiscovery({ quiet: true }),
+    }) : null,
+    schemaTarget === null ? null : h(DwSchemaDialog, {
+      key: 'schema-dialog',
+      store,
+      tr,
+      instance: schemaTarget,
+      onClose: () => setSchemaTarget(null),
+    }),
   ])
 }
 
@@ -545,12 +612,12 @@ function dwClock(date) {
 }
 
 /** The context menu of one node. */
-function dwMenuItems(node, store, tr, close) {
+function dwMenuItems(node, store, tr, close, openSchemaDialog) {
   const items = []
-  const add = (key, label, shortcut, run) => items.push(h('button', {
+  const add = (key, label, shortcut, run, tone) => items.push(h('button', {
     key,
     type: 'button',
-    className: 'dw-menu-item',
+    className: tone === undefined ? 'dw-menu-item' : `dw-menu-item ${tone}`,
     onClick: () => {
       close()
       run()
@@ -570,8 +637,14 @@ function dwMenuItems(node, store, tr, close) {
     })
   } else if (node.kind === 'database') {
     add('open', tr('menuOpenConsole'), '', () => store.openDatabase(node))
+    if (node.remembered === true) {
+      add('forget-database', tr('forgetDatabase'), '', () => void store.forgetDatabase(node), 'dw-menu-danger')
+    }
   } else if (node.kind === 'instance') {
-    add('all', tr('browseAllDatabases'), '', () => void store.loadAllDatabases(node))
+    add('pick', tr('chooseDatabases'), '', () => openSchemaDialog(node))
+    if (node.manual === true && typeof node.entryId === 'string') {
+      add('remove-manual', tr('removeConnection'), '', () => void store.removeManual(node.entryId), 'dw-menu-danger')
+    }
   } else if (node.kind === 'env') {
     add('expand', tr('menuExpand'), '', () => void store.toggleNode(node))
   } else if (node.kind === 'column') {
@@ -591,8 +664,9 @@ function dwMenuItems(node, store, tr, close) {
  * a workspace whose configuration resolved no database, and a workspace whose
  * configuration failed. Each one now says what happened and what to do next.
  */
-function DwEmpty({ tr, state, onPick }) {
+function DwEmpty({ tr, state, onPick, onOpenAi, onOpenManual }) {
   const warnings = state.warnings ?? []
+  const canUseAi = state.root !== '' && (state.environments ?? []).length === 0
   const states = []
   if (state.root === '') {
     states.push({ title: tr('emptyTitle'), hint: tr('emptyHint') })
@@ -610,6 +684,32 @@ function DwEmpty({ tr, state, onPick }) {
     h('div', { key: 'h', className: 'dw-empty-hint' }, current.hint),
     h('div', { key: 'k', className: 'dw-empty-hint', style: { fontSize: 11.5, opacity: .8 } }, tr('shortcutSummary')),
     h('button', { key: 'b', type: 'button', className: 'dw-btn', onClick: onPick }, tr('pickWorkspace')),
+    canUseAi === true
+      ? h('button', {
+        key: 'ai',
+        type: 'button',
+        className: 'dw-btn dw-btn-accent',
+        disabled: state.aiRunning === true,
+        onClick: onOpenAi,
+      }, [
+        h(DwIcon, { key: 'i', name: 'ai', size: 12 }),
+        h('span', { key: 't' }, state.aiRunning === true ? tr('aiRunningShort') : tr('aiOpen')),
+      ])
+      : null,
+    canUseAi === true
+      ? h('button', {
+        key: 'manual',
+        type: 'button',
+        className: 'dw-btn',
+        onClick: onOpenManual,
+      }, [
+        h(DwIcon, { key: 'i', name: 'plus', size: 12 }),
+        h('span', { key: 't' }, tr('manualOpen')),
+      ])
+      : null,
+    canUseAi === true
+      ? h('div', { key: 'aihint', className: 'dw-empty-hint', style: { fontSize: 11.5, opacity: .8 } }, tr('aiEmptyHint'))
+      : null,
     warnings.length > 0
       ? h('div', { key: 'w', className: 'dw-code-block' }, warnings.map((warning) => dwWarningText(warning, tr)).join('\n'))
       : null,

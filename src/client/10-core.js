@@ -100,6 +100,13 @@ async function dwRpc(action, payload = {}) {
   return body.value
 }
 
+/** The instance behind a database id; a schema found through "all databases" is `<instance>~<name>`. */
+function dwInstanceIdOf(dbId) {
+  const text = String(dbId ?? '')
+  const separator = text.indexOf('~')
+  return separator > 0 && text.startsWith('i:') ? text.slice(0, separator) : ''
+}
+
 /** Compose one tree-node key; every level of the tree is addressable. */
 function dwNodeKey(kind, ...parts) {
   return [kind, ...parts].join(':')
@@ -148,6 +155,7 @@ function dwExplainFailure(translate, error) {
     'ECONNREFUSED': 'error.refused',
     'ENOTFOUND': 'error.unresolved',
     'ER_QUERY_INTERRUPTED': 'error.interrupted',
+    'manual-connect-failed': 'error.manualConnectFailed',
   }
   const key = known[code]
   if (key !== undefined) {
@@ -155,6 +163,42 @@ function dwExplainFailure(translate, error) {
     if (text !== key) return `${text}${detail === '' ? '' : `（${detail}）`}`
   }
   return detail === '' ? code : `${code}: ${detail}`
+}
+
+/**
+ * Merge AI-resolved environments into the rule-based ones.
+ *
+ * The two sources may describe the same host; instances and databases are merged
+ * by identity so a workspace never shows the same database twice.
+ */
+function dwMergeEnvironments(existing, added) {
+  const output = (Array.isArray(existing) ? existing : []).map((environment) => ({
+    ...environment,
+    instances: [...(Array.isArray(environment?.instances) ? environment.instances : [])],
+  }))
+  for (const environment of Array.isArray(added) ? added : []) {
+    if (environment === null || typeof environment !== 'object') continue
+    const incoming = Array.isArray(environment.instances) ? environment.instances : []
+    const current = output.find((entry) => entry.env === environment.env)
+    if (current === undefined) {
+      output.push({ ...environment, instances: [...incoming] })
+      continue
+    }
+    for (const instance of incoming) {
+      const known = current.instances.find((entry) => entry.id === instance.id)
+      if (known === undefined) {
+        current.instances.push(instance)
+        continue
+      }
+      if (!Array.isArray(known.databases)) known.databases = []
+      for (const database of Array.isArray(instance.databases) ? instance.databases : []) {
+        if (known.databases.some((entry) => entry.name === database.name)) continue
+        known.databases.push(database)
+      }
+    }
+    current.databaseCount = current.instances.reduce((total, instance) => total + (Array.isArray(instance.databases) ? instance.databases.length : 0), 0)
+  }
+  return output
 }
 
 /** Read the persisted manual workspace, tolerating a blocked storage. */
@@ -185,7 +229,7 @@ const DW_PREFS_KEY = 'dsh-data-window:prefs'
 
 /** Read the display preferences, tolerating a blocked storage. */
 function dwReadPrefs() {
-  const fallback = { autoHideSidebar: true, defaultLimit: 0, shortcutOpen: null }
+  const fallback = { autoHideSidebar: true, defaultLimit: 0, shortcutOpen: null, aiModel: null }
   try {
     const parsed = JSON.parse(globalThis.localStorage?.getItem(DW_PREFS_KEY) ?? '{}')
     const limit = Number(parsed?.defaultLimit)
@@ -196,10 +240,21 @@ function dwReadPrefs() {
         modifiers: (Array.isArray(raw.modifiers) ? raw.modifiers : []).filter((name) => ['meta', 'ctrl', 'alt', 'shift'].includes(name)),
       }
       : null
+    const rawModel = parsed?.aiModel
+    const aiModel = rawModel !== null && rawModel !== undefined
+      && typeof rawModel.provider === 'string' && rawModel.provider !== ''
+      && typeof rawModel.model === 'string' && rawModel.model !== ''
+      ? {
+        provider: rawModel.provider,
+        model: rawModel.model,
+        name: typeof rawModel.name === 'string' && rawModel.name !== '' ? rawModel.name : rawModel.model,
+      }
+      : null
     return {
       autoHideSidebar: parsed?.autoHideSidebar !== false,
       defaultLimit: Number.isFinite(limit) && limit > 0 ? limit : 0,
       shortcutOpen,
+      aiModel,
     }
   } catch (error) {
     return fallback
@@ -269,6 +324,8 @@ function dwCreateStore(translate) {
     discoveryMs: 0,
     fromCache: false,
     settings: null,
+    /** True while an AI fallback scan is running; the dialog owns the result. */
+    aiRunning: false,
     // tree
     filter: '',
     expanded: new Set(),
@@ -562,7 +619,9 @@ function dwCreateStore(translate) {
         const defaultEnv = discovery.defaultEnv ?? environments[0]?.env
         const base = refreshing ? new Set() : new Set(state.expanded)
         for (const environment of environments) {
-          if (environment.env === defaultEnv) base.add(dwNodeKey('env', environment.env))
+          // Manually added connections are the ones the user just created, so they
+          // open expanded; the rule-based default environment opens too.
+          if (environment.env === defaultEnv || environment.manual === true) base.add(dwNodeKey('env', environment.env))
         }
         patch({
           phase: environments.length === 0 ? 'empty' : 'ready',
@@ -590,6 +649,97 @@ function dwCreateStore(translate) {
         if (state.root !== root) return
         patch({ phase: 'error', refreshing: false, discoveryError: dwExplainFailure(t, error) })
         pushLog('error', t('log.discoverFailed', { message: dwExplainFailure(t, error) }))
+      }
+    },
+
+    /**
+     * Ask the Host to read the workspace with one model.
+     *
+     * The Host resolves the credential from the file the model cited and proves
+     * the address with a real connection, so whatever comes back is already safe
+     * to render; anything unproven stays a warning.
+     */
+    async runAiDiscovery(selection) {
+      const root = state.root
+      if (root === '') return { ok: false, error: t('aiNoWorkspace') }
+      const provider = String(selection?.provider ?? '')
+      const model = String(selection?.model ?? '')
+      if (provider === '' || model === '') return { ok: false, error: t('aiNeedModel') }
+      if (state.aiRunning === true) return { ok: false, error: t('aiBusy') }
+      patch({ aiRunning: true })
+      pushLog('info', t('log.aiStart', { model: selection?.name ?? model }))
+      const startedAt = Date.now()
+      try {
+        const value = await dwRpc('aiDiscover', { root, provider, model })
+        if (state.root !== root) return { ok: false, error: '' }
+        const environments = dwMergeEnvironments(state.environments, value?.environments)
+        const expanded = new Set(state.expanded)
+        for (const environment of Array.isArray(value?.environments) ? value.environments : []) {
+          expanded.add(dwNodeKey('env', environment.env))
+        }
+        patch({
+          aiRunning: false,
+          environments,
+          expanded,
+          phase: environments.length === 0 ? 'empty' : 'ready',
+          warnings: [...new Set([...state.warnings, ...(Array.isArray(value?.warnings) ? value.warnings : [])])],
+        })
+        pushLog('info', t('log.aiDone', {
+          accepted: Number(value?.accepted ?? 0),
+          candidates: Number(value?.candidates ?? 0),
+          ms: dwDuration(Number(value?.elapsedMs ?? Date.now() - startedAt)),
+        }))
+        return { ok: true, value }
+      } catch (error) {
+        if (state.root !== root) return { ok: false, error: '' }
+        patch({ aiRunning: false })
+        const message = dwExplainFailure(t, error)
+        pushLog('error', t('log.aiFailed', { message }))
+        return { ok: false, error: message }
+      }
+    },
+
+    /** Keep a database the user opened from an instance's full list. */
+    async rememberDatabase(node) {
+      const root = state.root
+      const instanceId = dwInstanceIdOf(node?.dbId)
+      const database = String(node?.database ?? '')
+      if (root === '' || instanceId === '' || database === '') return
+      try {
+        const value = await dwRpc('rememberDatabase', { root, instanceId, database })
+        if (value?.remembered === true) pushLog('info', t('log.remembered', { database }))
+      } catch (error) {
+        // Remembering is a convenience: a workspace that cannot write its store
+        // still keeps the database open in this session.
+        void error
+      }
+    },
+
+    /** Drop a remembered database and re-read the tree without it. */
+    async forgetDatabase(node) {
+      const root = state.root
+      const instanceId = dwInstanceIdOf(node?.dbId)
+      const database = String(node?.database ?? '')
+      if (root === '' || instanceId === '' || database === '') return
+      try {
+        await dwRpc('forgetDatabase', { root, instanceId, database })
+        pushLog('info', t('log.forgotDatabase', { database }))
+        await store.loadDiscovery({ quiet: true })
+      } catch (error) {
+        pushLog('error', t('log.forgetDatabaseFailed', { message: dwExplainFailure(t, error) }))
+      }
+    },
+
+    /** Remove one manually added connection, then re-read the tree. */
+    async removeManual(entryId) {
+      const root = state.root
+      if (root === '' || typeof entryId !== 'string' || entryId === '') return
+      try {
+        await dwRpc('manualRemove', { root, id: entryId })
+        pushLog('info', t('log.manualRemoved'))
+        await store.loadDiscovery({ quiet: true })
+      } catch (error) {
+        pushLog('error', t('log.manualRemoveFailed', { message: dwExplainFailure(t, error) }))
       }
     },
 
@@ -629,14 +779,9 @@ function dwCreateStore(translate) {
     async ensureChildren(node) {
       if (node === null || node === undefined) return
       if (node.kind === 'env') return
-      if (node.kind === 'instance') {
-        // A project whose configuration never named this instance still gets a
-        // usable tree: opening it asks the server which schemas exist.
-        if ((node.databases ?? []).length === 0 && state.loadState.get(node.key) !== 'ready') {
-          await store.loadAllDatabases(node)
-        }
-        return
-      }
+      // Databases are an explicit choice made in the schema picker, not a list the
+      // tree fills in on expand: expanding an instance only reveals what was picked.
+      if (node.kind === 'instance') return
       if (node.kind !== 'database' && node.kind !== 'table' && node.kind !== 'view') return
       if (Array.isArray(state.children.get(node.key))) return
       if (state.loadState.get(node.key) === 'loading') return
@@ -714,43 +859,6 @@ function dwCreateStore(translate) {
     },
 
     /** Reveal every schema on one instance, not only the configured ones. */
-    async loadAllDatabases(instanceNode) {
-      if (instanceNode === null || instanceNode === undefined || instanceNode.id === undefined) return
-      const key = instanceNode.key
-      if (state.loadState.get(key) === 'loading') return
-      const loadState = new Map(state.loadState)
-      loadState.set(key, 'loading')
-      const expanded = new Set(state.expanded)
-      expanded.add(key)
-      patch({ loadState, expanded })
-      try {
-        const value = await call('databases', { id: instanceNode.id })
-        const seen = new Set((state.children.get(key) ?? []).map((entry) => entry.label))
-        const children = (value.databases ?? [])
-          .filter((entry) => !seen.has(entry.name))
-          .map((entry) => ({
-            key: dwNodeKey('db', entry.id),
-            kind: 'database',
-            label: entry.name,
-            dbId: entry.id,
-            database: entry.name,
-            env: instanceNode.env,
-            instanceLabel: instanceNode.label,
-          }))
-        const nextChildren = new Map(state.children)
-        nextChildren.set(key, [...(nextChildren.get(key) ?? []), ...children])
-        const nextState = new Map(state.loadState)
-        nextState.set(key, 'ready')
-        patch({ children: nextChildren, loadState: nextState })
-        pushLog('info', t('log.allDatabases', { instance: instanceNode.label, count: value.databases?.length ?? 0 }))
-      } catch (error) {
-        const nextState = new Map(state.loadState)
-        nextState.set(key, 'error')
-        patch({ loadState: nextState })
-        pushLog('error', t('log.databasesFailed', { message: dwExplainFailure(t, error) }))
-      }
-    },
-
     /** Select one row; a table also becomes the target of the DDL shortcut. */
     select(node) {
       patch({ selected: node?.key ?? '', selectedNode: node ?? null })
@@ -769,6 +877,7 @@ function dwCreateStore(translate) {
       if (existing !== undefined) {
         patch({ activeTab: id })
         scheduleConsoles()
+        if (node.configured === false) void store.rememberDatabase(node)
         return existing
       }
       const tab = {
@@ -789,6 +898,9 @@ function dwCreateStore(translate) {
       }
       patch({ tabs: [...state.tabs, tab], activeTab: id })
       scheduleConsoles()
+      // Opening a schema that is not part of the configuration makes it part of the
+      // workspace: the next discovery lists it next to the configured databases.
+      if (node.configured === false) void store.rememberDatabase(node)
       return tab
     },
 
@@ -877,6 +989,9 @@ function dwCreateStore(translate) {
       }
       patch({ tabs: [...state.tabs, tab], activeTab: id })
       scheduleConsoles()
+      // Opening a schema that is not part of the configuration makes it part of the
+      // workspace: the next discovery lists it next to the configured databases.
+      if (node.configured === false) void store.rememberDatabase(node)
       return tab
     },
 

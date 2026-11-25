@@ -1,9 +1,12 @@
 # dsh-data-window
 
-A DataGrip-style database window for DeepSeek Harness. It never asks for a
-connection: it reads the workspace's own Spring/Nacos configuration, resolves each
-environment's host and credentials from the local Nacos snapshot cache, and turns
-that into a browsable tree plus one read-only SQL workbench per database.
+A DataGrip-style database window for DeepSeek Harness. For a normal project it asks
+for no connection at all: it reads the workspace's own Spring/Nacos configuration,
+resolves each environment's host and credentials from the local Nacos snapshot
+cache, and turns that into a browsable tree plus one read-only SQL workbench per
+database. When a project's configuration cannot be resolved, a model or the user
+can supply the connection — and either way it is proven with a real read-only
+connection before it enters the tree.
 
 ## Features
 
@@ -11,6 +14,19 @@ that into a browsable tree plus one read-only SQL workbench per database.
   data-id defines each `${…}` placeholder, resolved the way the JVM does it. No
   configuration file name is assumed. Only the data sources this project declares
   are shown; results are cached per workspace and refreshed when the files change.
+- **AI fallback when the rules find nothing** — a workspace whose configuration
+  shape the scan does not recognise can be analysed by a model configured in DSH.
+  The model only proposes hosts and file/key paths; password values are redacted
+  before they enter the prompt, the Host reads the secret itself, and every proposed
+  address is proven with a real read-only connection before it joins an “AI” group
+  in the tree. The model is chosen the first time (and changeable in settings).
+- **Pick the databases to show** — the configured database is what the tree shows
+  first; a per-instance picker (searchable checkboxes, configured ones locked on)
+  chooses the other schemas, and the choice is remembered for that workspace.
+- **Manual connections** — a toolbar button adds a host/port/account/database by
+  hand for databases described nowhere in the workspace (a local container, a shared
+  test instance). The connection is tested before it is saved, entries are grouped by
+  environment name, and they can be removed from the tree's context menu.
 - **Explorer** — environments → instances → databases → tables → columns, with type,
   primary key, nullability and comment. One button reveals every schema on an
   instance, not only the configured ones. The column is draggable, and a
@@ -84,7 +100,9 @@ Set these under the plugin row's `config` in `cordis.patch.yml`:
 - Requires a local Nacos snapshot cache and the workspace's own `spring.datasource`
   configuration. A project without one, or one that has never started, shows an empty
   tree; the other data-ids in the snapshot are read only for the values the
-  project's placeholders name.
+  project's placeholders name. The optional AI fallback and manual connections can
+  fill that gap; the AI path needs an LLM provider configured in DSH, and — like
+  everything else — only keeps addresses that actually connect.
 - Each workspace keeps its own discovery cache under
   `$DSH_HOME/storages/dsh-data-window/workspaces/` (mode `0600`). A file holds only
   that project's resolved hosts and credentials; deleting it forgets just that

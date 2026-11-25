@@ -142,6 +142,86 @@ window.__ModuleLoader__.load({
     "settingsTheme": "Colour theme",
     "settingsThemeHint": "Follows the theme chosen in the code workspace (dsh-ide-window); with none chosen, DSH colours are used.",
     "settingsThemeDsh": "Follow DSH",
+    "cancel": "Cancel",
+    "close": "Close",
+    "aiOpen": "AI analysis",
+    "aiOpenHint": "Let a model read the workspace configuration for addresses the rules missed",
+    "aiRunningShort": "Analyzing…",
+    "aiEmptyHint": "When the rules do not recognise this project's configuration shape, a model can read the workspace. Every proposed address is proven with a real connection first; unproven ones stay out of the tree.",
+    "aiTitle": "Analyze the workspace with AI",
+    "aiLoadingModels": "Reading the models configured in DSH…",
+    "aiPickModel": "Choose a model",
+    "aiNoModels": "DSH has no usable model: configure a provider in Settings, then come back.",
+    "aiNoLlm": "The Host exposes no LLM service, so AI analysis is unavailable.",
+    "aiProviderFailed": "This provider failed to list models: {message}",
+    "aiPrivacy": "Only redacted configuration excerpts are sent (password values become <redacted>). The model returns file and key paths; the Host reads the secret itself and proves every address with a read-only connection.",
+    "aiStart": "Start analysis",
+    "aiRunning": "Analyzing the workspace with {model}…",
+    "aiRunningHint": "Up to 2 minutes. The Host then tries each proposed address; ones that do not connect stay out of the tree.",
+    "aiFailedTitle": "AI analysis failed",
+    "aiFailed": "The analysis did not finish",
+    "aiRetry": "Retry",
+    "aiDone": "{accepted} connection(s) verified (the model proposed {candidates})",
+    "aiDoneEmpty": "None of the proposed addresses connected",
+    "aiDoneHint": "Verified addresses joined the “AI” group in the tree; failures are listed below and written to the run log.",
+    "aiAgain": "Try another model",
+    "aiNoWorkspace": "Pick a workspace first",
+    "aiNeedModel": "Choose a model first",
+    "aiBusy": "An AI analysis is already running",
+    "settingsGroupAi": "AI fallback",
+    "settingsAiModel": "Default model",
+    "settingsAiModelHint": "Used to read the workspace when the rules resolve no database configuration. Proposed addresses are verified by a real connection before they reach the tree.",
+    "settingsAiModelNone": "Not chosen",
+    "settingsAiChoose": "Choose a model",
+    "settingsAiChange": "Change model",
+    "log.aiStart": "AI analysis started: {model}",
+    "log.aiDone": "AI analysis finished: {accepted}/{candidates} candidates verified · {ms}",
+    "log.aiFailed": "AI analysis failed: {message}",
+    "warning.ai-no-evidence": "No configuration excerpt the model could read was found in the workspace.",
+    "warning.ai-candidate-unresolved": "A proposed address cited no resolvable account or password, so it was ignored.",
+    "warning.ai-connect-failed": "A proposed address refused the connection and was ignored.",
+    "warning.ai-unvalidated": "The Host cannot validate connections, so the AI result is unverified.",
+    "aiDefaultTag": "DSH default",
+    "manualTitle": "Add a connection",
+    "manualOpen": "Add connection",
+    "manualOpenHint": "Add a database connection by hand (independent of the workspace configuration)",
+    "manualHint": "For databases neither the rules nor the AI can find: a local container, a shared test instance, a customer's replica. The connection is tested once before it is saved; a failed test writes nothing.",
+    "manualLabel": "Environment name",
+    "manualLabelPlaceholder": "e.g. Local / Staging / Customer A",
+    "manualLabelHint": "Connections sharing a name form one environment group",
+    "manualHost": "Host",
+    "manualPort": "Port",
+    "manualUser": "User",
+    "manualPassword": "Password",
+    "manualDatabase": "Database (optional)",
+    "manualDatabaseHint": "Leave empty to add the instance only; then use “List every database on this instance”",
+    "manualPrivacy": "The Host stores these settings (password included) in a 0600 file under this workspace's storage directory; the browser only receives connection ids, and every query still passes the read-only gateway.",
+    "manualSave": "Test and save",
+    "manualSaving": "Connecting…",
+    "manualNoWorkspace": "Pick a workspace first",
+    "manualBadge": "manual",
+    "removeConnection": "Remove this connection",
+    "aiManualInstead": "Or enter the connection by hand",
+    "error.manualConnectFailed": "Connection failed; nothing was saved",
+    "log.manualRemoved": "Removed the manually added connection",
+    "log.manualRemoveFailed": "Could not remove the connection: {message}",
+    "log.manualSaved": "Added a manual connection",
+    "rememberedBadge": "saved",
+    "forgetDatabase": "Forget this database",
+    "log.remembered": "Remembered this database for the workspace: {database}",
+    "log.forgotDatabase": "Removed the remembered database: {database}",
+    "log.forgetDatabaseFailed": "Could not remove the remembered database: {message}",
+    "chooseDatabases": "Choose databases…",
+    "schemaTitle": "Choose databases",
+    "schemaSearch": "Search databases",
+    "schemaCount": "{chosen} of {total} selected",
+    "schemaConfigured": "configured",
+    "schemaHint": "Checked databases appear in the tree and are remembered for this workspace; the configured ones always stay.",
+    "schemaApply": "Apply",
+    "schemaApplying": "Applying…",
+    "schemaLoading": "Reading this instance's databases…",
+    "schemaFailed": "Could not read the database list",
+    "schemaNoMatch": "No matching database",
   }
   const DW_TEXT_ZH = {
     "openPanel": "数据窗口",
@@ -277,6 +357,86 @@ window.__ModuleLoader__.load({
     "settingsTheme": "界面配色",
     "settingsThemeHint": "在代码工作区（dsh-ide-window）切换主题后自动同步；未选择主题时跟随 DSH。",
     "settingsThemeDsh": "跟随 DSH",
+    "cancel": "取消",
+    "close": "关闭",
+    "aiOpen": "AI 分析",
+    "aiOpenHint": "让模型读取工作区配置，补上规则没解析到的地址",
+    "aiRunningShort": "分析中…",
+    "aiEmptyHint": "规则没认出这个项目的配置形态时，可以让模型读一遍工作区；候选地址会用真实连接验证，验证不过的不会进树。",
+    "aiTitle": "用 AI 分析工作区配置",
+    "aiLoadingModels": "正在读取 DSH 已配置的模型…",
+    "aiPickModel": "选择模型",
+    "aiNoModels": "DSH 里没有可用模型：先在设置里配置一个模型提供方，再回来。",
+    "aiNoLlm": "Host 没有可用的 LLM 服务，AI 分析暂时不可用。",
+    "aiProviderFailed": "该提供方读取模型失败：{message}",
+    "aiPrivacy": "只发送脱敏后的配置片段（密码值替换为 <redacted>）；模型只返回文件和键路径，密码由 Host 自己读取，候选地址会用只读连接实测。",
+    "aiStart": "开始分析",
+    "aiRunning": "正在用 {model} 分析工作区…",
+    "aiRunningHint": "最长 2 分钟。模型返回后 Host 会逐个尝试连接，连不上的地址不会进树。",
+    "aiFailedTitle": "AI 分析失败",
+    "aiFailed": "分析没有完成",
+    "aiRetry": "重试",
+    "aiDone": "验证通过 {accepted} 个连接（模型共提议 {candidates} 个）",
+    "aiDoneEmpty": "模型给出的地址都没能连上",
+    "aiDoneHint": "通过的地址已并入左侧环境的「AI」分组；失败的原因在下面，也会写进运行日志。",
+    "aiAgain": "换模型再来",
+    "aiNoWorkspace": "先选择一个工作区",
+    "aiNeedModel": "先选择一个模型",
+    "aiBusy": "已有一次 AI 分析在进行",
+    "settingsGroupAi": "AI 兜底",
+    "settingsAiModel": "默认模型",
+    "settingsAiModelHint": "规则没解析到数据库配置时，用这个模型读一遍工作区。候选地址会经真实连接验证后才进树。",
+    "settingsAiModelNone": "未选择",
+    "settingsAiChoose": "选择模型",
+    "settingsAiChange": "更换模型",
+    "log.aiStart": "AI 分析开始：{model}",
+    "log.aiDone": "AI 分析完成：验证通过 {accepted}/{candidates} 个候选 · {ms}",
+    "log.aiFailed": "AI 分析失败：{message}",
+    "warning.ai-no-evidence": "工作区里没有找到可供模型分析的配置片段。",
+    "warning.ai-candidate-unresolved": "模型提议的地址缺少可解析的账号或密码引用，已忽略。",
+    "warning.ai-connect-failed": "模型提议的地址连接失败，已忽略。",
+    "warning.ai-unvalidated": "Host 缺少连接校验能力，AI 结果未验证。",
+    "aiDefaultTag": "DSH 默认",
+    "manualTitle": "手动添加连接",
+    "manualOpen": "添加连接",
+    "manualOpenHint": "手动添加一个数据库连接（不受工作区配置限制）",
+    "manualHint": "给规则和 AI 都找不到的库用：本地容器、共享测试库、客户机房实例。保存前会先连一次，连不上不会写入。",
+    "manualLabel": "环境名称",
+    "manualLabelPlaceholder": "例如：本地 / 测试库 / 客户 A",
+    "manualLabelHint": "同名的连接会合并成同一个环境分组",
+    "manualHost": "主机",
+    "manualPort": "端口",
+    "manualUser": "用户名",
+    "manualPassword": "密码",
+    "manualDatabase": "数据库（可选）",
+    "manualDatabaseHint": "留空则只添加实例，进入后可点「列出该实例上的全部库」",
+    "manualPrivacy": "连接信息（含密码）由 Host 保存在本工作区目录下的 0600 文件里，浏览器只拿连接 id；所有查询仍走只读网关。",
+    "manualSave": "测试并保存",
+    "manualSaving": "连接中…",
+    "manualNoWorkspace": "先选择一个工作区",
+    "manualBadge": "手动",
+    "removeConnection": "移除此连接",
+    "aiManualInstead": "或者手动填写连接信息",
+    "error.manualConnectFailed": "连接失败，未保存",
+    "log.manualRemoved": "已移除手动添加的连接",
+    "log.manualRemoveFailed": "移除连接失败：{message}",
+    "log.manualSaved": "已添加手动连接",
+    "rememberedBadge": "已记住",
+    "forgetDatabase": "不再记住此库",
+    "log.remembered": "已将该库记到工作区：{database}",
+    "log.forgotDatabase": "已移除记住的库：{database}",
+    "log.forgetDatabaseFailed": "移除记住的库失败：{message}",
+    "chooseDatabases": "选择数据库…",
+    "schemaTitle": "选择数据库",
+    "schemaSearch": "搜索数据库",
+    "schemaCount": "已选 {chosen} / 共 {total}",
+    "schemaConfigured": "配置",
+    "schemaHint": "勾选的库会出现在树里，并记到当前工作区；配置里的库始终显示。",
+    "schemaApply": "应用",
+    "schemaApplying": "应用中…",
+    "schemaLoading": "正在读取实例上的库…",
+    "schemaFailed": "读取库列表失败",
+    "schemaNoMatch": "没有匹配的库",
   }
 
 // ---- 00-css.js -----------------------------------------------------------
@@ -413,7 +573,9 @@ const DW_CSS = `
 .dw-btn-accent {
   border-color: transparent;
   background: var(--dsw-alias-brand-primary, #4b8bf5);
-  color: #fff;
+  /* The brand fill is ink in the light palette and near-white in the dark one, so
+     the label has to follow the host's inverted-label token instead of staying white. */
+  color: var(--dsw-alias-label-primary-inverted, #fff);
   font-weight: 600;
 }
 .dw-btn-accent:hover { filter: brightness(1.08); background: var(--dsw-alias-brand-primary, #4b8bf5); }
@@ -996,6 +1158,154 @@ const DW_CSS = `
 .dw-settings-key-live { border-color: var(--dsw-alias-brand-primary, #4b8bf5); color: var(--dsw-alias-brand-primary, #4b8bf5); }
 .dw-settings-warn { color: var(--dsw-alias-state-warning-primary, #d9a13b); font-size: 11px; }
 
+/* --- The AI fallback dialog ------------------------------------------------ */
+.dw-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(10, 12, 16, .42);
+}
+.dw-modal-card {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: min(72vh, 640px);
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1, #1f2228);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .38);
+}
+.dw-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 16px 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.dw-modal-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 16px 12px; }
+.dw-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--dsw-alias-border-l1, #31353d);
+}
+.dw-ai-pick { display: flex; flex-direction: column; gap: 8px; }
+.dw-ai-label { font-size: 12px; color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-ai-list { display: flex; flex-direction: column; gap: 10px; }
+.dw-ai-group { display: flex; flex-direction: column; gap: 3px; }
+.dw-ai-group-title {
+  font-size: 11px;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  padding: 2px 2px 4px;
+}
+.dw-ai-model {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dw-ai-model:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12)); }
+.dw-ai-model.on {
+  border-color: var(--dsw-alias-brand-primary, #4b8bf5);
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 12%, transparent);
+}
+.dw-ai-model-name { font-size: 12.5px; }
+.dw-ai-model-desc { font-size: 11px; color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-ai-model-tag {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12));
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 10px;
+  vertical-align: 1px;
+}
+.dw-ai-note { font-size: 11.5px; line-height: 1.5; color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-ai-warn { color: var(--dsw-alias-state-warning-primary, #d9a13b); }
+.dw-ai-ok { color: var(--dsw-alias-state-success-primary, #4fbf7b); font-size: 12.5px; }
+.dw-ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 4px;
+  font-size: 12.5px;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+}
+.dw-ai-error { display: flex; flex-direction: column; gap: 4px; padding: 10px 2px; }
+.dw-ai-done { display: flex; flex-direction: column; gap: 8px; padding: 6px 2px; }
+.dw-ai-link {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-brand-primary, #4b8bf5);
+  font: inherit;
+  font-size: 11.5px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.dw-form { display: flex; flex-direction: column; gap: 10px; padding: 10px 0 6px; }
+.dw-form-row { display: flex; flex-direction: column; gap: 4px; }
+.dw-form-split { display: flex; gap: 10px; }
+.dw-form-split .dw-form-row:first-child { flex: 1 1 auto; }
+.dw-form-split .dw-form-row:last-child { width: 108px; flex: 0 0 auto; }
+.dw-form-label { font-size: 11.5px; color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-form-input {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+.dw-form-input:focus { border-color: var(--dsw-alias-brand-primary, #4b8bf5); }
+.dw-form-hint { font-size: 11px; color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-node-tag {
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12));
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 10px;
+}
+.dw-menu-danger { color: var(--dsw-alias-state-danger-primary, #e5534b); }
+.dw-schema-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0 6px; }
+.dw-schema-list { display: flex; flex-direction: column; gap: 1px; max-height: 340px; overflow: auto; padding: 2px 0; }
+.dw-schema-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.dw-schema-row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12)); }
+.dw-schema-row.locked { cursor: default; color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-schema-box { accent-color: var(--dsw-alias-state-business-primary, #4b8bf5); }
+.dw-schema-name { flex: 0 1 auto; }
+
+
 `
 
 function DwStyles() {
@@ -1112,6 +1422,18 @@ function DwIcon({ name, size = 14, className }) {
       return h('svg', common, [
         h('path', { key: 'a', d: 'M2.5 4h11M2.5 8h7.5M2.5 12h4.5' }),
         h('path', { key: 'b', d: 'M11.5 10.5v3M10 12h3' }),
+      ])
+    case 'plus':
+      return h('svg', common, [h('path', { d: 'M8 3.2v9.6M3.2 8h9.6' })])
+    case 'link':
+      return h('svg', common, [
+        h('path', { key: 'a', d: 'M6.6 9.4a2.6 2.6 0 0 0 3.7 0l2-2a2.6 2.6 0 0 0-3.7-3.7l-1 1' }),
+        h('path', { key: 'b', d: 'M9.4 6.6a2.6 2.6 0 0 0-3.7 0l-2 2a2.6 2.6 0 0 0 3.7 3.7l1-1' }),
+      ])
+    case 'ai':
+      return h('svg', common, [
+        h('path', { key: 'a', d: 'M8 1.9l1.4 3.7 3.7 1.4-3.7 1.4L8 12.1 6.6 8.4 2.9 7l3.7-1.4z' }),
+        h('path', { key: 'b', d: 'M12.4 10.9l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z' }),
       ])
     case 'panel':
       return h('svg', common, [
@@ -1621,6 +1943,13 @@ async function dwRpc(action, payload = {}) {
   return body.value
 }
 
+/** The instance behind a database id; a schema found through "all databases" is `<instance>~<name>`. */
+function dwInstanceIdOf(dbId) {
+  const text = String(dbId ?? '')
+  const separator = text.indexOf('~')
+  return separator > 0 && text.startsWith('i:') ? text.slice(0, separator) : ''
+}
+
 /** Compose one tree-node key; every level of the tree is addressable. */
 function dwNodeKey(kind, ...parts) {
   return [kind, ...parts].join(':')
@@ -1669,6 +1998,7 @@ function dwExplainFailure(translate, error) {
     'ECONNREFUSED': 'error.refused',
     'ENOTFOUND': 'error.unresolved',
     'ER_QUERY_INTERRUPTED': 'error.interrupted',
+    'manual-connect-failed': 'error.manualConnectFailed',
   }
   const key = known[code]
   if (key !== undefined) {
@@ -1676,6 +2006,42 @@ function dwExplainFailure(translate, error) {
     if (text !== key) return `${text}${detail === '' ? '' : `（${detail}）`}`
   }
   return detail === '' ? code : `${code}: ${detail}`
+}
+
+/**
+ * Merge AI-resolved environments into the rule-based ones.
+ *
+ * The two sources may describe the same host; instances and databases are merged
+ * by identity so a workspace never shows the same database twice.
+ */
+function dwMergeEnvironments(existing, added) {
+  const output = (Array.isArray(existing) ? existing : []).map((environment) => ({
+    ...environment,
+    instances: [...(Array.isArray(environment?.instances) ? environment.instances : [])],
+  }))
+  for (const environment of Array.isArray(added) ? added : []) {
+    if (environment === null || typeof environment !== 'object') continue
+    const incoming = Array.isArray(environment.instances) ? environment.instances : []
+    const current = output.find((entry) => entry.env === environment.env)
+    if (current === undefined) {
+      output.push({ ...environment, instances: [...incoming] })
+      continue
+    }
+    for (const instance of incoming) {
+      const known = current.instances.find((entry) => entry.id === instance.id)
+      if (known === undefined) {
+        current.instances.push(instance)
+        continue
+      }
+      if (!Array.isArray(known.databases)) known.databases = []
+      for (const database of Array.isArray(instance.databases) ? instance.databases : []) {
+        if (known.databases.some((entry) => entry.name === database.name)) continue
+        known.databases.push(database)
+      }
+    }
+    current.databaseCount = current.instances.reduce((total, instance) => total + (Array.isArray(instance.databases) ? instance.databases.length : 0), 0)
+  }
+  return output
 }
 
 /** Read the persisted manual workspace, tolerating a blocked storage. */
@@ -1706,7 +2072,7 @@ const DW_PREFS_KEY = 'dsh-data-window:prefs'
 
 /** Read the display preferences, tolerating a blocked storage. */
 function dwReadPrefs() {
-  const fallback = { autoHideSidebar: true, defaultLimit: 0, shortcutOpen: null }
+  const fallback = { autoHideSidebar: true, defaultLimit: 0, shortcutOpen: null, aiModel: null }
   try {
     const parsed = JSON.parse(globalThis.localStorage?.getItem(DW_PREFS_KEY) ?? '{}')
     const limit = Number(parsed?.defaultLimit)
@@ -1717,10 +2083,21 @@ function dwReadPrefs() {
         modifiers: (Array.isArray(raw.modifiers) ? raw.modifiers : []).filter((name) => ['meta', 'ctrl', 'alt', 'shift'].includes(name)),
       }
       : null
+    const rawModel = parsed?.aiModel
+    const aiModel = rawModel !== null && rawModel !== undefined
+      && typeof rawModel.provider === 'string' && rawModel.provider !== ''
+      && typeof rawModel.model === 'string' && rawModel.model !== ''
+      ? {
+        provider: rawModel.provider,
+        model: rawModel.model,
+        name: typeof rawModel.name === 'string' && rawModel.name !== '' ? rawModel.name : rawModel.model,
+      }
+      : null
     return {
       autoHideSidebar: parsed?.autoHideSidebar !== false,
       defaultLimit: Number.isFinite(limit) && limit > 0 ? limit : 0,
       shortcutOpen,
+      aiModel,
     }
   } catch (error) {
     return fallback
@@ -1790,6 +2167,8 @@ function dwCreateStore(translate) {
     discoveryMs: 0,
     fromCache: false,
     settings: null,
+    /** True while an AI fallback scan is running; the dialog owns the result. */
+    aiRunning: false,
     // tree
     filter: '',
     expanded: new Set(),
@@ -2083,7 +2462,9 @@ function dwCreateStore(translate) {
         const defaultEnv = discovery.defaultEnv ?? environments[0]?.env
         const base = refreshing ? new Set() : new Set(state.expanded)
         for (const environment of environments) {
-          if (environment.env === defaultEnv) base.add(dwNodeKey('env', environment.env))
+          // Manually added connections are the ones the user just created, so they
+          // open expanded; the rule-based default environment opens too.
+          if (environment.env === defaultEnv || environment.manual === true) base.add(dwNodeKey('env', environment.env))
         }
         patch({
           phase: environments.length === 0 ? 'empty' : 'ready',
@@ -2111,6 +2492,97 @@ function dwCreateStore(translate) {
         if (state.root !== root) return
         patch({ phase: 'error', refreshing: false, discoveryError: dwExplainFailure(t, error) })
         pushLog('error', t('log.discoverFailed', { message: dwExplainFailure(t, error) }))
+      }
+    },
+
+    /**
+     * Ask the Host to read the workspace with one model.
+     *
+     * The Host resolves the credential from the file the model cited and proves
+     * the address with a real connection, so whatever comes back is already safe
+     * to render; anything unproven stays a warning.
+     */
+    async runAiDiscovery(selection) {
+      const root = state.root
+      if (root === '') return { ok: false, error: t('aiNoWorkspace') }
+      const provider = String(selection?.provider ?? '')
+      const model = String(selection?.model ?? '')
+      if (provider === '' || model === '') return { ok: false, error: t('aiNeedModel') }
+      if (state.aiRunning === true) return { ok: false, error: t('aiBusy') }
+      patch({ aiRunning: true })
+      pushLog('info', t('log.aiStart', { model: selection?.name ?? model }))
+      const startedAt = Date.now()
+      try {
+        const value = await dwRpc('aiDiscover', { root, provider, model })
+        if (state.root !== root) return { ok: false, error: '' }
+        const environments = dwMergeEnvironments(state.environments, value?.environments)
+        const expanded = new Set(state.expanded)
+        for (const environment of Array.isArray(value?.environments) ? value.environments : []) {
+          expanded.add(dwNodeKey('env', environment.env))
+        }
+        patch({
+          aiRunning: false,
+          environments,
+          expanded,
+          phase: environments.length === 0 ? 'empty' : 'ready',
+          warnings: [...new Set([...state.warnings, ...(Array.isArray(value?.warnings) ? value.warnings : [])])],
+        })
+        pushLog('info', t('log.aiDone', {
+          accepted: Number(value?.accepted ?? 0),
+          candidates: Number(value?.candidates ?? 0),
+          ms: dwDuration(Number(value?.elapsedMs ?? Date.now() - startedAt)),
+        }))
+        return { ok: true, value }
+      } catch (error) {
+        if (state.root !== root) return { ok: false, error: '' }
+        patch({ aiRunning: false })
+        const message = dwExplainFailure(t, error)
+        pushLog('error', t('log.aiFailed', { message }))
+        return { ok: false, error: message }
+      }
+    },
+
+    /** Keep a database the user opened from an instance's full list. */
+    async rememberDatabase(node) {
+      const root = state.root
+      const instanceId = dwInstanceIdOf(node?.dbId)
+      const database = String(node?.database ?? '')
+      if (root === '' || instanceId === '' || database === '') return
+      try {
+        const value = await dwRpc('rememberDatabase', { root, instanceId, database })
+        if (value?.remembered === true) pushLog('info', t('log.remembered', { database }))
+      } catch (error) {
+        // Remembering is a convenience: a workspace that cannot write its store
+        // still keeps the database open in this session.
+        void error
+      }
+    },
+
+    /** Drop a remembered database and re-read the tree without it. */
+    async forgetDatabase(node) {
+      const root = state.root
+      const instanceId = dwInstanceIdOf(node?.dbId)
+      const database = String(node?.database ?? '')
+      if (root === '' || instanceId === '' || database === '') return
+      try {
+        await dwRpc('forgetDatabase', { root, instanceId, database })
+        pushLog('info', t('log.forgotDatabase', { database }))
+        await store.loadDiscovery({ quiet: true })
+      } catch (error) {
+        pushLog('error', t('log.forgetDatabaseFailed', { message: dwExplainFailure(t, error) }))
+      }
+    },
+
+    /** Remove one manually added connection, then re-read the tree. */
+    async removeManual(entryId) {
+      const root = state.root
+      if (root === '' || typeof entryId !== 'string' || entryId === '') return
+      try {
+        await dwRpc('manualRemove', { root, id: entryId })
+        pushLog('info', t('log.manualRemoved'))
+        await store.loadDiscovery({ quiet: true })
+      } catch (error) {
+        pushLog('error', t('log.manualRemoveFailed', { message: dwExplainFailure(t, error) }))
       }
     },
 
@@ -2150,14 +2622,9 @@ function dwCreateStore(translate) {
     async ensureChildren(node) {
       if (node === null || node === undefined) return
       if (node.kind === 'env') return
-      if (node.kind === 'instance') {
-        // A project whose configuration never named this instance still gets a
-        // usable tree: opening it asks the server which schemas exist.
-        if ((node.databases ?? []).length === 0 && state.loadState.get(node.key) !== 'ready') {
-          await store.loadAllDatabases(node)
-        }
-        return
-      }
+      // Databases are an explicit choice made in the schema picker, not a list the
+      // tree fills in on expand: expanding an instance only reveals what was picked.
+      if (node.kind === 'instance') return
       if (node.kind !== 'database' && node.kind !== 'table' && node.kind !== 'view') return
       if (Array.isArray(state.children.get(node.key))) return
       if (state.loadState.get(node.key) === 'loading') return
@@ -2235,43 +2702,6 @@ function dwCreateStore(translate) {
     },
 
     /** Reveal every schema on one instance, not only the configured ones. */
-    async loadAllDatabases(instanceNode) {
-      if (instanceNode === null || instanceNode === undefined || instanceNode.id === undefined) return
-      const key = instanceNode.key
-      if (state.loadState.get(key) === 'loading') return
-      const loadState = new Map(state.loadState)
-      loadState.set(key, 'loading')
-      const expanded = new Set(state.expanded)
-      expanded.add(key)
-      patch({ loadState, expanded })
-      try {
-        const value = await call('databases', { id: instanceNode.id })
-        const seen = new Set((state.children.get(key) ?? []).map((entry) => entry.label))
-        const children = (value.databases ?? [])
-          .filter((entry) => !seen.has(entry.name))
-          .map((entry) => ({
-            key: dwNodeKey('db', entry.id),
-            kind: 'database',
-            label: entry.name,
-            dbId: entry.id,
-            database: entry.name,
-            env: instanceNode.env,
-            instanceLabel: instanceNode.label,
-          }))
-        const nextChildren = new Map(state.children)
-        nextChildren.set(key, [...(nextChildren.get(key) ?? []), ...children])
-        const nextState = new Map(state.loadState)
-        nextState.set(key, 'ready')
-        patch({ children: nextChildren, loadState: nextState })
-        pushLog('info', t('log.allDatabases', { instance: instanceNode.label, count: value.databases?.length ?? 0 }))
-      } catch (error) {
-        const nextState = new Map(state.loadState)
-        nextState.set(key, 'error')
-        patch({ loadState: nextState })
-        pushLog('error', t('log.databasesFailed', { message: dwExplainFailure(t, error) }))
-      }
-    },
-
     /** Select one row; a table also becomes the target of the DDL shortcut. */
     select(node) {
       patch({ selected: node?.key ?? '', selectedNode: node ?? null })
@@ -2290,6 +2720,7 @@ function dwCreateStore(translate) {
       if (existing !== undefined) {
         patch({ activeTab: id })
         scheduleConsoles()
+        if (node.configured === false) void store.rememberDatabase(node)
         return existing
       }
       const tab = {
@@ -2310,6 +2741,9 @@ function dwCreateStore(translate) {
       }
       patch({ tabs: [...state.tabs, tab], activeTab: id })
       scheduleConsoles()
+      // Opening a schema that is not part of the configuration makes it part of the
+      // workspace: the next discovery lists it next to the configured databases.
+      if (node.configured === false) void store.rememberDatabase(node)
       return tab
     },
 
@@ -2398,6 +2832,9 @@ function dwCreateStore(translate) {
       }
       patch({ tabs: [...state.tabs, tab], activeTab: id })
       scheduleConsoles()
+      // Opening a schema that is not part of the configuration makes it part of the
+      // workspace: the next discovery lists it next to the configured databases.
+      if (node.configured === false) void store.rememberDatabase(node)
       return tab
     },
 
@@ -2609,13 +3046,7 @@ function dwBuildTree(state, tr) {
     const instanceRows = []
     for (const instance of environment.instances) {
       const instanceKey = dwNodeKey('inst', instance.id)
-      const extra = state.children.get(instanceKey) ?? []
       const databases = [...instance.databases]
-      const known = new Set(databases.map((database) => database.name))
-      for (const discovered of extra) {
-        if (known.has(discovered.label)) continue
-        databases.push({ name: discovered.label, id: discovered.dbId, discovered: true })
-      }
       const databaseRows = databases.map((database) => {
         const databaseNode = {
           key: dwNodeKey('db', database.id),
@@ -2627,6 +3058,7 @@ function dwBuildTree(state, tr) {
           env: environment.env,
           instanceLabel: instance.label,
           configured: database.discovered !== true,
+          remembered: database.remembered === true,
         }
         return { node: databaseNode, children: childrenOf(databaseNode, 3) }
       })
@@ -2649,7 +3081,8 @@ function dwBuildTree(state, tr) {
           user: instance.user,
           databases: instance.databases,
           aliases: instance.aliases ?? [],
-          allLoaded: extra.length > 0,
+          manual: instance.manual === true,
+          entryId: instance.entryId,
         },
         children: databaseRows,
       })
@@ -2663,6 +3096,7 @@ function dwBuildTree(state, tr) {
         env: environment.env,
         instanceCount: environment.instances.length,
         databaseCount: environment.databaseCount,
+        manual: environment.manual === true,
       },
       children: instanceRows,
     })
@@ -2729,7 +3163,7 @@ function dwNodeIconName(node) {
   }
 }
 
-function DwTree({ store, state, tr, onContextMenu }) {
+function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
   const rows = useMemo(
     () => dwVisibleRows(state, tr),
     [state.environments, state.expanded, state.children, state.loadState, state.filter],
@@ -2747,6 +3181,10 @@ function DwTree({ store, state, tr, onContextMenu }) {
       // Opening the workbench also reveals its tables: that is the list the user
       // came for, and one click is better than two.
       if (row.open !== true) void store.toggleNode(node)
+      return
+    }
+    if (node.kind === 'instance' && (node.databases ?? []).length === 0) {
+      onChooseDatabases(node)
       return
     }
     if (row.expandable === true) void store.toggleNode(node)
@@ -2832,19 +3270,21 @@ function DwTree({ store, state, tr, onContextMenu }) {
       h('span', { key: 'lb', className: 'dw-node-label' }, node.kind === 'retry'
         ? tr('retry')
         : node.label),
+      node.manual === true ? dwManualBadge(tr) : null,
+      node.remembered === true ? h('span', { key: 'saved', className: 'dw-node-tag' }, tr('rememberedBadge')) : null,
       node.detail !== '' && node.detail !== undefined && node.kind !== 'retry'
         ? h('span', { key: 'dt', className: 'dw-node-detail' }, detail)
         : null,
-      node.kind === 'instance' && node.allLoaded !== true
+      node.kind === 'instance'
         ? h('button', {
-          key: 'all',
+          key: 'pick',
           type: 'button',
           className: 'dw-node-more',
-          title: tr('browseAllDatabases'),
+          title: tr('chooseDatabases'),
           onClick: (event) => {
             event.stopPropagation()
             store.select(node)
-            void store.loadAllDatabases(node)
+            onChooseDatabases(node)
           },
         }, h(DwIcon, { name: 'grid', size: 12 }))
         : null,
@@ -4093,6 +4533,10 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const [editorHeight, setEditorHeight] = useState(168)
   const [sideWidth, setSideWidth] = useState(() => dwReadSideWidth())
   const [sidebarHidden, setSidebarHidden] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
+  const [manualOpen, setManualOpen] = useState(false)
+  const [schemaTarget, setSchemaTarget] = useState(null)
+  const aiPrompted = useRef(false)
   const panelRef = useRef(null)
   const logRef = useRef(null)
   const sideWidthRef = useRef(sideWidth)
@@ -4109,6 +4553,17 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   useEffect(() => {
     if (detected !== '') store.setDetectedRoot(detected)
   }, [detected, store])
+
+  // First open of a workspace the rule-based scan cannot read: offer the model
+  // picker instead of leaving the user with an empty tree and no next step. It
+  // asks once per mount and only while no model has been chosen yet.
+  useEffect(() => {
+    if (aiPrompted.current) return
+    if (state.root === '' || state.phase !== 'empty') return
+    if (dwAiModel() !== null) return
+    aiPrompted.current = true
+    setAiOpen(true)
+  }, [state.phase, state.root])
 
   // Requirement: entering the window folds the shell's navigation column, so the
   // explorer and the workbench get the whole frame. Leaving unfolds it again, but
@@ -4275,6 +4730,31 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       'aria-label': sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
     }, h(DwIcon, { name: 'panel', size: 13 })),
     h('button', {
+      key: 'ai',
+      type: 'button',
+      className: 'dw-btn',
+      disabled: state.root === '' || state.aiRunning === true,
+      onClick: () => setAiOpen(true),
+      title: tr('aiOpenHint'),
+    }, [
+      h(DwIcon, { key: 'i', name: 'ai', size: 12 }),
+      h('span', { key: 't' }, state.aiRunning === true ? tr('aiRunningShort') : tr('aiOpen')),
+    ]),
+    h('button', {
+      // A distinct key: the manual-workspace badge above already owns 'manual',
+      // and duplicate keys make React reuse one node for both, which surfaced as a
+      // row of repeated badges on every re-render.
+      key: 'add-manual',
+      type: 'button',
+      className: 'dw-btn',
+      disabled: state.root === '',
+      onClick: () => setManualOpen(true),
+      title: tr('manualOpenHint'),
+    }, [
+      h(DwIcon, { key: 'i', name: 'plus', size: 12 }),
+      h('span', { key: 't' }, tr('manualOpen')),
+    ]),
+    h('button', {
       key: 'refresh',
       type: 'button',
       className: 'dw-btn',
@@ -4324,6 +4804,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       state,
       tr,
       onContextMenu: (event, node) => setMenu({ x: event.clientX, y: event.clientY, node }),
+      onChooseDatabases: (node) => setSchemaTarget(node),
     }),
   ])
 
@@ -4333,6 +4814,8 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       tr,
       state,
       onPick: pickWorkspace,
+      onOpenAi: () => setAiOpen(true),
+      onOpenManual: () => setManualOpen(true),
     }))
   } else if (state.phase === 'loading' && environments.length === 0) {
     main = h('div', { key: 'main', className: 'dw-main' }, h('div', { className: 'dw-empty' }, [
@@ -4344,7 +4827,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     main = h('div', { key: 'main', className: 'dw-main' }, [
       h(DwTabs, { key: 'tabs', store, state, tr }),
       activeTab === undefined
-        ? h(DwEmpty, { key: 'empty', tr, state, onPick: pickWorkspace })
+        ? h(DwEmpty, { key: 'empty', tr, state, onPick: pickWorkspace, onOpenAi: () => setAiOpen(true), onOpenManual: () => setManualOpen(true) })
         : activeTab.kind === 'ddl'
           ? h(DwDdlView, { key: activeTab.id, tab: activeTab, tr, store })
           : h(React.Fragment, { key: activeTab.id }, [
@@ -4423,7 +4906,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
           left: Math.max(rect === undefined ? 0 : rect.left, left),
           top: Math.max(rect === undefined ? 0 : rect.top, top),
         },
-      }, dwMenuItems(menu.node, store, tr, () => setMenu(null))),
+      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node))),
     ])
   }
 
@@ -4445,6 +4928,30 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     ]),
     log,
     menuLayer,
+    aiOpen ? h(DwAiDialog, {
+      key: 'ai-dialog',
+      store,
+      tr,
+      onClose: () => setAiOpen(false),
+      onManual: () => {
+        setAiOpen(false)
+        setManualOpen(true)
+      },
+    }) : null,
+    manualOpen ? h(DwManualDialog, {
+      key: 'manual-dialog',
+      store,
+      tr,
+      onClose: () => setManualOpen(false),
+      onSaved: () => void store.loadDiscovery({ quiet: true }),
+    }) : null,
+    schemaTarget === null ? null : h(DwSchemaDialog, {
+      key: 'schema-dialog',
+      store,
+      tr,
+      instance: schemaTarget,
+      onClose: () => setSchemaTarget(null),
+    }),
   ])
 }
 
@@ -4456,12 +4963,12 @@ function dwClock(date) {
 }
 
 /** The context menu of one node. */
-function dwMenuItems(node, store, tr, close) {
+function dwMenuItems(node, store, tr, close, openSchemaDialog) {
   const items = []
-  const add = (key, label, shortcut, run) => items.push(h('button', {
+  const add = (key, label, shortcut, run, tone) => items.push(h('button', {
     key,
     type: 'button',
-    className: 'dw-menu-item',
+    className: tone === undefined ? 'dw-menu-item' : `dw-menu-item ${tone}`,
     onClick: () => {
       close()
       run()
@@ -4481,8 +4988,14 @@ function dwMenuItems(node, store, tr, close) {
     })
   } else if (node.kind === 'database') {
     add('open', tr('menuOpenConsole'), '', () => store.openDatabase(node))
+    if (node.remembered === true) {
+      add('forget-database', tr('forgetDatabase'), '', () => void store.forgetDatabase(node), 'dw-menu-danger')
+    }
   } else if (node.kind === 'instance') {
-    add('all', tr('browseAllDatabases'), '', () => void store.loadAllDatabases(node))
+    add('pick', tr('chooseDatabases'), '', () => openSchemaDialog(node))
+    if (node.manual === true && typeof node.entryId === 'string') {
+      add('remove-manual', tr('removeConnection'), '', () => void store.removeManual(node.entryId), 'dw-menu-danger')
+    }
   } else if (node.kind === 'env') {
     add('expand', tr('menuExpand'), '', () => void store.toggleNode(node))
   } else if (node.kind === 'column') {
@@ -4502,8 +5015,9 @@ function dwMenuItems(node, store, tr, close) {
  * a workspace whose configuration resolved no database, and a workspace whose
  * configuration failed. Each one now says what happened and what to do next.
  */
-function DwEmpty({ tr, state, onPick }) {
+function DwEmpty({ tr, state, onPick, onOpenAi, onOpenManual }) {
   const warnings = state.warnings ?? []
+  const canUseAi = state.root !== '' && (state.environments ?? []).length === 0
   const states = []
   if (state.root === '') {
     states.push({ title: tr('emptyTitle'), hint: tr('emptyHint') })
@@ -4521,6 +5035,32 @@ function DwEmpty({ tr, state, onPick }) {
     h('div', { key: 'h', className: 'dw-empty-hint' }, current.hint),
     h('div', { key: 'k', className: 'dw-empty-hint', style: { fontSize: 11.5, opacity: .8 } }, tr('shortcutSummary')),
     h('button', { key: 'b', type: 'button', className: 'dw-btn', onClick: onPick }, tr('pickWorkspace')),
+    canUseAi === true
+      ? h('button', {
+        key: 'ai',
+        type: 'button',
+        className: 'dw-btn dw-btn-accent',
+        disabled: state.aiRunning === true,
+        onClick: onOpenAi,
+      }, [
+        h(DwIcon, { key: 'i', name: 'ai', size: 12 }),
+        h('span', { key: 't' }, state.aiRunning === true ? tr('aiRunningShort') : tr('aiOpen')),
+      ])
+      : null,
+    canUseAi === true
+      ? h('button', {
+        key: 'manual',
+        type: 'button',
+        className: 'dw-btn',
+        onClick: onOpenManual,
+      }, [
+        h(DwIcon, { key: 'i', name: 'plus', size: 12 }),
+        h('span', { key: 't' }, tr('manualOpen')),
+      ])
+      : null,
+    canUseAi === true
+      ? h('div', { key: 'aihint', className: 'dw-empty-hint', style: { fontSize: 11.5, opacity: .8 } }, tr('aiEmptyHint'))
+      : null,
     warnings.length > 0
       ? h('div', { key: 'w', className: 'dw-code-block' }, warnings.map((warning) => dwWarningText(warning, tr)).join('\n'))
       : null,
@@ -4555,6 +5095,7 @@ function DwSettingsSection({ translate, store }) {
   const tr = typeof translate === 'function' ? translate : (key) => key
   const [prefs, setPrefs] = useState(() => dwReadPrefs())
   const [recording, setRecording] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
   const [recordError, setRecordError] = useState('')
   const themeId = useSyncExternalStore(dwSubscribeTheme, dwSharedTheme, dwSharedTheme)
   const binding = prefs.shortcutOpen ?? dwDefaultOpenShortcut()
@@ -4657,6 +5198,14 @@ function DwSettingsSection({ translate, store }) {
         h('span', { key: 'control', className: 'dw-settings-value' }, themeId === '' ? tr('settingsThemeDsh') : themeId),
       ),
     ]),
+    section('ai', tr('settingsGroupAi'), [
+      h(DwAiSettingsRow, {
+        key: 'model',
+        tr,
+        prefs,
+        onOpen: () => setAiOpen(true),
+      }),
+    ]),
     section('shortcuts', tr('settingsShortcuts'), [
       h('div', { key: 'hint', className: 'dw-settings-desc' }, tr('settingsShortcutsHint')),
       h('div', { key: 'shortcut', className: 'dw-settings-row' }, [
@@ -4697,6 +5246,667 @@ function DwSettingsSection({ translate, store }) {
         h('code', { key: 'value', className: 'dw-settings-path' }, '~/.dsh/storages/dsh-data-window/workspaces/'),
       ]),
     ]),
+    aiOpen === true
+      ? h(DwAiDialog, {
+        key: 'ai-dialog',
+        store,
+        tr,
+        onClose: () => {
+          setAiOpen(false)
+          setPrefs(dwReadPrefs())
+        },
+      })
+      : null,
+  ])
+}
+
+// ---- 63-schema.js --------------------------------------------------------
+/**
+ * The schema picker.
+ *
+ * An instance carries far more schemas than the project's configuration names, and
+ * dropping all of them into the tree buries the few a user actually works with. This
+ * dialog is the explicit choice: every schema the server reports on the left of a
+ * checkbox, the configured ones locked on, and only the checked ones reach the tree.
+ *
+ * What the user picks is stored per workspace by the Host (`selectDatabases`), so
+ * the choice survives a restart and a browser change.
+ */
+
+/**
+ * The "choose databases" modal for one instance.
+ *
+ * @param props `{ store, tr, instance, onClose }`; `instance` is the tree node, which
+ *   carries the configured databases and the id the server answers for
+ */
+function DwSchemaDialog({ store, tr, instance, onClose }) {
+  const [phase, setPhase] = useState('loading')
+  const [schemas, setSchemas] = useState([])
+  const [checked, setChecked] = useState(() => new Set((instance?.databases ?? []).map((database) => database.name)))
+  const [locked] = useState(() => new Set((instance?.databases ?? [])
+    .filter((database) => database.remembered !== true)
+    .map((database) => database.name)))
+  const [query, setQuery] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const savingRef = useRef(false)
+  savingRef.current = saving
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key !== 'Escape' || savingRef.current) return
+      onClose()
+    }
+    globalThis.addEventListener('keydown', onKey)
+    return () => globalThis.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  useEffect(() => {
+    let alive = true
+    setPhase('loading')
+    dwRpc('databases', { id: instance?.id }).then((value) => {
+      if (!alive) return
+      const names = (Array.isArray(value?.databases) ? value.databases : [])
+        .map((entry) => String(entry?.name ?? ''))
+        .filter((name) => name !== '')
+      setSchemas(names)
+      // A schema that is configured is always shown; anything the server still has
+      // but the workspace no longer remembers comes back unchecked.
+      setChecked((current) => {
+        const next = new Set([...current].filter((name) => names.includes(name)))
+        for (const name of current) {
+          if (!names.includes(name)) continue
+          next.add(name)
+        }
+        return next
+      })
+      setPhase('ready')
+    }).catch((failure) => {
+      if (!alive) return
+      setError(dwExplainFailure(tr, failure))
+      setPhase('error')
+    })
+    return () => {
+      alive = false
+    }
+  }, [instance?.id])
+
+  const toggle = (name) => {
+    if (locked.has(name)) return
+    const next = new Set(checked)
+    if (next.has(name)) next.delete(name)
+    else next.add(name)
+    setChecked(next)
+  }
+
+  const apply = async () => {
+    if (saving === true) return
+    const root = String(store.getState?.()?.root ?? '')
+    if (root === '') {
+      setError(tr('manualNoWorkspace'))
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      // Configured schemas are always shown by discovery itself; storing them too
+      // would make a schema that later leaves the configuration look hand-picked.
+      const names = [...checked].filter((name) => !locked.has(name))
+      await dwRpc('selectDatabases', { root, instanceId: instance.id, databases: names })
+      await store.loadDiscovery({ quiet: true })
+      onClose()
+    } catch (failure) {
+      setError(dwExplainFailure(tr, failure))
+      setSaving(false)
+    }
+  }
+
+  const filter = query.trim().toLowerCase()
+  const visible = filter === '' ? schemas : schemas.filter((name) => name.toLowerCase().includes(filter))
+  const chosenCount = [...checked].filter((name) => schemas.includes(name)).length
+
+  const body = []
+  if (phase === 'loading') {
+    body.push(h('div', { key: 'loading', className: 'dw-ai-loading' }, [
+      h(DwIcon, { key: 'i', name: 'spinner', size: 16 }),
+      h('span', { key: 't' }, tr('schemaLoading')),
+    ]))
+  } else if (phase === 'error') {
+    body.push(h('div', { key: 'error', className: 'dw-ai-error' }, [
+      h('div', { key: 't' }, tr('schemaFailed')),
+      h('div', { key: 'm', className: 'dw-ai-note' }, error),
+    ]))
+  } else {
+    body.push(h('div', { key: 'head', className: 'dw-schema-head' }, [
+      h('input', {
+        key: 'search',
+        className: 'dw-form-input',
+        type: 'search',
+        value: query,
+        placeholder: tr('schemaSearch'),
+        onChange: (event) => setQuery(event.target.value),
+        style: { width: 240 },
+      }),
+      h('span', { key: 'count', className: 'dw-ai-note' }, tr('schemaCount', { chosen: chosenCount, total: schemas.length })),
+    ]))
+    body.push(h('div', { key: 'list', className: 'dw-schema-list' }, visible.length === 0
+      ? [h('div', { key: 'empty', className: 'dw-ai-note' }, tr('schemaNoMatch'))]
+      : visible.map((name) => h('label', {
+        key: name,
+        className: locked.has(name) ? 'dw-schema-row locked' : 'dw-schema-row',
+      }, [
+        h('input', {
+          key: 'c',
+          type: 'checkbox',
+          className: 'dw-schema-box',
+          checked: checked.has(name),
+          disabled: locked.has(name),
+          onChange: () => toggle(name),
+        }),
+        h('span', { key: 'n', className: 'dw-schema-name' }, name),
+        locked.has(name) ? h('span', { key: 't', className: 'dw-node-tag' }, tr('schemaConfigured')) : null,
+      ]))))
+    body.push(h('div', { key: 'note', className: 'dw-ai-note' }, tr('schemaHint')))
+  }
+
+  return h('div', {
+    className: 'dw-modal',
+    onClick: (event) => {
+      if (event.target === event.currentTarget && saving !== true) onClose()
+    },
+  }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-label': tr('schemaTitle'),
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, [
+      h(DwIcon, { key: 'i', name: 'database', size: 15 }),
+      h('span', { key: 't' }, `${tr('schemaTitle')} · ${instance?.label ?? instance?.host ?? ''}`),
+    ]),
+    h('div', { key: 'body', className: 'dw-modal-body' }, body),
+    error === '' || phase === 'error'
+      ? null
+      : h('div', { key: 'err', className: 'dw-ai-note dw-ai-warn', style: { padding: '0 16px 8px' } }, error),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
+      h('button', {
+        key: 'cancel',
+        type: 'button',
+        className: 'dw-btn',
+        disabled: saving === true,
+        onClick: onClose,
+      }, tr('cancel')),
+      h('button', {
+        key: 'apply',
+        type: 'button',
+        className: 'dw-btn dw-btn-accent',
+        disabled: saving === true || phase !== 'ready',
+        onClick: () => void apply(),
+      }, saving === true ? tr('schemaApplying') : tr('schemaApply')),
+    ]),
+  ]))
+}
+
+// ---- 64-manual.js --------------------------------------------------------
+/**
+ * Manually added connections.
+ *
+ * The rule scan and the AI fallback both try to derive a connection from the
+ * workspace. When the database a user needs is described nowhere — a local
+ * container, a shared test instance, a customer's replica — this form is the third
+ * path. The window keeps these entries per workspace, and the Host proves the
+ * connection once before saving it, so a typo fails here instead of producing a
+ * tree row that never opens.
+ */
+
+/** Empty form state; the port defaults to MySQL's. */
+const DW_MANUAL_FORM = { label: '', host: '127.0.0.1', port: '3306', user: '', password: '', database: '' }
+
+/**
+ * The "add a connection" modal.
+ *
+ * @param props `{ store, tr, onClose, onSaved }`; `onSaved` refreshes the tree
+ */
+function DwManualDialog({ store, tr, onClose, onSaved }) {
+  const [form, setForm] = useState(() => ({ ...DW_MANUAL_FORM }))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const savingRef = useRef(false)
+  savingRef.current = saving
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key !== 'Escape' || savingRef.current) return
+      onClose()
+    }
+    globalThis.addEventListener('keydown', onKey)
+    return () => globalThis.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const update = (key) => (event) => {
+    setForm({ ...form, [key]: event.target.value })
+  }
+
+  const save = async () => {
+    if (saving === true) return
+    const root = String(store.getState?.()?.root ?? '')
+    if (root === '') {
+      setError(tr('manualNoWorkspace'))
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      await dwRpc('manualSave', {
+        root,
+        entry: {
+          label: form.label,
+          host: form.host,
+          port: Number(form.port),
+          user: form.user,
+          password: form.password,
+          database: form.database,
+        },
+      })
+      if (typeof onSaved === 'function') onSaved()
+      onClose()
+    } catch (failure) {
+      setError(dwExplainFailure(tr, failure))
+      setSaving(false)
+    }
+  }
+
+  const field = (key, label, props, hint) => h('label', { key, className: 'dw-form-row' }, [
+    h('span', { key: 'l', className: 'dw-form-label' }, label),
+    h('input', {
+      key: 'i',
+      className: 'dw-form-input',
+      value: form[key],
+      spellCheck: false,
+      autoComplete: 'off',
+      onChange: update(key),
+      ...props,
+    }),
+    hint === undefined ? null : h('span', { key: 'h', className: 'dw-form-hint' }, hint),
+  ])
+
+  return h('div', {
+    className: 'dw-modal',
+    onClick: (event) => {
+      if (event.target === event.currentTarget && saving !== true) onClose()
+    },
+  }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-label': tr('manualTitle'),
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, [
+      h(DwIcon, { key: 'i', name: 'link', size: 15 }),
+      h('span', { key: 't' }, tr('manualTitle')),
+    ]),
+    h('div', { key: 'body', className: 'dw-modal-body' }, [
+      h('div', { key: 'hint', className: 'dw-ai-note' }, tr('manualHint')),
+      h('div', { key: 'form', className: 'dw-form' }, [
+        field('label', tr('manualLabel'), { placeholder: tr('manualLabelPlaceholder') }, tr('manualLabelHint')),
+        h('div', { key: 'addr', className: 'dw-form-split' }, [
+          field('host', tr('manualHost'), { placeholder: 'mysql.internal' }),
+          field('port', tr('manualPort'), { inputMode: 'numeric', placeholder: '3306' }),
+        ]),
+        field('user', tr('manualUser'), { placeholder: 'app_user' }),
+        field('password', tr('manualPassword'), { type: 'password' }),
+        field('database', tr('manualDatabase'), { placeholder: 'demo_order' }, tr('manualDatabaseHint')),
+      ]),
+      error === ''
+        ? null
+        : h('div', { key: 'err', className: 'dw-ai-error' }, h('div', { key: 'm', className: 'dw-ai-note' }, error)),
+      h('div', { key: 'privacy', className: 'dw-ai-note' }, tr('manualPrivacy')),
+    ]),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
+      h('button', {
+        key: 'cancel',
+        type: 'button',
+        className: 'dw-btn',
+        disabled: saving === true,
+        onClick: onClose,
+      }, tr('cancel')),
+      h('button', {
+        key: 'save',
+        type: 'button',
+        className: 'dw-btn dw-btn-accent',
+        disabled: saving === true,
+        onClick: () => void save(),
+      }, saving === true ? tr('manualSaving') : tr('manualSave')),
+    ]),
+  ]))
+}
+
+/** The tree's badge for a manually added connection. */
+function dwManualBadge(tr) {
+  return h('span', { key: 'badge', className: 'dw-node-tag' }, tr('manualBadge'))
+}
+
+// ---- 65-ai.js ------------------------------------------------------------
+/**
+ * The AI fallback dialog.
+ *
+ * The configuration scan only knows the shapes this team already writes. When it
+ * finds nothing, the user may hand the workspace to a model — but the model only
+ * proposes file paths and keys; the Host reads the value and proves the address
+ * with a real connection. This dialog is where the model is chosen (DSH's own
+ * configured providers), and where the result is reported.
+ *
+ * The choice is a display preference, so it lives with the other preferences in
+ * localStorage: another machine is expected to have another model configured.
+ */
+
+/** The saved model choice, or null when the user never picked one. */
+function dwAiModel() {
+  return dwReadPrefs().aiModel ?? null
+}
+
+/** Persist one model choice and return the normalized record. */
+function dwAiSaveModel(selection) {
+  const provider = String(selection?.provider ?? '').trim()
+  const model = String(selection?.model ?? '').trim()
+  const name = String(selection?.name ?? '').trim()
+  if (provider === '' || model === '') return null
+  const saved = { provider, model, name: name === '' ? model : name }
+  dwWritePrefs({ aiModel: saved })
+  return saved
+}
+
+/** Bound one request so a stuck provider cannot leave the dialog spinning forever. */
+function dwAiWithTimeout(promise, milliseconds) {
+  return new Promise((resolvePromise, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timed out after ${milliseconds} ms`)), milliseconds)
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timer)
+        resolvePromise(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
+/** The first selectable model of a catalog, for a first-time default. */
+function dwAiFirstModel(groups) {
+  for (const group of Array.isArray(groups) ? groups : []) {
+    const model = (Array.isArray(group?.models) ? group.models : [])[0]
+    if (model !== undefined) return { provider: group.id, model: model.id, name: model.name ?? model.id }
+  }
+  return null
+}
+
+/** The preset DSH is configured with, when the catalog still offers it. */
+function dwAiPreset(value, groups) {
+  const provider = String(value?.default?.provider ?? '')
+  const model = String(value?.default?.model ?? '')
+  const group = (Array.isArray(groups) ? groups : []).find((entry) => entry.id === provider)
+  const found = group === undefined ? undefined : group.models.find((entry) => entry.id === model)
+  if (found === undefined) return null
+  return { provider, model, name: found.name ?? found.id }
+}
+
+/** "DeepSeek Chat · deepseek" for a chip; empty when nothing was chosen. */
+function dwAiModelLabel(selection) {
+  if (selection === null || selection === undefined) return ''
+  return `${selection.name ?? selection.model} · ${selection.provider}`
+}
+
+/**
+ * Modal used by both the empty state and the settings page.
+ *
+ * @param props `{ store, tr, onClose }`; `store.runAiDiscovery` performs the scan
+ */
+function DwAiDialog({ store, tr, onClose, onManual }) {
+  const state = useSyncExternalStore(store.subscribe, store.getState, store.getState)
+  const [mode, setMode] = useState('models-loading')
+  const [groups, setGroups] = useState([])
+  const [error, setError] = useState('')
+  const [report, setReport] = useState(null)
+  const [selection, setSelection] = useState(() => dwAiModel())
+  const [preset, setPreset] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+  const modeRef = useRef(mode)
+  modeRef.current = mode
+
+  const close = () => {
+    if (modeRef.current === 'running') return
+    onClose()
+  }
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key !== 'Escape') return
+      if (modeRef.current === 'running') return
+      onClose()
+    }
+    globalThis.addEventListener('keydown', onKey)
+    return () => globalThis.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  // The catalog is DSH's, not this plugin's: ask the Host once per attempt and let
+  // the user retry a provider whose discovery failed.
+  useEffect(() => {
+    let alive = true
+    setMode('models-loading')
+    setError('')
+    dwAiWithTimeout(dwRpc('models'), 20000).then((value) => {
+      if (!alive) return
+      if (value?.available !== true) {
+        setError(tr('aiNoLlm'))
+        setMode('models-error')
+        return
+      }
+      const list = (Array.isArray(value.groups) ? value.groups : [])
+        .map((group) => ({
+          id: String(group?.id ?? ''),
+          name: String(group?.name ?? group?.id ?? ''),
+          error: String(group?.error ?? ''),
+          models: (Array.isArray(group?.models) ? group.models : []).filter((model) => typeof model?.id === 'string'),
+        }))
+        .filter((group) => group.id !== '' && (group.models.length > 0 || group.error !== ''))
+      setGroups(list)
+      // A saved choice can point at a model the user has since removed from DSH;
+      // otherwise pre-select the model DSH itself is set to use.
+      const suggested = dwAiPreset(value, list) ?? dwAiFirstModel(list)
+      setPreset(suggested)
+      setSelection((current) => {
+        const exists = current !== null && list.some((group) => group.id === current.provider
+          && group.models.some((model) => model.id === current.model))
+        return exists ? current : suggested
+      })
+      setMode('choose')
+    }).catch((failure) => {
+      if (!alive) return
+      setError(dwExplainFailure(tr, failure))
+      setMode('models-error')
+    })
+    return () => {
+      alive = false
+    }
+  }, [attempt])
+
+  const start = async () => {
+    if (selection === null) return
+    const saved = dwAiSaveModel(selection)
+    if (saved === null) return
+    setSelection(saved)
+    setError('')
+    setReport(null)
+    setMode('running')
+    const outcome = await store.runAiDiscovery(saved)
+    if (outcome?.ok === true) {
+      setReport(outcome.value ?? null)
+      setMode('done')
+      return
+    }
+    setError(outcome?.error ?? tr('aiFailed'))
+    setMode('run-error')
+  }
+
+  const models = groups.filter((group) => group.models.length > 0)
+  const body = []
+  if (mode === 'models-loading') {
+    body.push(h('div', { key: 'loading', className: 'dw-ai-loading' }, [
+      h(DwIcon, { key: 'i', name: 'spinner', size: 16 }),
+      h('span', { key: 't' }, tr('aiLoadingModels')),
+    ]))
+  }
+  if (mode === 'choose') {
+    body.push(h('div', { key: 'pick', className: 'dw-ai-pick' }, [
+      h('div', { key: 'label', className: 'dw-ai-label' }, tr('aiPickModel')),
+      models.length === 0
+        ? h('div', { key: 'none', className: 'dw-ai-note' }, tr('aiNoModels'))
+        : h('div', { key: 'list', className: 'dw-ai-list', role: 'radiogroup', 'aria-label': tr('aiPickModel') },
+          models.map((group) => h('div', { key: group.id, className: 'dw-ai-group' }, [
+            h('div', { key: 'head', className: 'dw-ai-group-title' }, group.name === '' ? group.id : group.name),
+            ...group.models.map((model) => {
+              const chosen = selection !== null && selection.provider === group.id && selection.model === model.id
+              return h('button', {
+                key: `${group.id}:${model.id}`,
+                type: 'button',
+                role: 'radio',
+                'aria-checked': chosen,
+                className: chosen ? 'dw-ai-model on' : 'dw-ai-model',
+                onClick: () => setSelection({ provider: group.id, model: model.id, name: model.name ?? model.id }),
+              }, [
+                h('span', { key: 'name', className: 'dw-ai-model-name' }, [
+                  h('span', { key: 'label' }, model.name ?? model.id),
+                  preset !== null && preset.provider === group.id && preset.model === model.id
+                    ? h('span', { key: 'tag', className: 'dw-ai-model-tag' }, tr('aiDefaultTag'))
+                    : null,
+                ]),
+                model.description === undefined || model.description === ''
+                  ? null
+                  : h('span', { key: 'desc', className: 'dw-ai-model-desc' }, model.description),
+              ])
+            }),
+            group.error === ''
+              ? null
+              : h('div', { key: 'err', className: 'dw-ai-note dw-ai-warn' }, tr('aiProviderFailed', { message: group.error })),
+          ]))),
+      h('div', { key: 'note', className: 'dw-ai-note' }, tr('aiPrivacy')),
+      typeof onManual === 'function'
+        ? h('button', {
+          key: 'manual',
+          type: 'button',
+          className: 'dw-ai-link',
+          onClick: () => {
+            onManual()
+            onClose()
+          },
+        }, tr('aiManualInstead'))
+        : null,
+    ]))
+  }
+  if (mode === 'running') {
+    body.push(h('div', { key: 'running', className: 'dw-ai-loading' }, [
+      h(DwIcon, { key: 'i', name: 'spinner', size: 16 }),
+      h('div', { key: 'box' }, [
+        h('div', { key: 't' }, tr('aiRunning', { model: dwAiModelLabel(selection) })),
+        h('div', { key: 'h', className: 'dw-ai-note' }, tr('aiRunningHint')),
+      ]),
+    ]))
+  }
+  if (mode === 'models-error' || mode === 'run-error') {
+    body.push(h('div', { key: 'error', className: 'dw-ai-error' }, [
+      h('div', { key: 't' }, tr('aiFailedTitle')),
+      h('div', { key: 'm', className: 'dw-ai-note' }, error === '' ? tr('aiFailed') : error),
+    ]))
+  }
+  if (mode === 'done') {
+    const warnings = Array.isArray(report?.warnings) ? report.warnings : []
+    const accepted = Number(report?.accepted ?? 0)
+    body.push(h('div', { key: 'done', className: 'dw-ai-done' }, [
+      h('div', { key: 'title', className: accepted > 0 ? 'dw-ai-ok' : 'dw-ai-warn' }, accepted > 0
+        ? tr('aiDone', { accepted, candidates: Number(report?.candidates ?? 0) })
+        : tr('aiDoneEmpty')),
+      h('div', { key: 'hint', className: 'dw-ai-note' }, tr('aiDoneHint')),
+      warnings.length === 0
+        ? null
+        : h('div', { key: 'warn', className: 'dw-code-block' }, warnings.map((warning) => dwWarningText(warning, tr)).join('\n')),
+      typeof report?.notes === 'string' && report.notes !== ''
+        ? h('div', { key: 'notes', className: 'dw-ai-note' }, report.notes)
+        : null,
+    ]))
+  }
+
+  const footer = []
+  if (mode === 'choose') {
+    footer.push(h('button', { key: 'cancel', type: 'button', className: 'dw-btn', onClick: close }, tr('cancel')))
+    footer.push(h('button', {
+      key: 'start',
+      type: 'button',
+      className: 'dw-btn dw-btn-accent',
+      disabled: selection === null || models.length === 0 || state.aiRunning === true,
+      onClick: () => void start(),
+    }, tr('aiStart')))
+  } else if (mode === 'running') {
+    footer.push(h('button', { key: 'cancel', type: 'button', className: 'dw-btn', disabled: true }, tr('cancel')))
+  } else if (mode === 'done') {
+    footer.push(h('button', {
+      key: 'again',
+      type: 'button',
+      className: 'dw-btn',
+      onClick: () => {
+        setReport(null)
+        setError('')
+        setMode('choose')
+      },
+    }, tr('aiAgain')))
+    footer.push(h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: close }, tr('close')))
+  } else {
+    footer.push(h('button', { key: 'retry', type: 'button', className: 'dw-btn', onClick: () => setAttempt(attempt + 1) }, tr('aiRetry')))
+    footer.push(h('button', { key: 'close', type: 'button', className: 'dw-btn', onClick: close }, tr('close')))
+  }
+
+  return h('div', {
+    className: 'dw-modal',
+    onClick: (event) => {
+      if (event.target === event.currentTarget) close()
+    },
+  }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-label': tr('aiTitle'),
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, [
+      h(DwIcon, { key: 'i', name: 'ai', size: 15 }),
+      h('span', { key: 't' }, tr('aiTitle')),
+    ]),
+    h('div', { key: 'body', className: 'dw-modal-body' }, body),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, footer),
+  ]))
+}
+
+/** The settings row that shows (and changes) the chosen model. */
+function DwAiSettingsRow({ tr, prefs, onOpen }) {
+  const label = prefs.aiModel === null ? tr('settingsAiModelNone') : dwAiModelLabel(prefs.aiModel)
+  return h('div', { className: 'dw-settings-row' }, [
+    h('div', { key: 'head', className: 'dw-settings-head' }, [
+      h('span', { key: 'label', className: 'dw-settings-label' }, tr('settingsAiModel')),
+      h('div', { key: 'right', className: 'dw-settings-shortcut-actions' }, [
+        h('span', { key: 'value', className: 'dw-settings-value' }, label),
+        h('button', {
+          key: 'change',
+          type: 'button',
+          className: 'dw-btn',
+          onClick: onOpen,
+        }, prefs.aiModel === null ? tr('settingsAiChoose') : tr('settingsAiChange')),
+      ]),
+    ]),
+    h('div', { key: 'desc', className: 'dw-settings-desc' }, tr('settingsAiModelHint')),
+    h('div', { key: 'note', className: 'dw-settings-desc dw-ai-warn' }, tr('aiPrivacy')),
   ])
 }
 

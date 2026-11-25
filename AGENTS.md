@@ -4,7 +4,7 @@ DataGrip 风格的 DSH 数据库窗口插件。本文件是这个工作区的**�
 
 ## 一句话职责
 
-不新建任何连接配置：读工作区自己的 Spring/Nacos 配置拿到各环境的主机与账号，渲染成"环境 → 实例 → 库 → 表 → 字段"的树，每个库一个只读 SQL 工作台。
+默认不新建连接配置：读工作区自己的 Spring/Nacos 配置拿到各环境的主机与账号，渲染成"环境 → 实例 → 库 → 表 → 字段"的树，每个库一个只读 SQL 工作台。规则读不到时有三条兜底：AI 分析、手动添加连接，或者继续用规则；三者产出的连接都必须通过只读连接验证才进树。
 
 ## 不可让步的三条
 
@@ -23,6 +23,9 @@ DataGrip 风格的 DSH 数据库窗口插件。本文件是这个工作区的**�
 | `src/host/rpc.js` | action 分发（discover/ping/databases/tables/columns/schema/ddl/query/consoles/saveConsoles/config/forget）、错误→HTTP 映射 |
 | `src/host/cache.js` | 每个工作区一份发现缓存（文件指纹 + 插件版本），0600，写临时文件再 rename |
 | `src/host/consoles.js` | 每个工作区一份 SQL 控制台快照（只存语句，0600，原子写） |
+| `src/host/ai.js` | AI 兜底：证据收集与脱敏、提示词、候选解析、凭据回读、连接校验、内存缓存 |
+| `src/host/manual.js` | 手动连接：每个工作区一份 0600 条目文件 + 环境/实例/库与连接目标表 |
+| `src/host/remembered.js` | 记住用户从「全部库」里打开过的库（每工作区一份 0600 文件），下次发现时并进实例 |
 | `src/client/*.js` | 面板源码，`node build.mjs` 拼成单文件 `client.js` |
 | `build.mjs` | 拼接 + 注入语言字典 + 未定义 helper 检查 + 去掉模块语法 |
 | `locale/{en,zh}.json` | 显示名（`meta`）+ 全部界面文案，客户端把它内联进 bundle |
@@ -90,7 +93,7 @@ node test/ui-verify.mjs "http://127.0.0.1:<port>/?token=<令牌>" \
 ## 已知边界
 
 - 只支持 MySQL/MariaDB。
-- 必须本机已有 Nacos 快照缓存，且工作区自己的配置里要有 `spring.datasource`；否则树是空的（不再用快照里其它 data-id 兜底列实例）。
+- 规则解析依赖本机 Nacos 快照与工作区自己的 `spring.datasource`；缺失时规则结果是空的（不再用快照里其它 data-id 兜底列实例），可以改用 AI 分析或手动添加连接。
 - 查询不能取消，最长 60 秒（`statementTimeoutMs`）。
 - 一次只连一个实例的库；跨库请写 `库名.表名`。
 - 远端是 `github.com/simons-jiang/dsh-data-window`（公开仓库，截图与文档已脱敏）；提交与推送仍需用户明确发话（全局规范）。
