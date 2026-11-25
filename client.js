@@ -37,7 +37,6 @@ window.__ModuleLoader__.load({
     "rows": "rows",
     "truncated": "truncated to",
     "copy": "Copy",
-    "copyResult": "Copy the result as TSV",
     "limit": "Limit",
     "queryFailed": "The statement failed",
     "noWorkspace": "No workspace",
@@ -47,7 +46,6 @@ window.__ModuleLoader__.load({
     "envInstances": "instances",
     "envDatabases": "databases",
     "pickWorkspace": "Choose a workspace",
-    "pickWorkspaceHint": "Use another directory when this workspace has no database configuration",
     "refresh": "Reload",
     "refreshHint": "Re-read the workspace configuration and the Nacos cache",
     "ddlShortcutHint": "F4 · DDL",
@@ -80,7 +78,6 @@ window.__ModuleLoader__.load({
     "log.query": "{database} · {rows} rows · {ms}{truncated}",
     "log.truncatedSuffix": " (capped at {limit})",
     "log.noStatement": "There is no statement to run",
-    "log.copiedRows": "Copied {rows} rows to the clipboard",
     "log.copiedDdl": "Copied the create statement of {table}",
     "log.copiedName": "Copied the name {name}",
     "log.pickFailed": "Could not open the directory picker: {message}",
@@ -239,6 +236,58 @@ window.__ModuleLoader__.load({
     "removeEnvironmentConfirm": "Delete",
     "log.removedEnvironment": "Environment deleted: {name}",
     "log.removeEnvironmentFailed": "Could not delete the environment: {message}",
+    "pagePrev": "Previous",
+    "pageNext": "Next",
+    "pageLabel": "Page {page} · {size} per page",
+    "log.page": "Page {page}: {rows} rows · {ms}",
+    "log.pageEnd": "No more rows: this is the last page",
+    "editingCellHint": "Editing: Enter commits, Esc cancels",
+    "menuCopyUpdate": "Copy UPDATE statement",
+    "menuCopyUpdateHint": "Builds an UPDATE from the edited cells (copied, never executed)",
+    "menuCopyCell": "Copy cell value",
+    "updateNeedsEdits": "Double-click a cell and edit it before copying an UPDATE",
+    "updateNeedsPrimaryKey": "This result has no primary-key column, so no safe WHERE can be built",
+    "updateNeedsSingleTable": "This statement is not a single-table SELECT; no UPDATE can be built",
+    "copyUpdateFailed": "Clipboard unavailable; nothing was copied",
+    "editsCount": "{count} edited",
+    "clearEdits": "Clear",
+    "log.copiedUpdate": "UPDATE copied ({table}, not executed)",
+    "log.copiedCell": "Cell value copied",
+    "copyEdits": "Copy",
+    "copyEditsHint": "Copy the UPDATE statements of every edited row (copied, never executed)",
+    "log.copiedUpdates": "{count} UPDATE statement(s) copied (not executed)",
+    "export": "Export",
+    "exportHint": "Export the {rows} rows on this page",
+    "exportXlsx": "Excel workbook (.xlsx)",
+    "exportCsv": "CSV file (.csv)",
+    "exportInsert": "INSERT SQL script (.sql)",
+    "insertNeedsTable": "This is not a single-table SELECT (it uses a join, several tables or a subquery), so the target table is unknown. Export from a single-table query instead.",
+    "exportFailed": "Export failed: {message}",
+    "log.exported": "Exported {name} ({rows} rows)",
+    "log.exportCancelled": "Export cancelled",
+    "log.exportDownloaded": "This host cannot choose a save location; downloaded {name} to the default downloads folder",
+    "cellDetailTitle": "{column} · row {row}",
+    "editCell": "Edit cell",
+    "insertNeedsTitle": "Cannot export an INSERT script",
+    "refreshStructure": "Refresh structure",
+    "log.refreshingConnection": "Refreshing connection: {name}",
+    "log.refreshedStructure": "Structure refreshed: {name}",
+    "editorUndo": "Undo",
+    "editorRedo": "Redo",
+    "editorCut": "Cut",
+    "editorCopy": "Copy",
+    "editorPaste": "Paste",
+    "editorSelectAll": "Select all",
+    "editorPasteBlocked": "The browser does not allow reading the clipboard; paste with ⌘V",
+    "sqlOptimize": "AI optimize SQL",
+    "optimizeTitle": "SQL optimization",
+    "optimizeRunning": "Analyzing the statement…",
+    "optimizeNoModel": "No model selected yet — choose one in Settings → Data window → AI",
+    "optimizeModelLabel": "Model: {model}",
+    "aiModelUnknown": "not configured",
+    "optimizeNotes": "Notes",
+    "optimizeCopy": "Copy SQL",
+    "log.optimizeCopied": "Optimized SQL copied",
   }
   const DW_TEXT_ZH = {
     "openPanel": "数据窗口",
@@ -269,7 +318,6 @@ window.__ModuleLoader__.load({
     "rows": "行",
     "truncated": "已截断到",
     "copy": "复制",
-    "copyResult": "复制结果（TSV）",
     "limit": "上限",
     "queryFailed": "语句执行失败",
     "noWorkspace": "未选择工作区",
@@ -279,7 +327,6 @@ window.__ModuleLoader__.load({
     "envInstances": "实例",
     "envDatabases": "库",
     "pickWorkspace": "选择工作区",
-    "pickWorkspaceHint": "当前工作区没有数据库配置时，可以换一个目录",
     "refresh": "重新读取",
     "refreshHint": "重新读取工作区配置与 Nacos 缓存",
     "ddlShortcutHint": "F4 · 建表语句",
@@ -312,7 +359,6 @@ window.__ModuleLoader__.load({
     "log.query": "{database} · {rows} 行 · {ms}{truncated}",
     "log.truncatedSuffix": "（已截断到 {limit} 行）",
     "log.noStatement": "没有可执行的语句",
-    "log.copiedRows": "已复制 {rows} 行到剪贴板",
     "log.copiedDdl": "已复制 {table} 的建表语句",
     "log.copiedName": "已复制名称 {name}",
     "log.pickFailed": "打开目录选择器失败：{message}",
@@ -471,6 +517,58 @@ window.__ModuleLoader__.load({
     "removeEnvironmentConfirm": "删除",
     "log.removedEnvironment": "已删除环境：{name}",
     "log.removeEnvironmentFailed": "删除环境失败：{message}",
+    "pagePrev": "上一页",
+    "pageNext": "下一页",
+    "pageLabel": "第 {page} 页 · 每页 {size} 行",
+    "log.page": "第 {page} 页：{rows} 行 · {ms}",
+    "log.pageEnd": "已到最后一页",
+    "editingCellHint": "编辑中：Enter 提交，Esc 取消",
+    "menuCopyUpdate": "复制 UPDATE 语句",
+    "menuCopyUpdateHint": "用已修改的单元格生成一条 UPDATE（只复制，不执行）",
+    "menuCopyCell": "复制单元格值",
+    "updateNeedsEdits": "先双击编辑单元格，再复制 UPDATE",
+    "updateNeedsPrimaryKey": "当前结果没有主键列，无法生成安全的 WHERE",
+    "updateNeedsSingleTable": "当前语句不是单表 SELECT，无法生成 UPDATE",
+    "copyUpdateFailed": "剪贴板不可用，复制失败",
+    "editsCount": "{count} 处修改",
+    "clearEdits": "清除",
+    "log.copiedUpdate": "已复制 UPDATE 语句（{table}，未执行）",
+    "log.copiedCell": "已复制单元格值",
+    "copyEdits": "复制",
+    "copyEditsHint": "复制所有已修改行的 UPDATE 语句（只复制，不执行）",
+    "log.copiedUpdates": "已复制 {count} 条 UPDATE 语句（未执行）",
+    "export": "导出",
+    "exportHint": "导出当前页 {rows} 行",
+    "exportXlsx": "Excel 工作簿（.xlsx）",
+    "exportCsv": "CSV 文件（.csv）",
+    "exportInsert": "INSERT SQL 脚本（.sql）",
+    "insertNeedsTable": "当前语句不是单表 SELECT（包含 JOIN / 多表 / 子查询），无法确定写入哪张表。请改成单表查询后再导出。",
+    "exportFailed": "导出失败：{message}",
+    "log.exported": "已导出 {name}（{rows} 行）",
+    "log.exportCancelled": "已取消导出",
+    "log.exportDownloaded": "当前环境不支持选择保存位置，已下载到默认下载目录：{name}",
+    "cellDetailTitle": "{column} · 第 {row} 行",
+    "editCell": "编辑单元格",
+    "insertNeedsTitle": "无法导出 INSERT 脚本",
+    "refreshStructure": "刷新结构",
+    "log.refreshingConnection": "正在刷新连接：{name}",
+    "log.refreshedStructure": "已刷新 {name} 的结构",
+    "editorUndo": "撤销",
+    "editorRedo": "重做",
+    "editorCut": "剪切",
+    "editorCopy": "复制",
+    "editorPaste": "粘贴",
+    "editorSelectAll": "全选",
+    "editorPasteBlocked": "浏览器不允许读取剪贴板，请用 ⌘V 粘贴",
+    "sqlOptimize": "AI 优化 SQL",
+    "optimizeTitle": "SQL 优化建议",
+    "optimizeRunning": "正在分析 SQL…",
+    "optimizeNoModel": "还没有配置模型：请到「设置 → 数据库窗口 → AI」里选一个模型",
+    "optimizeModelLabel": "模型：{model}",
+    "aiModelUnknown": "未配置",
+    "optimizeNotes": "优化说明",
+    "optimizeCopy": "复制 SQL",
+    "log.optimizeCopied": "优化后的 SQL 已复制",
   }
 
 // ---- 00-css.js -----------------------------------------------------------
@@ -567,6 +665,11 @@ const DW_CSS = `
   border-radius: 8px;
   background: var(--dsw-alias-bg-layer-2, #262930);
   box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+.dw-project-sep {
+  height: 1px;
+  margin: 3px 4px;
+  background: var(--dsw-alias-border-l1, #2c2f36);
 }
 .dw-project-row {
   display: flex;
@@ -669,6 +772,19 @@ const DW_CSS = `
   min-width: 0;
   border-right: 1px solid var(--dsw-alias-border-l1, #2c2f36);
   background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #22242a));
+}
+.dw-side-head .dw-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+}
+.dw-side-head .dw-btn:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12));
+  color: var(--dsw-alias-label-primary, #e6e8ec);
 }
 .dw-side-head {
   display: flex;
@@ -954,14 +1070,16 @@ const DW_CSS = `
   font-size: 10px;
 }
 .dw-grid td {
-  padding: 3px 10px;
-  white-space: pre;
-  max-width: 460px;
+  padding: 2px 10px;
+  height: 24px;
+  line-height: 18px;
+  /* One fixed line per row: long values are clipped, the detail dialog shows all. */
+  white-space: nowrap;
+  max-width: 360px;
   overflow: hidden;
-  text-overflow: ellipsis;
   border-bottom: 1px solid var(--dsw-alias-border-l1, #23262c);
   border-right: 1px solid var(--dsw-alias-border-l1, #23262c);
-  vertical-align: top;
+  vertical-align: middle;
 }
 .dw-grid tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--dsw-alias-bg-layer-1, #22242a) 55%, transparent); }
 .dw-grid tbody tr:hover td { background: color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 12%, transparent); }
@@ -1087,6 +1205,11 @@ const DW_CSS = `
   background: var(--dsw-alias-bg-overlay, #23262d);
   box-shadow: 0 10px 26px rgba(0,0,0,.42);
 }
+.dw-menu-note {
+  padding: 4px 8px 5px;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 11px;
+}
 .dw-menu-item {
   display: flex;
   align-items: center;
@@ -1102,6 +1225,8 @@ const DW_CSS = `
   text-align: left;
 }
 .dw-menu-item:hover { background: var(--dsw-alias-bg-layer-2, #33373f); }
+.dw-menu-item:disabled { opacity: .45; cursor: default; }
+.dw-menu-item:disabled:hover { background: transparent; }
 .dw-menu-shortcut { margin-left: auto; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 11px; }
 .dw-backdrop { position: fixed; inset: 0; z-index: 39; }
 .dw-splitter {
@@ -1314,6 +1439,86 @@ const DW_CSS = `
 }
 .dw-form-input:focus { border-color: var(--dsw-alias-brand-primary, #4b8bf5); }
 .dw-form-hint { font-size: 11px; color: var(--dsw-alias-label-secondary, #8b919d); }
+/*
+ * The zebra and hover rules paint td backgrounds, so these selectors carry the
+ * same tbody/tr weight plus the cell class: an edited cell keeps its blue on every
+ * row parity, and while the pointer is over it.
+ */
+.dw-grid tbody tr td.dw-cell-edited,
+.dw-grid tbody tr:nth-child(even) td.dw-cell-edited,
+.dw-grid tbody tr:hover td.dw-cell-edited {
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4b8bf5) 22%, transparent);
+}
+.dw-cell-text {
+  display: block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dw-grid tbody tr td.dw-cell-selected,
+.dw-grid tbody tr:nth-child(even) td.dw-cell-selected {
+  outline: 1px solid var(--dsw-alias-brand-primary, #4b8bf5);
+  outline-offset: -1px;
+}
+.dw-grid tbody tr td[data-dw-edit='1'] {
+  max-width: 460px;
+  height: auto;
+  white-space: pre-wrap;
+  vertical-align: top;
+}
+.dw-cell-view {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 52vh;
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.dw-cell-dialog { width: min(720px, 100%); }
+.dw-optimize-dialog { width: min(760px, 100%); }
+.dw-optimize-model { padding-bottom: 8px; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 11px; }
+.dw-optimize-notes {
+  max-height: 120px;
+  overflow: auto;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.dw-grid tbody tr td[data-dw-edit='1'],
+.dw-grid tbody tr:nth-child(even) td[data-dw-edit='1'] {
+  outline: 2px solid var(--dsw-alias-state-business-primary, #4b8bf5);
+  outline-offset: -2px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+}
+.dw-edit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4b8bf5) 16%, transparent);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-size: 11px;
+}
+.dw-edit-clear {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .dw-node-tag {
   margin-left: 6px;
   padding: 0 4px;
@@ -1323,6 +1528,21 @@ const DW_CSS = `
   font-size: 10px;
 }
 .dw-menu-danger { color: var(--dsw-alias-state-danger-primary, #e5534b); }
+.dw-pager { display: inline-flex; align-items: center; gap: 6px; }
+.dw-pager-btn {
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.dw-pager-btn:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12)); }
+.dw-pager-btn:disabled { opacity: .4; cursor: default; }
+.dw-pager-label { font-size: 11px; color: var(--dsw-alias-label-secondary, #8b919d); white-space: nowrap; }
 .dw-schema-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0 6px; }
 .dw-schema-list { display: flex; flex-direction: column; gap: 1px; max-height: 340px; overflow: auto; padding: 2px 0; }
 .dw-schema-row {
@@ -1416,6 +1636,12 @@ function DwIcon({ name, size = 14, className }) {
       return h('svg', { ...common, fill: 'currentColor', stroke: 'none' }, [h('rect', { x: 4, y: 4, width: 8, height: 8, rx: 1.4 })])
     case 'close':
       return h('svg', common, [h('path', { d: 'M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6' })])
+    case 'download':
+      return h('svg', common, [
+        h('path', { key: 'a', d: 'M8 2.4v7.2' }),
+        h('path', { key: 'b', d: 'M5 6.9 8 9.9l3-3' }),
+        h('path', { key: 'c', d: 'M2.6 10.6v2.2h10.8v-2.2' }),
+      ])
     case 'copy':
       return h('svg', common, [
         h('rect', { key: 'a', x: 5.4, y: 5.4, width: 8, height: 8, rx: 1.4 }),
@@ -2496,6 +2722,7 @@ function dwCreateStore(translate) {
         const environments = Array.isArray(discovery.environments) ? discovery.environments : []
         const defaultEnv = discovery.defaultEnv ?? environments[0]?.env
         const focus = Array.isArray(discovery.focus?.envs) ? discovery.focus.envs : []
+        const focusInstances = Array.isArray(discovery.focus?.instances) ? discovery.focus.instances : []
         const base = refreshing ? new Set() : new Set(state.expanded)
         for (const environment of environments) {
           // Manual environments are the ones the user just created, so they open
@@ -2505,6 +2732,12 @@ function dwCreateStore(translate) {
         }
         for (const env of focus) {
           if (typeof env === 'string' && env !== '') base.add(dwNodeKey('env', env))
+        }
+        // Expanding the environment alone still hides the database behind a closed
+        // instance row; the workspace's own instances open too, so its databases are
+        // visible the moment the window appears.
+        for (const instanceId of focusInstances) {
+          if (typeof instanceId === 'string' && instanceId !== '') base.add(dwNodeKey('inst', instanceId))
         }
         patch({
           phase: environments.length === 0 ? 'empty' : 'ready',
@@ -2659,6 +2892,44 @@ function dwCreateStore(translate) {
       const expanded = new Set(state.expanded)
       for (const key of keys) if (typeof key === 'string' && key !== '') expanded.add(key)
       patch({ expanded })
+    },
+
+    /**
+     * Re-read one node's structure from the server.
+     *
+     * Connection: the inventory comes from discovery, so the workspace scan runs
+     * again. Database/table: drop the cached children, expand the row and fetch the
+     * new list (tables or columns), so a structure changed outside the window shows
+     * up without reloading the panel. An open DDL tab is refreshed too.
+     */
+    async refreshNode(node) {
+      if (node === null || node === undefined) return
+      if (node.kind === 'instance') {
+        patch({ children: new Map(), loadState: new Map(), schemas: new Map() })
+        pushLog('info', t('log.refreshingConnection', { name: node.label }))
+        await store.loadDiscovery({ refresh: true })
+        return
+      }
+      if (node.kind !== 'database' && node.kind !== 'table' && node.kind !== 'view') return
+      const children = new Map(state.children)
+      children.delete(node.key)
+      const loadState = new Map(state.loadState)
+      loadState.delete(node.key)
+      const expanded = new Set(state.expanded)
+      expanded.add(node.key)
+      patch({ children, loadState, expanded })
+      // Completion is built from a per-database map that goes stale with the tables.
+      const schemas = new Map(state.schemas ?? [])
+      schemas.delete(node.dbId)
+      patch({ schemas })
+      void store.loadSchema(node.dbId)
+      await store.ensureChildren(node)
+      if (state.loadState.get(node.key) === 'error') return
+      if (node.kind === 'table' || node.kind === 'view') {
+        const tab = state.tabs.find((entry) => entry.kind === 'ddl' && entry.dbId === node.dbId && entry.table === node.table)
+        if (tab !== undefined) await store.refreshDdl(tab.id)
+      }
+      pushLog('info', t('log.refreshedStructure', { name: node.label }))
     },
 
     /** Forget one node's cached children so the next expand re-reads them. */
@@ -3030,6 +3301,10 @@ function dwCreateStore(translate) {
         pushLog('warn', t('log.noStatement'))
         return
       }
+      // A trailing LIMIT makes the result a page: the pager re-runs the statement
+      // with another OFFSET instead of asking the user to edit the SQL. Only
+      // SELECT/WITH statements are paged — `SHOW … LIMIT` has no OFFSET form.
+      const page = /^\s*(select|with)\b/i.test(sql) ? dwSqlPage(sql) : undefined
       // Every executed statement goes to the run log, failures included: the log is
       // the console history, not just a success report.
       pushLog('sql', sql)
@@ -3039,10 +3314,26 @@ function dwCreateStore(translate) {
           : entry)),
       })
       try {
-        const value = await call('query', { id: tab.dbId, sql, limit: state.limit })
+        const value = await call('query', {
+          id: tab.dbId,
+          sql,
+          // The statement's own LIMIT is the page capacity; the row cap must not cut
+          // a page short, or "returned fewer rows" would be mistaken for the end.
+          limit: page === undefined ? state.limit : Math.max(state.limit, page.size),
+        })
+        const returned = Array.isArray(value.rows) ? value.rows.length : Number(value.rowCount ?? 0)
         patch({
           tabs: state.tabs.map((entry) => (entry.id === tab.id
-            ? { ...entry, running: false, result: value, error: '', lastStatement: sql }
+            ? {
+              ...entry,
+              running: false,
+              result: value,
+              error: '',
+              lastStatement: sql,
+              // Cell edits belong to the rows on screen; a new result replaces them.
+              edits: undefined,
+              page: page === undefined ? undefined : { base: page.base, size: page.size, offset: page.offset, hasMore: returned >= page.size },
+            }
             : entry)),
         })
         pushLog('info', t('log.query', {
@@ -3058,6 +3349,103 @@ function dwCreateStore(translate) {
         })
         pushLog('error', message)
       }
+    },
+
+    /**
+     * Move one page inside the current statement's LIMIT.
+     *
+     * The editor's text is never rewritten: the page statement is derived from the
+     * stored base and sent directly. A next page that comes back empty ends the
+     * paging without replacing the page the user is reading, so only "previous"
+     * remains possible.
+     */
+    async goToPage(direction) {
+      const tab = state.tabs.find((entry) => entry.id === state.activeTab)
+      if (tab === undefined || tab.kind !== 'sql' || tab.running === true || tab.page === undefined) return
+      const { base, size, offset, hasMore } = tab.page
+      const forward = direction === 'next'
+      if (forward && hasMore !== true) return
+      const target = forward ? offset + size : Math.max(0, offset - size)
+      if (!forward && target === offset) return
+      const sql = `${base}\nLIMIT ${size} OFFSET ${target}`
+      patch({
+        tabs: state.tabs.map((entry) => (entry.id === tab.id ? { ...entry, running: true, error: '' } : entry)),
+      })
+      try {
+        const value = await call('query', { id: tab.dbId, sql, limit: Math.max(state.limit, size) })
+        const returned = Array.isArray(value.rows) ? value.rows.length : 0
+        if (forward && returned === 0) {
+          patch({
+            tabs: state.tabs.map((entry) => (entry.id === tab.id
+              ? { ...entry, running: false, page: { ...tab.page, hasMore: false } }
+              : entry)),
+          })
+          pushLog('info', t('log.pageEnd'))
+          return
+        }
+        patch({
+          tabs: state.tabs.map((entry) => (entry.id === tab.id
+            ? {
+              ...entry,
+              running: false,
+              result: value,
+              error: '',
+              edits: undefined,
+              page: { base, size, offset: target, hasMore: returned >= size },
+            }
+            : entry)),
+        })
+        pushLog('info', t('log.page', { page: Math.floor(target / size) + 1, rows: value.rowCount, ms: dwDuration(value.elapsedMs) }))
+      } catch (error) {
+        const message = dwExplainFailure(t, error)
+        patch({
+          tabs: state.tabs.map((entry) => (entry.id === tab.id ? { ...entry, running: false, error: message } : entry)),
+        })
+        pushLog('error', message)
+      }
+    },
+
+    /**
+     * Record one edited cell.
+     *
+     * Edits are a local draft for building an UPDATE statement — nothing is sent to
+     * the server, and the value is dropped as soon as the result changes.
+     */
+    setCellEdit(tabId, rowIndex, columnIndex, columnName, value) {
+      const tab = state.tabs.find((entry) => entry.id === tabId)
+      if (tab === undefined || tab.kind !== 'sql' || tab.result === undefined) return
+      const row = (Array.isArray(tab.result.rows) ? tab.result.rows : [])[rowIndex]
+      if (row === undefined) return
+      const original = row[columnIndex]
+      const edits = { ...(tab.edits ?? {}) }
+      const rowEdits = { ...(edits[rowIndex] ?? {}) }
+      const unchanged = original === null
+        ? value === null || value === 'NULL'
+        : String(original) === String(value)
+      if (unchanged) delete rowEdits[columnName]
+      else rowEdits[columnName] = value
+      if (Object.keys(rowEdits).length === 0) delete edits[rowIndex]
+      else edits[rowIndex] = rowEdits
+      patch({
+        tabs: state.tabs.map((entry) => (entry.id === tabId
+          ? { ...entry, edits: Object.keys(edits).length === 0 ? undefined : edits }
+          : entry)),
+      })
+    },
+
+    /** Throw away the draft edits of one result. */
+    clearCellEdits(tabId) {
+      patch({
+        tabs: state.tabs.map((entry) => (entry.id === tabId ? { ...entry, edits: undefined } : entry)),
+      })
+    },
+
+    async nextPage() {
+      await store.goToPage('next')
+    },
+
+    async prevPage() {
+      await store.goToPage('prev')
     },
   }
 
@@ -3462,6 +3850,154 @@ function dwSqlLex(text) {
     tokens.push({ type: DW_SQL_PUNCT.has(char) ? 'punct' : 'identifier', value: char, start, end: index })
   }
   return tokens
+}
+
+/**
+ * Split one statement's outermost trailing `LIMIT` into its base and page shape.
+ *
+ * Only the limit at parenthesis depth zero counts, so `FROM (SELECT … LIMIT 5)` is
+ * left alone. Returns undefined when the statement has no paginable limit, which is
+ * what the result bar uses to hide the pager for statements that are not paged.
+ *
+ * @returns `{ base, size, offset }`: the SQL without its LIMIT, the page capacity,
+ *   and the offset the statement asked for (`LIMIT 100`, `LIMIT 20, 100`, `LIMIT 100 OFFSET 20`)
+ */
+function dwSqlPage(text) {
+  const source = String(text ?? '')
+  const tokens = dwSqlLex(source).filter((token) => token.type !== 'space' && token.type !== 'comment')
+  let end = tokens.length
+  while (end > 0 && tokens[end - 1].value === ';') end -= 1
+  let depth = 0
+  let limitIndex = -1
+  for (let index = 0; index < end; index += 1) {
+    const value = tokens[index].value.toLowerCase()
+    if (value === '(') depth += 1
+    else if (value === ')') depth = Math.max(0, depth - 1)
+    else if (depth === 0 && value === 'limit') limitIndex = index
+  }
+  if (limitIndex < 0) return undefined
+  const tail = tokens.slice(limitIndex + 1, end)
+  const integer = (token) => (token !== undefined && token.type === 'number' && /^\d+$/.test(token.value) ? Number(token.value) : undefined)
+  const first = integer(tail[0])
+  if (first === undefined) return undefined
+  let size = first
+  let offset = 0
+  if (tail.length === 3 && tail[1].value === ',') {
+    const second = integer(tail[2])
+    if (second === undefined) return undefined
+    // LIMIT offset, size — the first number is the offset.
+    offset = first
+    size = second
+  } else if (tail.length === 3 && tail[1].value.toLowerCase() === 'offset') {
+    const second = integer(tail[2])
+    if (second === undefined) return undefined
+    offset = second
+  } else if (tail.length !== 1) {
+    return undefined
+  }
+  if (size <= 0 || offset < 0) return undefined
+  return { base: source.slice(0, tokens[limitIndex].start).trimEnd(), size, offset }
+}
+
+/**
+ * The single table a plain `SELECT` reads, for UPDATE/INSERT generation.
+ *
+ * A join is deliberately not resolved: which table a result row belongs to is then
+ * ambiguous, and inventing one would produce an INSERT that writes to the wrong
+ * place. The caller surfaces that refusal to the user instead.
+ */
+function dwSqlTargetTable(text) {
+  const source = String(text ?? '')
+  const tokens = dwSqlLex(source).filter((token) => token.type !== 'space' && token.type !== 'comment')
+  let end = tokens.length
+  while (end > 0 && tokens[end - 1].value === ';') end -= 1
+  if (end === 0 || tokens[0].value.toLowerCase() !== 'select') return undefined
+  let depth = 0
+  let fromIndex = -1
+  for (let index = 0; index < end; index += 1) {
+    const value = tokens[index].value.toLowerCase()
+    if (value === '(') depth += 1
+    else if (value === ')') depth = Math.max(0, depth - 1)
+    else if (depth === 0 && fromIndex < 0 && value === 'from') fromIndex = index
+  }
+  // The select list must be plain columns (`*`, `id`, `t.*`, `t.id`): an expression
+  // or an alias would make the result's column names unusable in an INSERT.
+  let listDepth = 0
+  let item = []
+  const items = []
+  for (let cursor = 1; cursor < fromIndex; cursor += 1) {
+    const token = tokens[cursor]
+    if (token.value === '(') listDepth += 1
+    else if (token.value === ')') listDepth = Math.max(0, listDepth - 1)
+    if (listDepth === 0 && token.value === ',') {
+      items.push(item)
+      item = []
+      continue
+    }
+    item.push(token)
+  }
+  items.push(item)
+  if (['distinct', 'all'].includes(items[0]?.[0]?.value.toLowerCase())) items[0] = items[0].slice(1)
+  for (const entry of items) {
+    const head = entry[0]
+    if (entry.length === 1 && (head.value === '*' || head.type === 'identifier')) continue
+    if (entry.length === 3 && head.type === 'identifier' && entry[1].value === '.' && (entry[2].value === '*' || entry[2].type === 'identifier')) continue
+    return undefined
+  }
+
+  if (fromIndex < 0) return undefined
+  let index = fromIndex + 1
+  const readName = () => {
+    const token = tokens[index]
+    if (token === undefined) return undefined
+    if (token.type !== 'identifier' && token.type !== 'string') return undefined
+    index += 1
+    return token.value.replace(/^`|`$/g, '')
+  }
+  const first = readName()
+  if (first === undefined) return undefined
+  let database = ''
+  let table = first
+  if (tokens[index]?.value === '.') {
+    index += 1
+    const second = readName()
+    if (second === undefined) return undefined
+    database = first
+    table = second
+  }
+  // A join or a second table makes "this row" ambiguous: refuse to generate SQL.
+  let joined = 0
+  for (let cursor = index; cursor < end; cursor += 1) {
+    const value = tokens[cursor].value.toLowerCase()
+    if (value === '(') joined += 1
+    else if (value === ')') joined = Math.max(0, joined - 1)
+    else if (joined === 0 && (value === ',' || value === 'join')) return undefined
+  }
+  return { database, table }
+}
+
+/** One SQL literal: numbers stay bare, everything else is quoted with '' doubling. */
+function dwSqlLiteral(value, numeric) {
+  if (value === null || value === undefined) return 'NULL'
+  const text = String(value)
+  if (numeric === true && /^-?\d+(\.\d+)?$/.test(text.trim())) return text.trim()
+  return `'${text.replace(/'/g, "''")}'`
+}
+
+/** Build the UPDATE a result row editor copies; it is never executed here. */
+function dwSqlUpdate(target, assignments, conditions) {
+  const quote = (name) => `\`${String(name).replace(/`/g, '``')}\``
+  const from = target.database === '' ? quote(target.table) : `${quote(target.database)}.${quote(target.table)}`
+  const set = assignments.map((entry) => `${quote(entry.column)} = ${dwSqlLiteral(entry.value, entry.numeric)}`).join(', ')
+  const where = conditions.map((entry) => `${quote(entry.column)} = ${dwSqlLiteral(entry.value, entry.numeric)}`).join(' AND ')
+  // No LIMIT: the WHERE is the row's primary key, so it is already unique, and
+  // `UPDATE … LIMIT` is MySQL-only syntax that would break when pasted elsewhere.
+  return `UPDATE ${from}\nSET ${set}\nWHERE ${where};`
+}
+
+/** MySQL's PRI_KEY_FLAG marks the columns of the primary key. */
+function dwIsPrimaryKey(column) {
+  return (Number(column?.flags ?? 0) & 2) === 2
 }
 
 /** Tokens that carry meaning for completion and formatting. */
@@ -3947,6 +4483,8 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
   const highlightRef = useRef(null)
   const completionRef = useRef(null)
   const [completion, setCompletion] = useState(null)
+  const [editorMenu, setEditorMenu] = useState(null)
+  const [optimize, setOptimize] = useState(null)
 
   useEffect(() => {
     const area = areaRef.current
@@ -4035,6 +4573,105 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     onRun(selected.trim() === '' ? undefined : selected)
   }
 
+  // The right-click menu replaces the browser's own so it can offer the same
+  // editing commands plus the model. Clipboard writes/reads go through the async
+  // API; undo/redo keep using the textarea's native history.
+  const editorMenuAction = (run) => () => {
+    setEditorMenu(null)
+    run()
+  }
+
+  const editorCommand = (command) => {
+    const area = areaRef.current
+    if (area === null) return
+    area.focus()
+    try {
+      document.execCommand(command)
+    } catch (error) {
+      void error
+    }
+  }
+
+  const editorCopy = () => {
+    const area = areaRef.current
+    if (area === null) return
+    const selected = area.selectionEnd > area.selectionStart ? value.slice(area.selectionStart, area.selectionEnd) : value
+    const write = globalThis.navigator?.clipboard?.writeText?.(selected)
+    if (write !== undefined) write.catch(() => undefined)
+  }
+
+  const editorCut = () => {
+    const area = areaRef.current
+    if (area === null) return
+    const start = area.selectionStart
+    const end = area.selectionEnd
+    if (end <= start) return
+    editorCopy()
+    store.setTabSql(tab.id, `${value.slice(0, start)}${value.slice(end)}`)
+    requestAnimationFrame(() => {
+      const next = areaRef.current
+      if (next === null) return
+      next.focus()
+      next.setSelectionRange(start, start)
+    })
+  }
+
+  const editorPaste = async () => {
+    const area = areaRef.current
+    if (area === null) return
+    const read = globalThis.navigator?.clipboard?.readText
+    if (typeof read !== 'function') {
+      store.pushLog('warn', tr('editorPasteBlocked'))
+      return
+    }
+    try {
+      const text = await read.call(globalThis.navigator.clipboard)
+      if (typeof text !== 'string' || text === '') return
+      const start = area.selectionStart
+      const end = area.selectionEnd
+      store.setTabSql(tab.id, `${value.slice(0, start)}${text}${value.slice(end)}`)
+      requestAnimationFrame(() => {
+        const next = areaRef.current
+        if (next === null) return
+        next.focus()
+        next.setSelectionRange(start + text.length, start + text.length)
+      })
+    } catch (error) {
+      void error
+      store.pushLog('warn', tr('editorPasteBlocked'))
+    }
+  }
+
+  const editorSelectAll = () => {
+    const area = areaRef.current
+    if (area === null) return
+    area.focus()
+    area.select()
+  }
+
+  const openOptimize = () => {
+    const area = areaRef.current
+    const selected = area !== null && area.selectionEnd > area.selectionStart
+      ? value.slice(area.selectionStart, area.selectionEnd)
+      : ''
+    const text = selected.trim() === '' ? value.trim() : selected.trim()
+    if (text === '') {
+      store.pushLog('warn', tr('log.noStatement'))
+      return
+    }
+    setOptimize({ sql: text, database: tab.database })
+  }
+
+  const menuItem = (key, label, shortcut, run) => h('button', {
+    key,
+    type: 'button',
+    className: 'dw-menu-item',
+    onClick: editorMenuAction(run),
+  }, [
+    h('span', { key: 'l' }, label),
+    shortcut === '' ? null : h('span', { key: 's', className: 'dw-menu-shortcut' }, shortcut),
+  ])
+
   const format = () => {
     const formatted = dwFormatSql(value)
     if (formatted === value) return
@@ -4070,6 +4707,29 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     ]),
   ])
 
+  const editorMenuLayer = editorMenu === null ? null : h(React.Fragment, null, [
+    h('div', {
+      key: 'backdrop',
+      className: 'dw-backdrop',
+      onClick: () => setEditorMenu(null),
+      onContextMenu: (event) => {
+        event.preventDefault()
+        setEditorMenu(null)
+      },
+    }),
+    h('div', { key: 'menu', className: 'dw-menu', style: { left: editorMenu.x, top: editorMenu.y } }, [
+      menuItem('undo', tr('editorUndo'), '⌘Z', () => editorCommand('undo')),
+      menuItem('redo', tr('editorRedo'), '⇧⌘Z', () => editorCommand('redo')),
+      h('div', { key: 'sep1', className: 'dw-project-sep' }),
+      menuItem('cut', tr('editorCut'), '⌘X', editorCut),
+      menuItem('copy', tr('editorCopy'), '⌘C', editorCopy),
+      menuItem('paste', tr('editorPaste'), '⌘V', () => void editorPaste()),
+      menuItem('select-all', tr('editorSelectAll'), '⌘A', editorSelectAll),
+      h('div', { key: 'sep2', className: 'dw-project-sep' }),
+      menuItem('optimize', tr('sqlOptimize'), '', openOptimize),
+    ]),
+  ])
+
   return h('div', { className: 'dw-editor-wrap', style: { height } }, [
     bar,
     h('div', { key: 'editor', className: 'dw-editor' }, [
@@ -4098,6 +4758,17 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
             refreshCompletion(text, caret)
           },
           onClick: (event) => refreshCompletion(event.target.value, event.target.selectionStart),
+          onContextMenu: (event) => {
+            event.preventDefault()
+            const width = 210
+            const height = 268
+            const maxX = (globalThis.innerWidth ?? 1200) - width
+            const maxY = (globalThis.innerHeight ?? 800) - height
+            setEditorMenu({
+              x: Math.max(8, Math.min(event.clientX, maxX)),
+              y: Math.max(8, Math.min(event.clientY, maxY)),
+            })
+          },
           onBlur: () => setCompletion(null),
           onScroll: (event) => syncScroll(event.target),
           onKeyDown: (event) => {
@@ -4166,6 +4837,15 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
           ]))),
       ]),
     ]),
+    editorMenuLayer,
+    optimize === null ? null : h(DwSqlOptimizeDialog, {
+      key: 'optimize',
+      store,
+      tr,
+      sql: optimize.sql,
+      database: optimize.database,
+      onClose: () => setOptimize(null),
+    }),
   ])
 }
 
@@ -4280,14 +4960,11 @@ function dwCell(value) {
   return String(value)
 }
 
-/** One clipboard cell: tabs and newlines would break the TSV grid. */
-function dwTsvCell(value) {
-  if (value === null || value === undefined) return 'NULL'
-  return String(value).replace(/[\t\r\n]+/g, ' ')
-}
 
 /** The grid, memoized on the rows it is given. */
-const DwGrid = React.memo(function DwGrid({ columns, rows, tr }) {
+const DwGrid = React.memo(function DwGrid({
+  columns, rows, tr, edits, editing, selected, skipBlur, onSelect, onCellDoubleClick, onEditCommit, onEditCancel, onCellMenu,
+}) {
   const head = h('thead', { key: 'head' }, h('tr', { key: 'row' }, [
     h('th', { key: '#', className: 'dw-rownum' }, '#'),
     ...columns.map((column, index) => h('th', { key: `${column.name}-${index}`, title: `${column.name}${column.type !== '' ? ` · ${dwColumnTypeName(column.type, column.charset)}` : ''}` }, [
@@ -4297,11 +4974,46 @@ const DwGrid = React.memo(function DwGrid({ columns, rows, tr }) {
   ]))
   const body = h('tbody', { key: 'body' }, rows.map((row, rowIndex) => h('tr', { key: rowIndex }, [
     h('td', { key: '#', className: 'dw-rownum' }, String(rowIndex + 1)),
-    ...row.map((cell, cellIndex) => h('td', {
-      key: cellIndex,
-      style: dwIsNumericColumn(columns[cellIndex]) ? { textAlign: 'right', fontVariantNumeric: 'tabular-nums' } : undefined,
-      title: cell === null ? 'NULL' : String(cell).slice(0, 400),
-    }, dwCell(cell))),
+    ...row.map((cell, cellIndex) => {
+      const column = columns[cellIndex] ?? { name: String(cellIndex) }
+      const rowEdits = edits === undefined ? undefined : edits[rowIndex]
+      const edited = rowEdits !== undefined && Object.prototype.hasOwnProperty.call(rowEdits, column.name)
+      const value = edited ? rowEdits[column.name] : cell
+      const isEditing = editing !== null && editing.row === rowIndex && editing.index === cellIndex
+      const isSelected = selected !== null && selected.row === rowIndex && selected.index === cellIndex
+      const props = {
+        key: cellIndex,
+        className: [edited ? 'dw-cell-edited' : '', isSelected ? 'dw-cell-selected' : ''].filter(Boolean).join(' ') || undefined,
+        style: dwIsNumericColumn(column) ? { textAlign: 'right', fontVariantNumeric: 'tabular-nums' } : undefined,
+        onClick: () => onSelect(rowIndex, cellIndex),
+        onDoubleClick: () => onCellDoubleClick(rowIndex, cellIndex),
+        onContextMenu: (event) => {
+          event.preventDefault()
+          onCellMenu(event, rowIndex, cellIndex)
+        },
+      }
+      if (isEditing) {
+        props.contentEditable = true
+        props.suppressContentEditableWarning = true
+        props['data-dw-edit'] = '1'
+        props.title = tr('editingCellHint')
+        props.onBlur = (event) => onEditCommit(rowIndex, cellIndex, column.name, event.currentTarget.textContent)
+        props.onKeyDown = (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            event.currentTarget.blur()
+            return
+          }
+          if (event.key !== 'Escape') return
+          event.preventDefault()
+          skipBlur.current = true
+          event.currentTarget.blur()
+        }
+        return h('td', props, value === null || value === undefined ? 'NULL' : String(value))
+      }
+      props.title = value === null || value === undefined ? 'NULL' : String(value).slice(0, 400)
+      return h('td', props, h('span', { key: 'v', className: 'dw-cell-text' }, dwCell(value)))
+    }),
   ])))
   void tr
   return h('div', { className: 'dw-result-body' }, h('table', { className: 'dw-grid' }, [head, body]))
@@ -4310,6 +5022,182 @@ const DwGrid = React.memo(function DwGrid({ columns, rows, tr }) {
 function DwResults({ store, state, tab, tr }) {
   const result = tab.result
   const running = tab.running === true
+  const [editing, setEditing] = useState(null)
+  const [cellMenu, setCellMenu] = useState(null)
+  const [exportMenu, setExportMenu] = useState(null)
+  const [selected, setSelected] = useState(null)
+  const [detail, setDetail] = useState(null)
+  const [notice, setNotice] = useState(null)
+  const skipBlur = useRef(false)
+  const edits = tab.edits ?? {}
+  const editCount = Object.values(edits).reduce((total, row) => total + Object.keys(row).length, 0)
+  // Export what is on screen, edits included — it is the view the user is acting on.
+  const exportRows = (result?.rows ?? []).map((row, rowIndex) => {
+    const rowEdits = edits[rowIndex]
+    if (rowEdits === undefined) return row
+    return row.map((cell, cellIndex) => {
+      const name = (result.columns[cellIndex] ?? {}).name
+      return Object.prototype.hasOwnProperty.call(rowEdits, name) ? rowEdits[name] : cell
+    })
+  })
+  const exportNumeric = (result?.columns ?? []).map((column) => dwIsNumericColumn(column))
+
+  // A new result (or a new page) invalidates both the edit cursor and the menu.
+  useEffect(() => {
+    setEditing(null)
+    setCellMenu(null)
+    setSelected(null)
+    setDetail(null)
+    setNotice(null)
+  }, [tab.id, result, tab.page?.offset])
+
+  // Focus the cell that just entered edit mode and select its text, so typing
+  // replaces the value instead of appending to it.
+  useEffect(() => {
+    if (editing === null) return
+    const doc = globalThis.document
+    if (doc === undefined || typeof doc.querySelector !== 'function') return
+    const node = doc.querySelector('[data-dw-edit="1"]')
+    if (node === null || node === undefined) return
+    node.focus()
+    const selection = typeof globalThis.getSelection === 'function' ? globalThis.getSelection() : null
+    if (selection === null || selection === undefined) return
+    const range = doc.createRange()
+    range.selectNodeContents(node)
+    selection.removeAllRanges()
+    selection.addRange(range)
+  }, [editing])
+
+  const columnIndexOf = (name) => (result?.columns ?? []).findIndex((column) => column.name === name)
+
+  // Full value of one cell, edits included: what the detail dialog shows.
+  const openDetail = (rowIndex, cellIndex) => {
+    const column = (result?.columns ?? [])[cellIndex] ?? {}
+    const rowEdits = edits[rowIndex] ?? {}
+    const raw = Object.prototype.hasOwnProperty.call(rowEdits, column.name)
+      ? rowEdits[column.name]
+      : (result?.rows ?? [])[rowIndex]?.[cellIndex]
+    setDetail({
+      row: rowIndex,
+      index: cellIndex,
+      name: column.name ?? '',
+      text: raw === null || raw === undefined ? 'NULL' : String(raw),
+    })
+  }
+
+  // One UPDATE for one edited row: edited columns in SET, the original primary
+  // key in WHERE. `reason` is what the UI shows when no statement can be built.
+  const rowUpdate = (rowIndex) => {
+    if (result === undefined) return { reason: tr('updateNeedsEdits') }
+    const target = dwSqlTargetTable(tab.lastStatement ?? tab.sql ?? '')
+    if (target === undefined) return { reason: tr('updateNeedsSingleTable') }
+    const primaryKeys = (result.columns ?? []).filter((column) => dwIsPrimaryKey(column))
+    if (primaryKeys.length === 0) return { reason: tr('updateNeedsPrimaryKey') }
+    const rowEdits = edits[rowIndex] ?? {}
+    const assignments = Object.keys(rowEdits).map((name) => ({
+      column: name,
+      value: rowEdits[name],
+      numeric: dwIsNumericColumn((result.columns ?? [])[columnIndexOf(name)]),
+    }))
+    if (assignments.length === 0) return { reason: tr('updateNeedsEdits') }
+    const source = (result.rows ?? [])[rowIndex] ?? []
+    const conditions = primaryKeys.map((column) => ({
+      column: column.name,
+      value: source[columnIndexOf(column.name)],
+      numeric: dwIsNumericColumn(column),
+    }))
+    return { sql: dwSqlUpdate(target, assignments, conditions), table: target.table, reason: '' }
+  }
+
+  const copyText = (text, onDone, onFail) => {
+    const write = globalThis.navigator?.clipboard?.writeText?.(text)
+    if (write === undefined) {
+      store.pushLog('warn', tr('copyUpdateFailed'))
+      return
+    }
+    write.then(onDone).catch(() => store.pushLog('warn', tr('copyUpdateFailed')))
+  }
+
+  const copyUpdate = () => {
+    if (cellMenu === null) return
+    const built = rowUpdate(cellMenu.row)
+    if (built.reason !== '') {
+      store.pushLog('warn', built.reason)
+      setCellMenu(null)
+      return
+    }
+    copyText(built.sql, () => store.pushLog('info', tr('log.copiedUpdate', { table: built.table })))
+    setCellMenu(null)
+  }
+
+  // Every edited row at once: one statement per row, in result order.
+  const copyAllUpdates = () => {
+    const rows = Object.keys(edits).map(Number).sort((left, right) => left - right)
+    if (rows.length === 0) return
+    const statements = []
+    for (const row of rows) {
+      const built = rowUpdate(row)
+      if (built.reason !== '') {
+        store.pushLog('warn', built.reason)
+        return
+      }
+      statements.push(built.sql)
+    }
+    copyText(statements.join('\n\n'), () => store.pushLog('info', tr('log.copiedUpdates', { count: statements.length })))
+  }
+
+  // Export the displayed rows: CSV, XLSX or an INSERT script. The save step asks
+  // for a path through the File System Access API when the host supports it.
+  const exportResult = (kind) => {
+    setExportMenu(null)
+    if (result === undefined) return
+    const columns = result.columns ?? []
+    const target = dwSqlTargetTable(tab.lastStatement ?? tab.sql ?? '')
+    const now = new Date()
+    const pad = (value) => String(value).padStart(2, '0')
+    const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+    const base = `${target?.table ?? tab.database ?? 'result'}-${stamp}`
+    let payload
+    let name
+    let mime
+    let extension
+    let description
+    if (kind === 'sql') {
+      if (target === undefined) {
+        // Not a silent log line: the user asked for a file, so say why there is none.
+        store.pushLog('warn', tr('insertNeedsTable'))
+        setNotice({ title: tr('insertNeedsTitle'), message: tr('insertNeedsTable') })
+        return
+      }
+      payload = dwInsertText(target, columns, exportRows, exportNumeric)
+      name = `${base}.sql`
+      mime = 'text/plain'
+      extension = '.sql'
+      description = tr('exportInsert')
+    } else if (kind === 'csv') {
+      payload = dwCsvText(columns, exportRows)
+      name = `${base}.csv`
+      mime = 'text/csv'
+      extension = '.csv'
+      description = tr('exportCsv')
+    } else {
+      payload = dwXlsxBytes(columns, exportRows, exportNumeric)
+      name = `${base}.xlsx`
+      mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      extension = '.xlsx'
+      description = tr('exportXlsx')
+    }
+    dwSaveFile({ name, data: payload, mime, extension, description })
+      .then((outcome) => {
+        if (outcome.cancelled === true) {
+          store.pushLog('info', tr('log.exportCancelled'))
+          return
+        }
+        store.pushLog('info', tr('log.exported', { name: outcome.name, rows: exportRows.length }))
+        if (outcome.via === 'download') store.pushLog('warn', tr('log.exportDownloaded', { name: outcome.name }))
+      })
+      .catch((error) => store.pushLog('warn', tr('exportFailed', { message: error?.message ?? String(error) })))
+  }
 
   const bar = h('div', { key: 'bar', className: 'dw-result-bar' }, [
     result === undefined
@@ -4318,6 +5206,48 @@ function DwResults({ store, state, tab, tr }) {
         h('b', { key: 'r', style: { color: 'var(--dsw-alias-state-success-primary)' } }, `${result.rowCount} ${tr('rows')}`),
         h('span', { key: 'd' }, `  ·  ${dwDuration(result.elapsedMs)}`),
         result.truncated === true ? h('span', { key: 't', className: 'dw-log-warn' }, `  ·  ${tr('truncated')} ${result.limit}`) : null,
+      ]),
+    editCount > 0
+      ? h('span', { key: 'edits', className: 'dw-edit-badge' }, [
+        h('span', { key: 'n' }, tr('editsCount', { count: editCount })),
+        h('button', {
+          key: 'copy',
+          type: 'button',
+          className: 'dw-edit-clear',
+          title: tr('copyEditsHint'),
+          onClick: copyAllUpdates,
+        }, tr('copyEdits')),
+        h('button', {
+          key: 'c',
+          type: 'button',
+          className: 'dw-edit-clear',
+          onClick: () => store.clearCellEdits(tab.id),
+        }, tr('clearEdits')),
+      ])
+      : null,
+    tab.page === undefined
+      ? null
+      : h('span', { key: 'pager', className: 'dw-pager' }, [
+        h('button', {
+          key: 'prev',
+          type: 'button',
+          className: 'dw-pager-btn',
+          disabled: running || tab.page.offset <= 0,
+          title: tr('pagePrev'),
+          onClick: () => void store.prevPage(),
+        }, `‹ ${tr('pagePrev')}`),
+        h('span', { key: 'label', className: 'dw-pager-label' }, tr('pageLabel', {
+          page: Math.floor(tab.page.offset / tab.page.size) + 1,
+          size: tab.page.size,
+        })),
+        h('button', {
+          key: 'next',
+          type: 'button',
+          className: 'dw-pager-btn',
+          disabled: running || tab.page.hasMore !== true,
+          title: tr('pageNext'),
+          onClick: () => void store.nextPage(),
+        }, `${tr('pageNext')} ›`),
       ]),
     result === undefined
       ? null
@@ -4348,19 +5278,15 @@ function DwResults({ store, state, tab, tr }) {
     h('span', { key: 'sp', className: 'dw-spacer' }),
     result !== undefined && (result.rows ?? []).length > 0
       ? h('button', {
-        key: 'copy',
+        key: 'export',
         type: 'button',
         className: 'dw-btn',
-        title: tr('copyResult'),
-        onClick: () => {
-          const header = result.columns.map((column) => column.name).join('\t')
-          const bodyText = result.rows.map((row) => row.map(dwTsvCell).join('\t')).join('\n')
-          const write = globalThis.navigator?.clipboard?.writeText?.(`${header}\n${bodyText}`)
-          if (write !== undefined) {
-            write.then(() => store.pushLog('info', tr('log.copiedRows', { rows: result.rowCount }))).catch(() => undefined)
-          }
+        title: tr('exportHint', { rows: exportRows.length }),
+        onClick: (event) => {
+          const rect = event.currentTarget.getBoundingClientRect()
+          setExportMenu({ x: Math.max(8, rect.right - 200), y: rect.bottom + 4 })
         },
-      }, [h(DwIcon, { key: 'i', name: 'copy', size: 11 }), h('span', { key: 't' }, tr('copy'))])
+      }, [h(DwIcon, { key: 'i', name: 'download', size: 11 }), h('span', { key: 't' }, tr('export'))])
       : null,
     h('label', { key: 'limit', style: { display: 'flex', alignItems: 'center', gap: 4 } }, [
       h('span', { key: 'l' }, tr('limit')),
@@ -4395,12 +5321,367 @@ function DwResults({ store, state, tab, tr }) {
       h('div', { key: 'q', className: 'dw-code-block' }, result.sql ?? ''),
     ])
   } else {
-    body = h(DwGrid, { key: 'grid', columns: result.columns, rows: result.rows, tr })
+    body = h(DwGrid, {
+      key: 'grid',
+      columns: result.columns,
+      rows: result.rows,
+      tr,
+      edits: tab.edits,
+      editing,
+      selected,
+      skipBlur,
+      onSelect: (row, index) => setSelected({ row, index }),
+      onCellDoubleClick: (row, index) => openDetail(row, index),
+      onEditCommit: (row, index, name, text) => {
+        if (skipBlur.current) {
+          skipBlur.current = false
+          setEditing(null)
+          return
+        }
+        store.setCellEdit(tab.id, row, index, name, text === 'NULL' ? null : text)
+        setEditing(null)
+      },
+      onEditCancel: () => setEditing(null),
+      onCellMenu: (event, row, index) => setCellMenu({ x: event.clientX, y: event.clientY, row, index }),
+    })
   }
 
-  return h('div', { className: 'dw-result' }, [bar, body])
+  const cellMenuLayer = cellMenu === null ? null : h(React.Fragment, null, [
+    h('div', {
+      key: 'backdrop',
+      className: 'dw-backdrop',
+      onClick: () => setCellMenu(null),
+      onContextMenu: (event) => {
+        event.preventDefault()
+        setCellMenu(null)
+      },
+    }),
+    h('div', { key: 'menu', className: 'dw-menu', style: { left: cellMenu.x, top: cellMenu.y } }, [
+      h('button', {
+        key: 'edit',
+        type: 'button',
+        className: 'dw-menu-item',
+        onClick: () => {
+          setSelected({ row: cellMenu.row, index: cellMenu.index })
+          setEditing({ row: cellMenu.row, index: cellMenu.index })
+          setCellMenu(null)
+        },
+      }, tr('editCell')),
+      h('button', {
+        key: 'update',
+        type: 'button',
+        className: 'dw-menu-item',
+        disabled: rowUpdate(cellMenu.row).reason !== '',
+        title: rowUpdate(cellMenu.row).reason === '' ? tr('menuCopyUpdateHint') : rowUpdate(cellMenu.row).reason,
+        onClick: copyUpdate,
+      }, tr('menuCopyUpdate')),
+      h('button', {
+        key: 'value',
+        type: 'button',
+        className: 'dw-menu-item',
+        onClick: () => {
+          const row = (result?.rows ?? [])[cellMenu.row] ?? []
+          const edited = edits[cellMenu.row] ?? {}
+          const name = (result?.columns ?? [])[cellMenu.index]?.name ?? ''
+          const value = Object.prototype.hasOwnProperty.call(edited, name) ? edited[name] : row[cellMenu.index]
+          const write = globalThis.navigator?.clipboard?.writeText?.(value === null || value === undefined ? 'NULL' : String(value))
+          if (write !== undefined) write.then(() => store.pushLog('info', tr('log.copiedCell'))).catch(() => undefined)
+          setCellMenu(null)
+        },
+      }, tr('menuCopyCell')),
+    ]),
+  ])
+
+  const exportLayer = exportMenu === null ? null : h(React.Fragment, null, [
+    h('div', {
+      key: 'backdrop',
+      className: 'dw-backdrop',
+      onClick: () => setExportMenu(null),
+      onContextMenu: (event) => {
+        event.preventDefault()
+        setExportMenu(null)
+      },
+    }),
+    h('div', { key: 'menu', className: 'dw-menu', style: { left: exportMenu.x, top: exportMenu.y } }, [
+      h('div', { key: 'note', className: 'dw-menu-note' }, tr('exportHint', { rows: exportRows.length })),
+      h('button', { key: 'xlsx', type: 'button', className: 'dw-menu-item', onClick: () => exportResult('xlsx') }, tr('exportXlsx')),
+      h('button', { key: 'csv', type: 'button', className: 'dw-menu-item', onClick: () => exportResult('csv') }, tr('exportCsv')),
+      h('button', { key: 'sql', type: 'button', className: 'dw-menu-item', onClick: () => exportResult('sql') }, tr('exportInsert')),
+    ]),
+  ])
+
+  const detailLayer = detail === null ? null : h('div', {
+    key: 'detail',
+    className: 'dw-modal',
+    onClick: () => setDetail(null),
+  }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card dw-cell-dialog',
+    onClick: (event) => event.stopPropagation(),
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, tr('cellDetailTitle', { column: detail.name, row: detail.row + 1 })),
+    h('div', { key: 'body', className: 'dw-modal-body' }, h('pre', { key: 'v', className: 'dw-cell-view' }, detail.text)),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
+      h('button', {
+        key: 'copy',
+        type: 'button',
+        className: 'dw-btn',
+        onClick: () => copyText(detail.text, () => store.pushLog('info', tr('log.copiedCell'))),
+      }, tr('menuCopyCell')),
+      h('button', {
+        key: 'edit',
+        type: 'button',
+        className: 'dw-btn',
+        onClick: () => {
+          setSelected({ row: detail.row, index: detail.index })
+          setEditing({ row: detail.row, index: detail.index })
+          setDetail(null)
+        },
+      }, tr('editCell')),
+      h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: () => setDetail(null) }, tr('close')),
+    ]),
+  ]))
+
+  const noticeLayer = notice === null ? null : h('div', {
+    key: 'notice',
+    className: 'dw-modal',
+    onClick: () => setNotice(null),
+  }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card',
+    onClick: (event) => event.stopPropagation(),
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, notice.title),
+    h('div', { key: 'body', className: 'dw-modal-body' }, h('div', { key: 'm', className: 'dw-error-text' }, notice.message)),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
+      h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: () => setNotice(null) }, tr('close')),
+    ]),
+  ]))
+
+  return h('div', { className: 'dw-result' }, [bar, body, cellMenuLayer, exportLayer, detailLayer, noticeLayer])
 }
 
+
+// ---- 45-export.js --------------------------------------------------------
+/**
+ * Result export: CSV, a minimal XLSX writer and an INSERT script.
+ *
+ * Browsers cannot write to an arbitrary path on their own, so `dwSaveFile` uses the
+ * File System Access API (`showSaveFilePicker`) when the host provides it — that is
+ * what lets the user pick the directory and file name. Where it is unavailable the
+ * file is downloaded instead, and the caller reports that in the run log.
+ *
+ * Everything here is pure except the save step: nothing is sent to the database,
+ * and the XLSX is assembled by hand (a stored-entry ZIP) so the bundle stays free of
+ * third-party archives.
+ */
+
+const DW_CRC_TABLE = (() => {
+  const table = new Uint32Array(256)
+  for (let index = 0; index < 256; index += 1) {
+    let value = index
+    for (let bit = 0; bit < 8; bit += 1) value = (value & 1) === 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1
+    table[index] = value >>> 0
+  }
+  return table
+})()
+
+function dwCrc32(bytes) {
+  let crc = 0xffffffff
+  for (let index = 0; index < bytes.length; index += 1) crc = DW_CRC_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8)
+  return (crc ^ 0xffffffff) >>> 0
+}
+
+function dwConcatBytes(parts) {
+  const total = parts.reduce((sum, part) => sum + part.length, 0)
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const part of parts) {
+    out.set(part, offset)
+    offset += part.length
+  }
+  return out
+}
+
+/** A ZIP with stored (uncompressed) entries, which is all an XLSX needs. */
+function dwZipStore(files) {
+  const encoder = new TextEncoder()
+  const entries = files.map((file) => ({
+    name: encoder.encode(file.name),
+    data: typeof file.data === 'string' ? encoder.encode(file.data) : file.data,
+  }))
+  const localParts = []
+  const centralParts = []
+  let offset = 0
+  for (const entry of entries) {
+    const crc = dwCrc32(entry.data)
+    const local = new Uint8Array(30 + entry.name.length)
+    const localView = new DataView(local.buffer)
+    localView.setUint32(0, 0x04034b50, true)
+    localView.setUint16(4, 20, true)
+    localView.setUint16(6, 0x0800, true)
+    localView.setUint16(8, 0, true)
+    localView.setUint32(14, crc, true)
+    localView.setUint32(18, entry.data.length, true)
+    localView.setUint32(22, entry.data.length, true)
+    localView.setUint16(26, entry.name.length, true)
+    local.set(entry.name, 30)
+    localParts.push(local, entry.data)
+
+    const central = new Uint8Array(46 + entry.name.length)
+    const centralView = new DataView(central.buffer)
+    centralView.setUint32(0, 0x02014b50, true)
+    centralView.setUint16(4, 20, true)
+    centralView.setUint16(6, 20, true)
+    centralView.setUint16(8, 0x0800, true)
+    centralView.setUint32(16, crc, true)
+    centralView.setUint32(20, entry.data.length, true)
+    centralView.setUint32(24, entry.data.length, true)
+    centralView.setUint16(28, entry.name.length, true)
+    centralView.setUint32(42, offset, true)
+    central.set(entry.name, 46)
+    centralParts.push(central)
+    offset += local.length + entry.data.length
+  }
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0)
+  const end = new Uint8Array(22)
+  const endView = new DataView(end.buffer)
+  endView.setUint32(0, 0x06054b50, true)
+  endView.setUint16(8, entries.length, true)
+  endView.setUint16(10, entries.length, true)
+  endView.setUint32(12, centralSize, true)
+  endView.setUint32(16, offset, true)
+  return dwConcatBytes([...localParts, ...centralParts, end])
+}
+
+/** One value as text for CSV: NULL becomes an empty field, quotes doubled. */
+function dwCsvField(value) {
+  if (value === null || value === undefined) return ''
+  const text = String(value)
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
+/** CSV text with a BOM, so Excel opens UTF-8 Chinese columns correctly. */
+function dwCsvText(columns, rows) {
+  const header = columns.map((column) => dwCsvField(column.name)).join(',')
+  const body = rows.map((row) => columns.map((column, index) => dwCsvField(row[index])).join(','))
+  return `\ufeff${[header, ...body].join('\r\n')}\r\n`
+}
+
+/** One SQL literal for the INSERT script (same rules as the UPDATE generator). */
+function dwExportLiteral(value, numeric) {
+  if (value === null || value === undefined) return 'NULL'
+  const text = String(value)
+  if (numeric === true && /^-?\d+(\.\d+)?$/.test(text.trim())) return text.trim()
+  return `'${text.replace(/'/g, "''")}'`
+}
+
+/** INSERT statements for the displayed rows; the caller must know the table. */
+function dwInsertText(target, columns, rows, numeric) {
+  const quote = (name) => `\`${String(name).replace(/`/g, '``')}\``
+  const from = target.database === '' ? quote(target.table) : `${quote(target.database)}.${quote(target.table)}`
+  const names = columns.map((column) => quote(column.name)).join(', ')
+  return `${rows.map((row) => `INSERT INTO ${from} (${names}) VALUES (${columns.map((column, index) => dwExportLiteral(row[index], numeric[index])).join(', ')});`).join('\n')}\n`
+}
+
+function dwXmlEscape(text) {
+  return String(text)
+    .replace(/[<>&"']/g, (character) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[character]))
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '')
+}
+
+/** A1, B1 … AA1: spreadsheet column names for a cell reference. */
+function dwColumnName(index) {
+  let name = ''
+  let rest = index
+  while (rest >= 0) {
+    name = String.fromCharCode(65 + (rest % 26)) + name
+    rest = Math.floor(rest / 26) - 1
+  }
+  return name
+}
+
+function dwXlsxCell(reference, value, numeric) {
+  if (value === null || value === undefined || value === '') return `<c r="${reference}"/>`
+  const text = String(value)
+  // Excel keeps only 15 significant digits; longer integers stay text so a BIGINT
+  // id is not silently rounded.
+  if (numeric === true && /^-?\d+(\.\d+)?$/.test(text) && text.replace(/[-.]/g, '').length <= 15) {
+    return `<c r="${reference}"><v>${text}</v></c>`
+  }
+  return `<c r="${reference}" t="inlineStr"><is><t xml:space="preserve">${dwXmlEscape(text)}</t></is></c>`
+}
+
+/** An XLSX workbook with one worksheet, as bytes. */
+function dwXlsxBytes(columns, rows, numeric) {
+  const sheetRows = [
+    `<row r="1">${columns.map((column, index) => dwXlsxCell(`${dwColumnName(index)}1`, column.name)).join('')}</row>`,
+    ...rows.map((row, rowIndex) => {
+      const line = rowIndex + 2
+      return `<row r="${line}">${columns.map((column, index) => dwXlsxCell(`${dwColumnName(index)}${line}`, row[index], numeric[index])).join('')}</row>`
+    }),
+  ]
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows.join('')}</sheetData></worksheet>`
+  return dwZipStore([
+    {
+      name: '[Content_Types].xml',
+      data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`,
+    },
+    {
+      name: '_rels/.rels',
+      data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+    },
+    {
+      name: 'xl/workbook.xml',
+      data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Result" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    },
+    {
+      name: 'xl/_rels/workbook.xml.rels',
+      data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`,
+    },
+    { name: 'xl/worksheets/sheet1.xml', data: sheet },
+  ])
+}
+
+/**
+ * Ask the user where to save, then write there.
+ *
+ * @returns `{ via: 'picker' | 'download', name }` or `{ cancelled: true }`
+ */
+async function dwSaveFile(options) {
+  const picker = globalThis.showSaveFilePicker
+  if (typeof picker === 'function') {
+    try {
+      const handle = await picker({
+        suggestedName: options.name,
+        types: [{ description: options.description, accept: { [options.mime]: [options.extension] } }],
+      })
+      const writable = await handle.createWritable()
+      await writable.write(options.data)
+      await writable.close()
+      return { via: 'picker', name: handle.name ?? options.name }
+    } catch (error) {
+      if (error?.name === 'AbortError') return { cancelled: true }
+      // A host that exposes the picker but refuses it (permissions, Electron build)
+      // still gets the file through the download path below.
+    }
+  }
+  const blob = new Blob([options.data], { type: options.mime })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = options.name
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+  return { via: 'download', name: options.name }
+}
 
 // ---- 50-panel.js ---------------------------------------------------------
 /**
@@ -4530,7 +5811,7 @@ function DwTracker({ store, useSessions, useWorkspaces }) {
 }
 
 /** The workspace chip and its menu: switching here re-roots the window in place. */
-function DwProjectMenu({ state, projects, tr, onSelect }) {
+function DwProjectMenu({ state, projects, tr, onSelect, onFollow }) {
   const [open, setOpen] = useState(false)
   const root = state.root === '' ? '' : state.root.replace(/\/+$/, '')
   const current = projects.find((item) => item.path === root)
@@ -4562,20 +5843,33 @@ function DwProjectMenu({ state, projects, tr, onSelect }) {
       h('span', { key: 'c', className: 'dw-project-caret' }, '\u25be'),
     ]),
     open
-      ? h('div', { key: 'menu', className: 'dw-project-menu', role: 'menu' }, projects.map((item) => h('button', {
-        key: item.path,
-        type: 'button',
-        role: 'menuitem',
-        className: item.path === root ? 'dw-project-row active' : 'dw-project-row',
-        title: item.path,
-        onClick: () => {
-          setOpen(false)
-          if (item.path !== root) onSelect(item.path)
-        },
-      }, [
-        h('span', { key: 't', className: 'dw-project-row-title' }, item.title),
-        h('span', { key: 'p', className: 'dw-project-row-path' }, dwShortPath(item.path)),
-      ])))
+      ? h('div', { key: 'menu', className: 'dw-project-menu', role: 'menu' }, [
+        h('button', {
+          key: '__follow',
+          type: 'button',
+          role: 'menuitem',
+          className: state.manual === true ? 'dw-project-row' : 'dw-project-row active',
+          onClick: () => {
+            setOpen(false)
+            if (state.manual === true) onFollow()
+          },
+        }, tr('followWorkspace')),
+        h('div', { key: '__sep', className: 'dw-project-sep' }),
+        ...projects.map((item) => h('button', {
+          key: item.path,
+          type: 'button',
+          role: 'menuitem',
+          className: item.path === root ? 'dw-project-row active' : 'dw-project-row',
+          title: item.path,
+          onClick: () => {
+            setOpen(false)
+            if (item.path !== root) onSelect(item.path)
+          },
+        }, [
+          h('span', { key: 't', className: 'dw-project-row-title' }, item.title),
+          h('span', { key: 'p', className: 'dw-project-row-path' }, dwShortPath(item.path)),
+        ])),
+      ])
       : null,
   ])
 }
@@ -4762,6 +6056,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
         projects: projectItems,
         tr,
         onSelect: (path) => store.setManualRoot(path),
+        onFollow: () => store.followDetected(),
       }),
       h('span', { key: 'path', className: 'dw-toolbar-path', title: state.root }, state.root),
     ]),
@@ -4770,13 +6065,6 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       ? h('span', { key: 'manual', className: 'dw-badge', style: { marginLeft: 0 }, title: state.detected }, tr('manualWorkspace'))
       : null,
     h('span', { key: 'sp', className: 'dw-spacer' }),
-    state.manual === true
-      ? h('button', { key: 'follow', type: 'button', className: 'dw-btn', onClick: () => store.followDetected() }, tr('followWorkspace'))
-      : null,
-    h('button', { key: 'pick', type: 'button', className: 'dw-btn', onClick: pickWorkspace, title: tr('pickWorkspaceHint') }, [
-      h(DwIcon, { key: 'i', name: 'panel', size: 12 }),
-      h('span', { key: 't' }, tr('pickWorkspace')),
-    ]),
     h('button', {
       key: 'sidebar',
       type: 'button',
@@ -4785,31 +6073,6 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       title: sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
       'aria-label': sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
     }, h(DwIcon, { name: 'panel', size: 13 })),
-    h('button', {
-      key: 'ai',
-      type: 'button',
-      className: 'dw-btn',
-      disabled: state.root === '' || state.aiRunning === true,
-      onClick: () => setAiOpen(true),
-      title: tr('aiOpenHint'),
-    }, [
-      h(DwIcon, { key: 'i', name: 'ai', size: 12 }),
-      h('span', { key: 't' }, state.aiRunning === true ? tr('aiRunningShort') : tr('aiOpen')),
-    ]),
-    h('button', {
-      // A distinct key: the manual-workspace badge above already owns 'manual',
-      // and duplicate keys make React reuse one node for both, which surfaced as a
-      // row of repeated badges on every re-render.
-      key: 'add-manual',
-      type: 'button',
-      className: 'dw-btn',
-      disabled: state.root === '',
-      onClick: () => setManualOpen(true),
-      title: tr('manualOpenHint'),
-    }, [
-      h(DwIcon, { key: 'i', name: 'plus', size: 12 }),
-      h('span', { key: 't' }, tr('manualOpen')),
-    ]),
     h('button', {
       key: 'refresh',
       type: 'button',
@@ -4832,6 +6095,27 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       h('span', { key: 't' }, tr('treeTitle')),
       h('span', { key: 'sp', className: 'dw-spacer' }),
       selectedTable === true ? h('span', { key: 'n' }, tr('ddlShortcutHint')) : null,
+      // These two belong to the tree, so they live in the tree's own header.
+      h('button', {
+        key: 'ai',
+        type: 'button',
+        className: 'dw-btn dw-btn-icon',
+        disabled: state.root === '' || state.aiRunning === true,
+        onClick: () => setAiOpen(true),
+        title: tr('aiOpenHint'),
+        'aria-label': tr('aiOpen'),
+      }, h(DwIcon, { key: 'i', name: state.aiRunning === true ? 'spinner' : 'ai', size: 12 })),
+      h('button', {
+        // A distinct key: the manual-workspace badge in the toolbar already owns
+        // 'manual', and duplicate keys make React reuse one node for both.
+        key: 'add-manual',
+        type: 'button',
+        className: 'dw-btn dw-btn-icon',
+        disabled: state.root === '',
+        onClick: () => setManualOpen(true),
+        title: tr('manualOpenHint'),
+        'aria-label': tr('manualOpen'),
+      }, h(DwIcon, { key: 'i', name: 'plus', size: 12 })),
     ]),
     h('div', { key: 'filter', style: { padding: '5px 8px', borderBottom: '1px solid var(--dsw-alias-border-l1)' } }, [
       h('input', {
@@ -4950,7 +6234,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   if (menu !== null) {
     const rect = panelRef.current?.getBoundingClientRect?.()
     const width = 210
-    const height = 190
+    const height = 230
     const left = rect === undefined ? menu.x : Math.min(menu.x, rect.right - width)
     const top = rect === undefined ? menu.y : Math.min(menu.y, rect.bottom - height)
     menuLayer = h(React.Fragment, null, [
@@ -5058,17 +6342,20 @@ function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, op
       store.seedStatement(node, statement)
       void store.runActiveTab(statement)
     })
+    add('refresh', tr('refreshStructure'), '', () => void store.refreshNode(node))
     add('name', tr('menuCopyName'), '', () => {
       const write = globalThis.navigator?.clipboard?.writeText?.(node.table)
       if (write !== undefined) write.then(() => store.pushLog('info', tr('log.copiedName', { name: node.table }))).catch(() => undefined)
     })
   } else if (node.kind === 'database') {
     add('open', tr('menuOpenConsole'), '', () => store.openDatabase(node))
+    add('refresh', tr('refreshStructure'), '', () => void store.refreshNode(node))
     if (node.remembered === true) {
       add('forget-database', tr('forgetDatabase'), '', () => void store.forgetDatabase(node), 'dw-menu-danger')
     }
   } else if (node.kind === 'instance') {
     add('pick', tr('chooseDatabases'), '', () => openSchemaDialog(node))
+    add('refresh', tr('refreshStructure'), '', () => void store.refreshNode(node))
     if (node.manual === true && typeof node.entryId === 'string') {
       add('remove-manual', tr('removeConnection'), '', () => void store.removeManual(node.entryId), 'dw-menu-danger')
     }
@@ -6200,6 +7487,106 @@ function DwAiSettingsRow({ tr, prefs, onOpen }) {
     h('div', { key: 'desc', className: 'dw-settings-desc' }, tr('settingsAiModelHint')),
     h('div', { key: 'note', className: 'dw-settings-desc dw-ai-warn' }, tr('aiPrivacy')),
   ])
+}
+
+// ---- 66-optimize.js ------------------------------------------------------
+/**
+ * The "AI optimize" dialog for the SQL editor.
+ *
+ * The model is the one chosen in settings (`aiModel`); the Host calls it, and the
+ * answer is shown as a suggestion. Nothing is executed or written back to the
+ * editor automatically — copying is the only way out, which keeps the "never
+ * overwrite user SQL" rule intact.
+ */
+
+function dwOptimizeModelName(model) {
+  return String(model?.name ?? model?.model ?? '')
+}
+
+function DwSqlOptimizeDialog({ store, tr, sql, database, onClose }) {
+  const [phase, setPhase] = useState('running')
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
+  const model = dwAiModel()
+
+  useEffect(() => {
+    if (model === null) {
+      setPhase('error')
+      setError(tr('optimizeNoModel'))
+      return undefined
+    }
+    let alive = true
+    const run = async () => {
+      try {
+        const value = await dwAiWithTimeout(dwRpc('optimizeSql', {
+          provider: model.provider,
+          model: model.model,
+          sql,
+          database,
+          // The explanation should read like the rest of the window.
+          locale: String(globalThis.document?.documentElement?.lang ?? globalThis.navigator?.language ?? ''),
+        }), 130000)
+        if (!alive) return
+        setResult(value)
+        setPhase('done')
+      } catch (failure) {
+        if (!alive) return
+        setError(dwExplainFailure(tr, failure))
+        setPhase('error')
+      }
+    }
+    void run()
+    return () => { alive = false }
+  }, [])
+
+  const body = phase === 'running'
+    ? h('div', { key: 'running', className: 'dw-empty', style: { minHeight: 120 } }, [
+      h(DwIcon, { key: 'i', name: 'spinner', size: 18 }),
+      h('div', { key: 't', className: 'dw-empty-hint' }, tr('optimizeRunning')),
+    ])
+    : phase === 'error'
+      ? h('div', { key: 'error', className: 'dw-error-text' }, error)
+      : h('div', { key: 'done' }, [
+        h('div', { key: 'm', className: 'dw-optimize-model' }, tr('optimizeModelLabel', {
+          model: dwOptimizeModelName(result?.model) === '' ? tr('aiModelUnknown') : dwOptimizeModelName(result?.model),
+        })),
+        h('pre', { key: 'sql', className: 'dw-cell-view' }, result?.sql ?? ''),
+        result?.notes === undefined || result.notes === ''
+          ? null
+          : h('div', { key: 'notes' }, [
+            h('div', { key: 't', className: 'dw-ai-label', style: { paddingTop: 10 } }, tr('optimizeNotes')),
+            h('div', { key: 'v', className: 'dw-optimize-notes' }, result.notes),
+          ]),
+      ])
+
+  return h('div', {
+    className: 'dw-modal',
+    onClick: onClose,
+  }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card dw-optimize-dialog',
+    onClick: (event) => event.stopPropagation(),
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, [
+      h(DwIcon, { key: 'i', name: 'ai', size: 13 }),
+      h('span', { key: 't' }, tr('optimizeTitle')),
+    ]),
+    h('div', { key: 'body', className: 'dw-modal-body' }, body),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
+      phase === 'done'
+        ? h('button', {
+          key: 'copy',
+          type: 'button',
+          className: 'dw-btn',
+          onClick: () => {
+            const write = globalThis.navigator?.clipboard?.writeText?.(result?.sql ?? '')
+            if (write !== undefined) write.then(() => store.pushLog('info', tr('log.optimizeCopied'))).catch(() => undefined)
+          },
+        }, tr('optimizeCopy'))
+        : null,
+      h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: onClose }, tr('close')),
+    ]),
+  ]))
 }
 
 // ---- 90-apply.js ---------------------------------------------------------

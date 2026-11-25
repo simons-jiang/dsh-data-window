@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- Paging a `LIMIT` statement no longer fails with `ER_PARSE_ERROR`: the Host's row
+  cap only recognised `LIMIT n` / `LIMIT m, n`, so a paged `… LIMIT n OFFSET m` got
+  a second `LIMIT n+1` appended. All trailing limit forms are now left alone.
+- Switching workspace now expands the shared tree down to that workspace's
+  instances, so its databases are visible without two manual clicks; the Host's
+  `focus` already carried instance ids, but the panel only used the environment ids.
 - The `数据窗口` control in the sidebar foot no longer reads as permanently selected.
   DSH paints the selected panel on its own navigation rows and expects a footer
   occupant to bring hover chrome only; the filled toolbar button this control reused
@@ -27,8 +33,45 @@
   character, and every query failed with `Access denied` even though the configuration
   was correct.
 
+### Fixed
+
+- INSERT export stays limited to single-table SELECT; a join is not made to guess a
+  target table. Refusing now opens a dialog explaining why (it used to only append a
+  log line, so clicking the menu item looked like nothing happened).
+- Result cells are one fixed-height line with an ellipsis instead of growing to fit
+  a long value; double-clicking a cell opens a detail dialog with the full text,
+  copy and an edit action (editing moved from double-click to the context menu).
+
 ### Added
 
+- The SQL editor now owns its context menu (undo, redo, cut, copy, paste, select all)
+  and adds “AI optimize SQL”: the selection or whole statement is sent to the model
+  chosen in settings, and the suggestion opens in a dialog that can copy it. The
+  statement is never executed or written back to the editor. The explanation comes
+  back in the window's language (the document language, falling back to the system
+  locale).
+- Right-click “刷新结构” on a connection, database or table/view re-reads that
+  node's structure: the connection re-runs discovery, a database re-fetches its
+  tables (and invalidates the editor's completion map), a table re-fetches its
+  columns and refreshes its open DDL tab.
+- The result bar's clipboard copy was replaced by “Export”: the current page (local
+  cell edits included) can be saved as an XLSX workbook (built in the client, no
+  dependency), a UTF-8 CSV, or an INSERT script. The save location is chosen through
+  the File System Access API when available, otherwise the file is downloaded; the
+  INSERT option requires a single-table SELECT.
+- Result cells can be edited locally (double-click; Enter commits, Esc cancels) and
+  edited cells are highlighted. Right-clicking a cell copies a single-row `UPDATE`
+  built from the edited columns and the original primary key — the statement is never
+  executed, and it is refused for non-single-table statements or results without a
+  primary-key column. The “N edited” badge also has a copy button that copies one
+  UPDATE per edited row in result order. Drafts reset when the result or page changes.
+- Results paging for statements with a trailing `LIMIT`: the result bar shows
+  previous/next controls, the page size is the statement's own limit (`LIMIT n`,
+  `LIMIT n OFFSET m` and `LIMIT m, n` all parse; a subquery limit does not count),
+  and a next page is run as a derived `… LIMIT n OFFSET m` statement without
+  rewriting the editor. A next page that returns no rows ends the paging in place and
+  disables “next”, leaving “previous” available; the total-row count still comes from
+  the original statement.
 - The resource tree is now shared by every workspace: opening a workspace adds its
   environments to the one tree (and expands them) instead of replacing it. Manual
   connections and picked databases moved to machine-wide files
@@ -102,6 +145,13 @@
 
 ### Changed
 
+- The “跟随工作区” and “选择工作区” toolbar buttons are gone: the workspace is
+  chosen in the shell's own top-left control, and the project chip menu keeps a
+  “跟随工作区” row so a manually picked directory can still return to following the
+  shell.
+- “AI 分析” and “添加连接” moved from the top toolbar into the resource explorer
+  header: both act on the tree, not on the workspace, and the toolbar keeps only
+  workspace-level actions.
 - Each table has its own console tab (`sql:<dbId>:tbl:<table>`). Double-clicking a
   table opens or focuses that tab and appends one base statement at the bottom;
   numbered copies no longer pile up and existing text is never replaced. Only the

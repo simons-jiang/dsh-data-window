@@ -231,7 +231,10 @@ export function stripTrailingLimit(statement) {
 export function withRowLimit(statement, limit) {
   const trimmed = statement.replace(/;\s*$/, '').trim()
   if (!/^(select|with|table)\b/i.test(trimmed)) return trimmed
-  if (/\blimit\s+[0-9]+\s*(,\s*[0-9]+)?\s*$/i.test(trimmed)) return trimmed
+  // Every trailing LIMIT form counts: a paged statement ends in
+  // `LIMIT n OFFSET m`, and appending another LIMIT turns a valid query into
+  // `… LIMIT n OFFSET m LIMIT n+1` (ER_PARSE_ERROR).
+  if (/\blimit\s+[0-9]+\s*(,\s*[0-9]+)?(\s+offset\s+[0-9]+)?\s*$/i.test(trimmed)) return trimmed
   return `${trimmed} LIMIT ${limit}`
 }
 

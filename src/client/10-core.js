@@ -619,6 +619,7 @@ function dwCreateStore(translate) {
         const environments = Array.isArray(discovery.environments) ? discovery.environments : []
         const defaultEnv = discovery.defaultEnv ?? environments[0]?.env
         const focus = Array.isArray(discovery.focus?.envs) ? discovery.focus.envs : []
+        const focusInstances = Array.isArray(discovery.focus?.instances) ? discovery.focus.instances : []
         const base = refreshing ? new Set() : new Set(state.expanded)
         for (const environment of environments) {
           // Manual environments are the ones the user just created, so they open
@@ -628,6 +629,12 @@ function dwCreateStore(translate) {
         }
         for (const env of focus) {
           if (typeof env === 'string' && env !== '') base.add(dwNodeKey('env', env))
+        }
+        // Expanding the environment alone still hides the database behind a closed
+        // instance row; the workspace's own instances open too, so its databases are
+        // visible the moment the window appears.
+        for (const instanceId of focusInstances) {
+          if (typeof instanceId === 'string' && instanceId !== '') base.add(dwNodeKey('inst', instanceId))
         }
         patch({
           phase: environments.length === 0 ? 'empty' : 'ready',
@@ -782,6 +789,44 @@ function dwCreateStore(translate) {
       const expanded = new Set(state.expanded)
       for (const key of keys) if (typeof key === 'string' && key !== '') expanded.add(key)
       patch({ expanded })
+    },
+
+    /**
+     * Re-read one node's structure from the server.
+     *
+     * Connection: the inventory comes from discovery, so the workspace scan runs
+     * again. Database/table: drop the cached children, expand the row and fetch the
+     * new list (tables or columns), so a structure changed outside the window shows
+     * up without reloading the panel. An open DDL tab is refreshed too.
+     */
+    async refreshNode(node) {
+      if (node === null || node === undefined) return
+      if (node.kind === 'instance') {
+        patch({ children: new Map(), loadState: new Map(), schemas: new Map() })
+        pushLog('info', t('log.refreshingConnection', { name: node.label }))
+        await store.loadDiscovery({ refresh: true })
+        return
+      }
+      if (node.kind !== 'database' && node.kind !== 'table' && node.kind !== 'view') return
+      const children = new Map(state.children)
+      children.delete(node.key)
+      const loadState = new Map(state.loadState)
+      loadState.delete(node.key)
+      const expanded = new Set(state.expanded)
+      expanded.add(node.key)
+      patch({ children, loadState, expanded })
+      // Completion is built from a per-database map that goes stale with the tables.
+      const schemas = new Map(state.schemas ?? [])
+      schemas.delete(node.dbId)
+      patch({ schemas })
+      void store.loadSchema(node.dbId)
+      await store.ensureChildren(node)
+      if (state.loadState.get(node.key) === 'error') return
+      if (node.kind === 'table' || node.kind === 'view') {
+        const tab = state.tabs.find((entry) => entry.kind === 'ddl' && entry.dbId === node.dbId && entry.table === node.table)
+        if (tab !== undefined) await store.refreshDdl(tab.id)
+      }
+      pushLog('info', t('log.refreshedStructure', { name: node.label }))
     },
 
     /** Forget one node's cached children so the next expand re-reads them. */
@@ -1153,6 +1198,10 @@ function dwCreateStore(translate) {
         pushLog('warn', t('log.noStatement'))
         return
       }
+      // A trailing LIMIT makes the result a page: the pager re-runs the statement
+      // with another OFFSET instead of asking the user to edit the SQL. Only
+      // SELECT/WITH statements are paged — `SHOW … LIMIT` has no OFFSET form.
+      const page = /^\s*(select|with)\b/i.test(sql) ? dwSqlPage(sql) : undefined
       // Every executed statement goes to the run log, failures included: the log is
       // the console history, not just a success report.
       pushLog('sql', sql)
@@ -1162,10 +1211,26 @@ function dwCreateStore(translate) {
           : entry)),
       })
       try {
-        const value = await call('query', { id: tab.dbId, sql, limit: state.limit })
+        const value = await call('query', {
+          id: tab.dbId,
+          sql,
+          // The statement's own LIMIT is the page capacity; the row cap must not cut
+          // a page short, or "returned fewer rows" would be mistaken for the end.
+          limit: page === undefined ? state.limit : Math.max(state.limit, page.size),
+        })
+        const returned = Array.isArray(value.rows) ? value.rows.length : Number(value.rowCount ?? 0)
         patch({
           tabs: state.tabs.map((entry) => (entry.id === tab.id
-            ? { ...entry, running: false, result: value, error: '', lastStatement: sql }
+            ? {
+              ...entry,
+              running: false,
+              result: value,
+              error: '',
+              lastStatement: sql,
+              // Cell edits belong to the rows on screen; a new result replaces them.
+              edits: undefined,
+              page: page === undefined ? undefined : { base: page.base, size: page.size, offset: page.offset, hasMore: returned >= page.size },
+            }
             : entry)),
         })
         pushLog('info', t('log.query', {
@@ -1181,6 +1246,103 @@ function dwCreateStore(translate) {
         })
         pushLog('error', message)
       }
+    },
+
+    /**
+     * Move one page inside the current statement's LIMIT.
+     *
+     * The editor's text is never rewritten: the page statement is derived from the
+     * stored base and sent directly. A next page that comes back empty ends the
+     * paging without replacing the page the user is reading, so only "previous"
+     * remains possible.
+     */
+    async goToPage(direction) {
+      const tab = state.tabs.find((entry) => entry.id === state.activeTab)
+      if (tab === undefined || tab.kind !== 'sql' || tab.running === true || tab.page === undefined) return
+      const { base, size, offset, hasMore } = tab.page
+      const forward = direction === 'next'
+      if (forward && hasMore !== true) return
+      const target = forward ? offset + size : Math.max(0, offset - size)
+      if (!forward && target === offset) return
+      const sql = `${base}\nLIMIT ${size} OFFSET ${target}`
+      patch({
+        tabs: state.tabs.map((entry) => (entry.id === tab.id ? { ...entry, running: true, error: '' } : entry)),
+      })
+      try {
+        const value = await call('query', { id: tab.dbId, sql, limit: Math.max(state.limit, size) })
+        const returned = Array.isArray(value.rows) ? value.rows.length : 0
+        if (forward && returned === 0) {
+          patch({
+            tabs: state.tabs.map((entry) => (entry.id === tab.id
+              ? { ...entry, running: false, page: { ...tab.page, hasMore: false } }
+              : entry)),
+          })
+          pushLog('info', t('log.pageEnd'))
+          return
+        }
+        patch({
+          tabs: state.tabs.map((entry) => (entry.id === tab.id
+            ? {
+              ...entry,
+              running: false,
+              result: value,
+              error: '',
+              edits: undefined,
+              page: { base, size, offset: target, hasMore: returned >= size },
+            }
+            : entry)),
+        })
+        pushLog('info', t('log.page', { page: Math.floor(target / size) + 1, rows: value.rowCount, ms: dwDuration(value.elapsedMs) }))
+      } catch (error) {
+        const message = dwExplainFailure(t, error)
+        patch({
+          tabs: state.tabs.map((entry) => (entry.id === tab.id ? { ...entry, running: false, error: message } : entry)),
+        })
+        pushLog('error', message)
+      }
+    },
+
+    /**
+     * Record one edited cell.
+     *
+     * Edits are a local draft for building an UPDATE statement — nothing is sent to
+     * the server, and the value is dropped as soon as the result changes.
+     */
+    setCellEdit(tabId, rowIndex, columnIndex, columnName, value) {
+      const tab = state.tabs.find((entry) => entry.id === tabId)
+      if (tab === undefined || tab.kind !== 'sql' || tab.result === undefined) return
+      const row = (Array.isArray(tab.result.rows) ? tab.result.rows : [])[rowIndex]
+      if (row === undefined) return
+      const original = row[columnIndex]
+      const edits = { ...(tab.edits ?? {}) }
+      const rowEdits = { ...(edits[rowIndex] ?? {}) }
+      const unchanged = original === null
+        ? value === null || value === 'NULL'
+        : String(original) === String(value)
+      if (unchanged) delete rowEdits[columnName]
+      else rowEdits[columnName] = value
+      if (Object.keys(rowEdits).length === 0) delete edits[rowIndex]
+      else edits[rowIndex] = rowEdits
+      patch({
+        tabs: state.tabs.map((entry) => (entry.id === tabId
+          ? { ...entry, edits: Object.keys(edits).length === 0 ? undefined : edits }
+          : entry)),
+      })
+    },
+
+    /** Throw away the draft edits of one result. */
+    clearCellEdits(tabId) {
+      patch({
+        tabs: state.tabs.map((entry) => (entry.id === tabId ? { ...entry, edits: undefined } : entry)),
+      })
+    },
+
+    async nextPage() {
+      await store.goToPage('next')
+    },
+
+    async prevPage() {
+      await store.goToPage('prev')
     },
   }
 

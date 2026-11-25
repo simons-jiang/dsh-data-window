@@ -114,6 +114,154 @@ export function dwSqlLex(text) {
   return tokens
 }
 
+/**
+ * Split one statement's outermost trailing `LIMIT` into its base and page shape.
+ *
+ * Only the limit at parenthesis depth zero counts, so `FROM (SELECT … LIMIT 5)` is
+ * left alone. Returns undefined when the statement has no paginable limit, which is
+ * what the result bar uses to hide the pager for statements that are not paged.
+ *
+ * @returns `{ base, size, offset }`: the SQL without its LIMIT, the page capacity,
+ *   and the offset the statement asked for (`LIMIT 100`, `LIMIT 20, 100`, `LIMIT 100 OFFSET 20`)
+ */
+export function dwSqlPage(text) {
+  const source = String(text ?? '')
+  const tokens = dwSqlLex(source).filter((token) => token.type !== 'space' && token.type !== 'comment')
+  let end = tokens.length
+  while (end > 0 && tokens[end - 1].value === ';') end -= 1
+  let depth = 0
+  let limitIndex = -1
+  for (let index = 0; index < end; index += 1) {
+    const value = tokens[index].value.toLowerCase()
+    if (value === '(') depth += 1
+    else if (value === ')') depth = Math.max(0, depth - 1)
+    else if (depth === 0 && value === 'limit') limitIndex = index
+  }
+  if (limitIndex < 0) return undefined
+  const tail = tokens.slice(limitIndex + 1, end)
+  const integer = (token) => (token !== undefined && token.type === 'number' && /^\d+$/.test(token.value) ? Number(token.value) : undefined)
+  const first = integer(tail[0])
+  if (first === undefined) return undefined
+  let size = first
+  let offset = 0
+  if (tail.length === 3 && tail[1].value === ',') {
+    const second = integer(tail[2])
+    if (second === undefined) return undefined
+    // LIMIT offset, size — the first number is the offset.
+    offset = first
+    size = second
+  } else if (tail.length === 3 && tail[1].value.toLowerCase() === 'offset') {
+    const second = integer(tail[2])
+    if (second === undefined) return undefined
+    offset = second
+  } else if (tail.length !== 1) {
+    return undefined
+  }
+  if (size <= 0 || offset < 0) return undefined
+  return { base: source.slice(0, tokens[limitIndex].start).trimEnd(), size, offset }
+}
+
+/**
+ * The single table a plain `SELECT` reads, for UPDATE/INSERT generation.
+ *
+ * A join is deliberately not resolved: which table a result row belongs to is then
+ * ambiguous, and inventing one would produce an INSERT that writes to the wrong
+ * place. The caller surfaces that refusal to the user instead.
+ */
+export function dwSqlTargetTable(text) {
+  const source = String(text ?? '')
+  const tokens = dwSqlLex(source).filter((token) => token.type !== 'space' && token.type !== 'comment')
+  let end = tokens.length
+  while (end > 0 && tokens[end - 1].value === ';') end -= 1
+  if (end === 0 || tokens[0].value.toLowerCase() !== 'select') return undefined
+  let depth = 0
+  let fromIndex = -1
+  for (let index = 0; index < end; index += 1) {
+    const value = tokens[index].value.toLowerCase()
+    if (value === '(') depth += 1
+    else if (value === ')') depth = Math.max(0, depth - 1)
+    else if (depth === 0 && fromIndex < 0 && value === 'from') fromIndex = index
+  }
+  // The select list must be plain columns (`*`, `id`, `t.*`, `t.id`): an expression
+  // or an alias would make the result's column names unusable in an INSERT.
+  let listDepth = 0
+  let item = []
+  const items = []
+  for (let cursor = 1; cursor < fromIndex; cursor += 1) {
+    const token = tokens[cursor]
+    if (token.value === '(') listDepth += 1
+    else if (token.value === ')') listDepth = Math.max(0, listDepth - 1)
+    if (listDepth === 0 && token.value === ',') {
+      items.push(item)
+      item = []
+      continue
+    }
+    item.push(token)
+  }
+  items.push(item)
+  if (['distinct', 'all'].includes(items[0]?.[0]?.value.toLowerCase())) items[0] = items[0].slice(1)
+  for (const entry of items) {
+    const head = entry[0]
+    if (entry.length === 1 && (head.value === '*' || head.type === 'identifier')) continue
+    if (entry.length === 3 && head.type === 'identifier' && entry[1].value === '.' && (entry[2].value === '*' || entry[2].type === 'identifier')) continue
+    return undefined
+  }
+
+  if (fromIndex < 0) return undefined
+  let index = fromIndex + 1
+  const readName = () => {
+    const token = tokens[index]
+    if (token === undefined) return undefined
+    if (token.type !== 'identifier' && token.type !== 'string') return undefined
+    index += 1
+    return token.value.replace(/^`|`$/g, '')
+  }
+  const first = readName()
+  if (first === undefined) return undefined
+  let database = ''
+  let table = first
+  if (tokens[index]?.value === '.') {
+    index += 1
+    const second = readName()
+    if (second === undefined) return undefined
+    database = first
+    table = second
+  }
+  // A join or a second table makes "this row" ambiguous: refuse to generate SQL.
+  let joined = 0
+  for (let cursor = index; cursor < end; cursor += 1) {
+    const value = tokens[cursor].value.toLowerCase()
+    if (value === '(') joined += 1
+    else if (value === ')') joined = Math.max(0, joined - 1)
+    else if (joined === 0 && (value === ',' || value === 'join')) return undefined
+  }
+  return { database, table }
+}
+
+/** One SQL literal: numbers stay bare, everything else is quoted with '' doubling. */
+export function dwSqlLiteral(value, numeric) {
+  if (value === null || value === undefined) return 'NULL'
+  const text = String(value)
+  if (numeric === true && /^-?\d+(\.\d+)?$/.test(text.trim())) return text.trim()
+  return `'${text.replace(/'/g, "''")}'`
+}
+
+/** Build the UPDATE a result row editor copies; it is never executed here. */
+export function dwSqlUpdate(target, assignments, conditions) {
+  const quote = (name) => `\`${String(name).replace(/`/g, '``')}\``
+  const from = target.database === '' ? quote(target.table) : `${quote(target.database)}.${quote(target.table)}`
+  const set = assignments.map((entry) => `${quote(entry.column)} = ${dwSqlLiteral(entry.value, entry.numeric)}`).join(', ')
+  const where = conditions.map((entry) => `${quote(entry.column)} = ${dwSqlLiteral(entry.value, entry.numeric)}`).join(' AND ')
+  // No LIMIT: the WHERE is the row's primary key, so it is already unique, and
+  // `UPDATE … LIMIT` is MySQL-only syntax that would break when pasted elsewhere.
+  return `UPDATE ${from}\nSET ${set}\nWHERE ${where};`
+}
+
+/** MySQL's PRI_KEY_FLAG marks the columns of the primary key. */
+export function dwIsPrimaryKey(column) {
+  return (Number(column?.flags ?? 0) & 2) === 2
+}
+
 /** Tokens that carry meaning for completion and formatting. */
 function dwSqlSignificant(tokens) {
   return tokens.filter((token) => token.type !== 'space')

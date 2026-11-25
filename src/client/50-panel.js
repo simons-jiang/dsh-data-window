@@ -125,7 +125,7 @@ function DwTracker({ store, useSessions, useWorkspaces }) {
 }
 
 /** The workspace chip and its menu: switching here re-roots the window in place. */
-function DwProjectMenu({ state, projects, tr, onSelect }) {
+function DwProjectMenu({ state, projects, tr, onSelect, onFollow }) {
   const [open, setOpen] = useState(false)
   const root = state.root === '' ? '' : state.root.replace(/\/+$/, '')
   const current = projects.find((item) => item.path === root)
@@ -157,20 +157,33 @@ function DwProjectMenu({ state, projects, tr, onSelect }) {
       h('span', { key: 'c', className: 'dw-project-caret' }, '\u25be'),
     ]),
     open
-      ? h('div', { key: 'menu', className: 'dw-project-menu', role: 'menu' }, projects.map((item) => h('button', {
-        key: item.path,
-        type: 'button',
-        role: 'menuitem',
-        className: item.path === root ? 'dw-project-row active' : 'dw-project-row',
-        title: item.path,
-        onClick: () => {
-          setOpen(false)
-          if (item.path !== root) onSelect(item.path)
-        },
-      }, [
-        h('span', { key: 't', className: 'dw-project-row-title' }, item.title),
-        h('span', { key: 'p', className: 'dw-project-row-path' }, dwShortPath(item.path)),
-      ])))
+      ? h('div', { key: 'menu', className: 'dw-project-menu', role: 'menu' }, [
+        h('button', {
+          key: '__follow',
+          type: 'button',
+          role: 'menuitem',
+          className: state.manual === true ? 'dw-project-row' : 'dw-project-row active',
+          onClick: () => {
+            setOpen(false)
+            if (state.manual === true) onFollow()
+          },
+        }, tr('followWorkspace')),
+        h('div', { key: '__sep', className: 'dw-project-sep' }),
+        ...projects.map((item) => h('button', {
+          key: item.path,
+          type: 'button',
+          role: 'menuitem',
+          className: item.path === root ? 'dw-project-row active' : 'dw-project-row',
+          title: item.path,
+          onClick: () => {
+            setOpen(false)
+            if (item.path !== root) onSelect(item.path)
+          },
+        }, [
+          h('span', { key: 't', className: 'dw-project-row-title' }, item.title),
+          h('span', { key: 'p', className: 'dw-project-row-path' }, dwShortPath(item.path)),
+        ])),
+      ])
       : null,
   ])
 }
@@ -357,6 +370,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
         projects: projectItems,
         tr,
         onSelect: (path) => store.setManualRoot(path),
+        onFollow: () => store.followDetected(),
       }),
       h('span', { key: 'path', className: 'dw-toolbar-path', title: state.root }, state.root),
     ]),
@@ -365,13 +379,6 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       ? h('span', { key: 'manual', className: 'dw-badge', style: { marginLeft: 0 }, title: state.detected }, tr('manualWorkspace'))
       : null,
     h('span', { key: 'sp', className: 'dw-spacer' }),
-    state.manual === true
-      ? h('button', { key: 'follow', type: 'button', className: 'dw-btn', onClick: () => store.followDetected() }, tr('followWorkspace'))
-      : null,
-    h('button', { key: 'pick', type: 'button', className: 'dw-btn', onClick: pickWorkspace, title: tr('pickWorkspaceHint') }, [
-      h(DwIcon, { key: 'i', name: 'panel', size: 12 }),
-      h('span', { key: 't' }, tr('pickWorkspace')),
-    ]),
     h('button', {
       key: 'sidebar',
       type: 'button',
@@ -380,31 +387,6 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       title: sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
       'aria-label': sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
     }, h(DwIcon, { name: 'panel', size: 13 })),
-    h('button', {
-      key: 'ai',
-      type: 'button',
-      className: 'dw-btn',
-      disabled: state.root === '' || state.aiRunning === true,
-      onClick: () => setAiOpen(true),
-      title: tr('aiOpenHint'),
-    }, [
-      h(DwIcon, { key: 'i', name: 'ai', size: 12 }),
-      h('span', { key: 't' }, state.aiRunning === true ? tr('aiRunningShort') : tr('aiOpen')),
-    ]),
-    h('button', {
-      // A distinct key: the manual-workspace badge above already owns 'manual',
-      // and duplicate keys make React reuse one node for both, which surfaced as a
-      // row of repeated badges on every re-render.
-      key: 'add-manual',
-      type: 'button',
-      className: 'dw-btn',
-      disabled: state.root === '',
-      onClick: () => setManualOpen(true),
-      title: tr('manualOpenHint'),
-    }, [
-      h(DwIcon, { key: 'i', name: 'plus', size: 12 }),
-      h('span', { key: 't' }, tr('manualOpen')),
-    ]),
     h('button', {
       key: 'refresh',
       type: 'button',
@@ -427,6 +409,27 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       h('span', { key: 't' }, tr('treeTitle')),
       h('span', { key: 'sp', className: 'dw-spacer' }),
       selectedTable === true ? h('span', { key: 'n' }, tr('ddlShortcutHint')) : null,
+      // These two belong to the tree, so they live in the tree's own header.
+      h('button', {
+        key: 'ai',
+        type: 'button',
+        className: 'dw-btn dw-btn-icon',
+        disabled: state.root === '' || state.aiRunning === true,
+        onClick: () => setAiOpen(true),
+        title: tr('aiOpenHint'),
+        'aria-label': tr('aiOpen'),
+      }, h(DwIcon, { key: 'i', name: state.aiRunning === true ? 'spinner' : 'ai', size: 12 })),
+      h('button', {
+        // A distinct key: the manual-workspace badge in the toolbar already owns
+        // 'manual', and duplicate keys make React reuse one node for both.
+        key: 'add-manual',
+        type: 'button',
+        className: 'dw-btn dw-btn-icon',
+        disabled: state.root === '',
+        onClick: () => setManualOpen(true),
+        title: tr('manualOpenHint'),
+        'aria-label': tr('manualOpen'),
+      }, h(DwIcon, { key: 'i', name: 'plus', size: 12 })),
     ]),
     h('div', { key: 'filter', style: { padding: '5px 8px', borderBottom: '1px solid var(--dsw-alias-border-l1)' } }, [
       h('input', {
@@ -545,7 +548,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   if (menu !== null) {
     const rect = panelRef.current?.getBoundingClientRect?.()
     const width = 210
-    const height = 190
+    const height = 230
     const left = rect === undefined ? menu.x : Math.min(menu.x, rect.right - width)
     const top = rect === undefined ? menu.y : Math.min(menu.y, rect.bottom - height)
     menuLayer = h(React.Fragment, null, [
@@ -653,17 +656,20 @@ function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, op
       store.seedStatement(node, statement)
       void store.runActiveTab(statement)
     })
+    add('refresh', tr('refreshStructure'), '', () => void store.refreshNode(node))
     add('name', tr('menuCopyName'), '', () => {
       const write = globalThis.navigator?.clipboard?.writeText?.(node.table)
       if (write !== undefined) write.then(() => store.pushLog('info', tr('log.copiedName', { name: node.table }))).catch(() => undefined)
     })
   } else if (node.kind === 'database') {
     add('open', tr('menuOpenConsole'), '', () => store.openDatabase(node))
+    add('refresh', tr('refreshStructure'), '', () => void store.refreshNode(node))
     if (node.remembered === true) {
       add('forget-database', tr('forgetDatabase'), '', () => void store.forgetDatabase(node), 'dw-menu-danger')
     }
   } else if (node.kind === 'instance') {
     add('pick', tr('chooseDatabases'), '', () => openSchemaDialog(node))
+    add('refresh', tr('refreshStructure'), '', () => void store.refreshNode(node))
     if (node.manual === true && typeof node.entryId === 'string') {
       add('remove-manual', tr('removeConnection'), '', () => void store.removeManual(node.entryId), 'dw-menu-danger')
     }

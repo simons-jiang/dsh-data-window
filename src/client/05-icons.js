@@ -67,6 +67,12 @@ function DwIcon({ name, size = 14, className }) {
       return h('svg', { ...common, fill: 'currentColor', stroke: 'none' }, [h('rect', { x: 4, y: 4, width: 8, height: 8, rx: 1.4 })])
     case 'close':
       return h('svg', common, [h('path', { d: 'M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6' })])
+    case 'download':
+      return h('svg', common, [
+        h('path', { key: 'a', d: 'M8 2.4v7.2' }),
+        h('path', { key: 'b', d: 'M5 6.9 8 9.9l3-3' }),
+        h('path', { key: 'c', d: 'M2.6 10.6v2.2h10.8v-2.2' }),
+      ])
     case 'copy':
       return h('svg', common, [
         h('rect', { key: 'a', x: 5.4, y: 5.4, width: 8, height: 8, rx: 1.4 }),

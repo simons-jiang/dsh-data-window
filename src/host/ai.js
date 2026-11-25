@@ -62,6 +62,7 @@ const AI_LIMITS = {
   maxTotalChars: 60000,
   contextLines: 4,
   maxCandidateFiles: 12,
+  maxSqlChars: 20000,
 }
 
 /** One model call may not hang the request. */
@@ -422,6 +423,29 @@ async function readStream(stream) {
   return { text, usage }
 }
 
+/** Human name for the language the explanation should be written in. */
+function optimizeLanguage(locale) {
+  if (/^zh/i.test(locale)) return /(tw|hk|hant)/i.test(locale) ? 'Traditional Chinese' : 'Simplified Chinese'
+  if (/^ja/i.test(locale)) return 'Japanese'
+  if (/^ko/i.test(locale)) return 'Korean'
+  if (/^de/i.test(locale)) return 'German'
+  if (/^fr/i.test(locale)) return 'French'
+  if (/^es/i.test(locale)) return 'Spanish'
+  return 'English'
+}
+
+/** The optimizer's system prompt: JSON only, so the answer is a statement not prose. */
+const OPTIMIZE_SYSTEM_PROMPT = [
+  'You are a senior MySQL 8.0 query optimizer working inside a read-only database tool.',
+  'Rewrite the given SQL for better performance while keeping its result exactly the same.',
+  'Prefer index-friendly predicates, sargable filters, avoiding SELECT *, removing redundant',
+  'subqueries and unnecessary ORDER BY, and stable LIMIT/OFFSET paging. Do not invent tables,',
+  'columns or indexes, and do not change the semantics. If the statement is already good,',
+  'return it unchanged and explain why.',
+  'Answer with one JSON object only, no markdown fences:',
+  '{"sql": "<the optimized statement>", "notes": "<short explanation in the user language, <=1200 chars>"}',
+].join(' ')
+
 /** The AI fallback service behind the `aiDiscover` action. */
 export class AiDiscovery {
   /**
@@ -499,6 +523,65 @@ export class AiDiscovery {
       return await task
     } finally {
       this.running.delete(runningKey)
+    }
+  }
+
+  /**
+   * Optimize one SQL statement with the configured model.
+   *
+   * Advisory only: the result is shown to the user, never executed, and the Host
+   * still has no write path. `sql` is bounded because it becomes prompt tokens.
+   */
+  async optimize(payload = {}) {
+    const llm = this.llm()
+    if (llm === undefined || llm === null) {
+      const error = new Error('no model provider is configured')
+      error.code = 'llm-unavailable'
+      throw error
+    }
+    const provider = String(payload.provider ?? '').trim()
+    const model = String(payload.model ?? '').trim()
+    const sql = String(payload.sql ?? '').trim()
+    if (provider === '' || model === '' || sql === '') {
+      const error = new Error('a provider, a model and a statement are required')
+      error.code = 'invalid-ai-request'
+      throw error
+    }
+    if (sql.length > AI_LIMITS.maxSqlChars) {
+      const error = new Error(`the statement is longer than ${AI_LIMITS.maxSqlChars} characters`)
+      error.code = 'invalid-ai-request'
+      throw error
+    }
+    const database = String(payload.database ?? '').trim().slice(0, 128)
+    // The UI knows the system language; the model writes the explanation in it.
+    const locale = String(payload.locale ?? '').trim().slice(0, 40)
+    const startedAt = Date.now()
+    const stream = llm.stream({
+      provider,
+      model,
+      system: locale === '' ? OPTIMIZE_SYSTEM_PROMPT : `${OPTIMIZE_SYSTEM_PROMPT} Write the "notes" value in ${optimizeLanguage(locale)} (locale "${locale}").`,
+      messages: [{
+        role: 'user',
+        content: [{ type: 'text', text: `${database === '' ? '' : `Database: ${database}\n`}SQL:\n${sql}` }],
+      }],
+      temperature: 0.1,
+      maxTokens: 2000,
+      signal: AbortSignal.timeout(AI_CALL_TIMEOUT_MS),
+    })
+    const answer = await readStream(stream)
+    const parsed = parseAnswer(answer.text)
+    const optimized = typeof parsed?.sql === 'string' ? parsed.sql.trim() : ''
+    if (optimized === '') {
+      const error = new Error('the model did not return a statement')
+      error.code = 'invalid-ai-answer'
+      throw error
+    }
+    return {
+      sql: optimized.slice(0, AI_LIMITS.maxSqlChars),
+      notes: typeof parsed?.notes === 'string' ? parsed.notes.slice(0, 2000) : '',
+      model: { provider, model },
+      usage: answer.usage,
+      elapsedMs: Date.now() - startedAt,
     }
   }
 

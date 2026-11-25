@@ -45,11 +45,33 @@ double-click on the divider restores its default width.
 - **Editor with JetBrains-style colouring** — keywords, functions, strings, numbers and
   comments are highlighted; typing suggests tables, columns and keywords, `alias.`
   narrows to that table's columns; one click reindents the statement.
+- **AI SQL optimization from the editor** — the editor's own context menu keeps
+  undo/redo/cut/copy/paste/select-all and adds “AI optimize SQL”: the selection (or
+  the whole statement) goes to the model configured in settings, and the suggestion
+  opens in a dialog with a copy button. Nothing is executed or written back.
+- **Refresh structure** — right-click a connection, database or table to re-read
+  its structure (databases, tables or columns) without reloading the panel; an open
+  DDL tab for that table refreshes with it. Metadata only, never a write.
+- **Paging for LIMIT queries** — a statement ending in `LIMIT` gets previous/next
+  controls whose page size is that limit; the next page is built as
+  `… LIMIT n OFFSET m` and run without touching the editor. An empty next page ends
+  the paging in place, leaving only “previous” available.
 - **Create statement in one keystroke** — `F4` or `⌘/Ctrl + Shift + D` on a table.
 - **One workbench per database**, kept as tabs, with a result grid, copy-as-TSV,
   a row limit, a draggable editor/result split and a collapsible run log. Opening a
   table's rows never overwrites SQL you already typed: a second console is added
   instead.
+- **Export the page** — the result bar exports the current page (with any local cell
+  edits) as an `.xlsx` workbook, a UTF-8 CSV, or an INSERT script. The save dialog
+  lets you choose the path through the File System Access API, with a download
+  fallback on hosts that do not expose it.
+- **Editable cells, generated UPDATE** — result rows are one fixed line high with
+  clipped cells; double-click opens the full value, and “Edit cell” in its context
+  menu (or the detail dialog) turns a cell into a local draft (edited cells turn
+  blue); right-click copies a single-row `UPDATE` built
+  from the edited columns and the original primary key. The statement is only copied,
+  never executed, and it is refused for joins, subqueries or results without a
+  primary key.
 - **Read-only by construction** — verb whitelist, one statement per request, a
   write-keyword scan, and `SET SESSION TRANSACTION READ ONLY` on every pooled
   connection so the server refuses a write even if the static check is ever wrong.

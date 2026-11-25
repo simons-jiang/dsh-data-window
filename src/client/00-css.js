@@ -92,6 +92,11 @@ const DW_CSS = `
   background: var(--dsw-alias-bg-layer-2, #262930);
   box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
 }
+.dw-project-sep {
+  height: 1px;
+  margin: 3px 4px;
+  background: var(--dsw-alias-border-l1, #2c2f36);
+}
 .dw-project-row {
   display: flex;
   flex-direction: column;
@@ -193,6 +198,19 @@ const DW_CSS = `
   min-width: 0;
   border-right: 1px solid var(--dsw-alias-border-l1, #2c2f36);
   background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #22242a));
+}
+.dw-side-head .dw-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+}
+.dw-side-head .dw-btn:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12));
+  color: var(--dsw-alias-label-primary, #e6e8ec);
 }
 .dw-side-head {
   display: flex;
@@ -478,14 +496,16 @@ const DW_CSS = `
   font-size: 10px;
 }
 .dw-grid td {
-  padding: 3px 10px;
-  white-space: pre;
-  max-width: 460px;
+  padding: 2px 10px;
+  height: 24px;
+  line-height: 18px;
+  /* One fixed line per row: long values are clipped, the detail dialog shows all. */
+  white-space: nowrap;
+  max-width: 360px;
   overflow: hidden;
-  text-overflow: ellipsis;
   border-bottom: 1px solid var(--dsw-alias-border-l1, #23262c);
   border-right: 1px solid var(--dsw-alias-border-l1, #23262c);
-  vertical-align: top;
+  vertical-align: middle;
 }
 .dw-grid tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--dsw-alias-bg-layer-1, #22242a) 55%, transparent); }
 .dw-grid tbody tr:hover td { background: color-mix(in srgb, var(--dsw-alias-brand-primary, #4b8bf5) 12%, transparent); }
@@ -611,6 +631,11 @@ const DW_CSS = `
   background: var(--dsw-alias-bg-overlay, #23262d);
   box-shadow: 0 10px 26px rgba(0,0,0,.42);
 }
+.dw-menu-note {
+  padding: 4px 8px 5px;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 11px;
+}
 .dw-menu-item {
   display: flex;
   align-items: center;
@@ -626,6 +651,8 @@ const DW_CSS = `
   text-align: left;
 }
 .dw-menu-item:hover { background: var(--dsw-alias-bg-layer-2, #33373f); }
+.dw-menu-item:disabled { opacity: .45; cursor: default; }
+.dw-menu-item:disabled:hover { background: transparent; }
 .dw-menu-shortcut { margin-left: auto; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 11px; }
 .dw-backdrop { position: fixed; inset: 0; z-index: 39; }
 .dw-splitter {
@@ -838,6 +865,86 @@ const DW_CSS = `
 }
 .dw-form-input:focus { border-color: var(--dsw-alias-brand-primary, #4b8bf5); }
 .dw-form-hint { font-size: 11px; color: var(--dsw-alias-label-secondary, #8b919d); }
+/*
+ * The zebra and hover rules paint td backgrounds, so these selectors carry the
+ * same tbody/tr weight plus the cell class: an edited cell keeps its blue on every
+ * row parity, and while the pointer is over it.
+ */
+.dw-grid tbody tr td.dw-cell-edited,
+.dw-grid tbody tr:nth-child(even) td.dw-cell-edited,
+.dw-grid tbody tr:hover td.dw-cell-edited {
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4b8bf5) 22%, transparent);
+}
+.dw-cell-text {
+  display: block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dw-grid tbody tr td.dw-cell-selected,
+.dw-grid tbody tr:nth-child(even) td.dw-cell-selected {
+  outline: 1px solid var(--dsw-alias-brand-primary, #4b8bf5);
+  outline-offset: -1px;
+}
+.dw-grid tbody tr td[data-dw-edit='1'] {
+  max-width: 460px;
+  height: auto;
+  white-space: pre-wrap;
+  vertical-align: top;
+}
+.dw-cell-view {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 52vh;
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.dw-cell-dialog { width: min(720px, 100%); }
+.dw-optimize-dialog { width: min(760px, 100%); }
+.dw-optimize-model { padding-bottom: 8px; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 11px; }
+.dw-optimize-notes {
+  max-height: 120px;
+  overflow: auto;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.dw-grid tbody tr td[data-dw-edit='1'],
+.dw-grid tbody tr:nth-child(even) td[data-dw-edit='1'] {
+  outline: 2px solid var(--dsw-alias-state-business-primary, #4b8bf5);
+  outline-offset: -2px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+}
+.dw-edit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4b8bf5) 16%, transparent);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-size: 11px;
+}
+.dw-edit-clear {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .dw-node-tag {
   margin-left: 6px;
   padding: 0 4px;
@@ -847,6 +954,21 @@ const DW_CSS = `
   font-size: 10px;
 }
 .dw-menu-danger { color: var(--dsw-alias-state-danger-primary, #e5534b); }
+.dw-pager { display: inline-flex; align-items: center; gap: 6px; }
+.dw-pager-btn {
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.dw-pager-btn:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12)); }
+.dw-pager-btn:disabled { opacity: .4; cursor: default; }
+.dw-pager-label { font-size: 11px; color: var(--dsw-alias-label-secondary, #8b919d); white-space: nowrap; }
 .dw-schema-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0 6px; }
 .dw-schema-list { display: flex; flex-direction: column; gap: 1px; max-height: 340px; overflow: auto; padding: 2px 0; }
 .dw-schema-row {

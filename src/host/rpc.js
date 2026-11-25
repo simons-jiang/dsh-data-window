@@ -384,6 +384,18 @@ export class DataController {
     }
   }
 
+  /** Ask the configured model to optimize one statement (advisory, never executed). */
+  async optimizeSql(payload = {}) {
+    try {
+      return await this.ai.optimize(payload)
+    } catch (error) {
+      const code = typeof error?.code === 'string' ? error.code : 'ai-failed'
+      if (code === 'llm-unavailable') throw new RouteFailure(503, code, error?.message ?? String(error))
+      if (code === 'invalid-ai-request' || code === 'invalid-ai-answer') throw new RouteFailure(400, code, error?.message ?? String(error))
+      throw new RouteFailure(502, 'ai-failed', error?.message ?? String(error))
+    }
+  }
+
   /** Dispatch one action. */
   async handle(action, payload = {}) {
     switch (String(action ?? '')) {
@@ -393,6 +405,8 @@ export class DataController {
         return this.ai.models()
       case 'aiDiscover':
         return this.aiDiscover(payload)
+      case 'optimizeSql':
+        return this.optimizeSql(payload)
       case 'manualSave':
         return this.manualSave(payload)
       case 'savedConnections':

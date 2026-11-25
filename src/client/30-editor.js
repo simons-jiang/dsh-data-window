@@ -113,6 +113,8 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
   const highlightRef = useRef(null)
   const completionRef = useRef(null)
   const [completion, setCompletion] = useState(null)
+  const [editorMenu, setEditorMenu] = useState(null)
+  const [optimize, setOptimize] = useState(null)
 
   useEffect(() => {
     const area = areaRef.current
@@ -201,6 +203,105 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     onRun(selected.trim() === '' ? undefined : selected)
   }
 
+  // The right-click menu replaces the browser's own so it can offer the same
+  // editing commands plus the model. Clipboard writes/reads go through the async
+  // API; undo/redo keep using the textarea's native history.
+  const editorMenuAction = (run) => () => {
+    setEditorMenu(null)
+    run()
+  }
+
+  const editorCommand = (command) => {
+    const area = areaRef.current
+    if (area === null) return
+    area.focus()
+    try {
+      document.execCommand(command)
+    } catch (error) {
+      void error
+    }
+  }
+
+  const editorCopy = () => {
+    const area = areaRef.current
+    if (area === null) return
+    const selected = area.selectionEnd > area.selectionStart ? value.slice(area.selectionStart, area.selectionEnd) : value
+    const write = globalThis.navigator?.clipboard?.writeText?.(selected)
+    if (write !== undefined) write.catch(() => undefined)
+  }
+
+  const editorCut = () => {
+    const area = areaRef.current
+    if (area === null) return
+    const start = area.selectionStart
+    const end = area.selectionEnd
+    if (end <= start) return
+    editorCopy()
+    store.setTabSql(tab.id, `${value.slice(0, start)}${value.slice(end)}`)
+    requestAnimationFrame(() => {
+      const next = areaRef.current
+      if (next === null) return
+      next.focus()
+      next.setSelectionRange(start, start)
+    })
+  }
+
+  const editorPaste = async () => {
+    const area = areaRef.current
+    if (area === null) return
+    const read = globalThis.navigator?.clipboard?.readText
+    if (typeof read !== 'function') {
+      store.pushLog('warn', tr('editorPasteBlocked'))
+      return
+    }
+    try {
+      const text = await read.call(globalThis.navigator.clipboard)
+      if (typeof text !== 'string' || text === '') return
+      const start = area.selectionStart
+      const end = area.selectionEnd
+      store.setTabSql(tab.id, `${value.slice(0, start)}${text}${value.slice(end)}`)
+      requestAnimationFrame(() => {
+        const next = areaRef.current
+        if (next === null) return
+        next.focus()
+        next.setSelectionRange(start + text.length, start + text.length)
+      })
+    } catch (error) {
+      void error
+      store.pushLog('warn', tr('editorPasteBlocked'))
+    }
+  }
+
+  const editorSelectAll = () => {
+    const area = areaRef.current
+    if (area === null) return
+    area.focus()
+    area.select()
+  }
+
+  const openOptimize = () => {
+    const area = areaRef.current
+    const selected = area !== null && area.selectionEnd > area.selectionStart
+      ? value.slice(area.selectionStart, area.selectionEnd)
+      : ''
+    const text = selected.trim() === '' ? value.trim() : selected.trim()
+    if (text === '') {
+      store.pushLog('warn', tr('log.noStatement'))
+      return
+    }
+    setOptimize({ sql: text, database: tab.database })
+  }
+
+  const menuItem = (key, label, shortcut, run) => h('button', {
+    key,
+    type: 'button',
+    className: 'dw-menu-item',
+    onClick: editorMenuAction(run),
+  }, [
+    h('span', { key: 'l' }, label),
+    shortcut === '' ? null : h('span', { key: 's', className: 'dw-menu-shortcut' }, shortcut),
+  ])
+
   const format = () => {
     const formatted = dwFormatSql(value)
     if (formatted === value) return
@@ -236,6 +337,29 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     ]),
   ])
 
+  const editorMenuLayer = editorMenu === null ? null : h(React.Fragment, null, [
+    h('div', {
+      key: 'backdrop',
+      className: 'dw-backdrop',
+      onClick: () => setEditorMenu(null),
+      onContextMenu: (event) => {
+        event.preventDefault()
+        setEditorMenu(null)
+      },
+    }),
+    h('div', { key: 'menu', className: 'dw-menu', style: { left: editorMenu.x, top: editorMenu.y } }, [
+      menuItem('undo', tr('editorUndo'), '⌘Z', () => editorCommand('undo')),
+      menuItem('redo', tr('editorRedo'), '⇧⌘Z', () => editorCommand('redo')),
+      h('div', { key: 'sep1', className: 'dw-project-sep' }),
+      menuItem('cut', tr('editorCut'), '⌘X', editorCut),
+      menuItem('copy', tr('editorCopy'), '⌘C', editorCopy),
+      menuItem('paste', tr('editorPaste'), '⌘V', () => void editorPaste()),
+      menuItem('select-all', tr('editorSelectAll'), '⌘A', editorSelectAll),
+      h('div', { key: 'sep2', className: 'dw-project-sep' }),
+      menuItem('optimize', tr('sqlOptimize'), '', openOptimize),
+    ]),
+  ])
+
   return h('div', { className: 'dw-editor-wrap', style: { height } }, [
     bar,
     h('div', { key: 'editor', className: 'dw-editor' }, [
@@ -264,6 +388,17 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
             refreshCompletion(text, caret)
           },
           onClick: (event) => refreshCompletion(event.target.value, event.target.selectionStart),
+          onContextMenu: (event) => {
+            event.preventDefault()
+            const width = 210
+            const height = 268
+            const maxX = (globalThis.innerWidth ?? 1200) - width
+            const maxY = (globalThis.innerHeight ?? 800) - height
+            setEditorMenu({
+              x: Math.max(8, Math.min(event.clientX, maxX)),
+              y: Math.max(8, Math.min(event.clientY, maxY)),
+            })
+          },
           onBlur: () => setCompletion(null),
           onScroll: (event) => syncScroll(event.target),
           onKeyDown: (event) => {
@@ -332,6 +467,15 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
           ]))),
       ]),
     ]),
+    editorMenuLayer,
+    optimize === null ? null : h(DwSqlOptimizeDialog, {
+      key: 'optimize',
+      store,
+      tr,
+      sql: optimize.sql,
+      database: optimize.database,
+      onClose: () => setOptimize(null),
+    }),
   ])
 }
 
