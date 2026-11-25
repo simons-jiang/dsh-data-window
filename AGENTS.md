@@ -25,6 +25,7 @@ DataGrip 风格的 DSH 数据库窗口插件。本文件是这个工作区的**�
 | `src/host/consoles.js` | 每个工作区一份 SQL 控制台快照（只存语句，0600，原子写） |
 | `src/host/ai.js` | AI 兜底：证据收集与脱敏、提示词、候选解析、凭据回读、连接校验、内存缓存 |
 | `src/host/manual.js` | 手动连接：每个工作区一份 0600 条目文件 + 环境/实例/库与连接目标表 |
+| `src/host/catalog.js` | 本机已解析/已手动添加的连接目录（跨工作区去重，列表不含密码，保存时按 id 取密码） |
 | `src/host/remembered.js` | 记住用户从「全部库」里打开过的库（每工作区一份 0600 文件），下次发现时并进实例 |
 | `src/client/*.js` | 面板源码，`node build.mjs` 拼成单文件 `client.js` |
 | `build.mjs` | 拼接 + 注入语言字典 + 未定义 helper 检查 + 去掉模块语法 |

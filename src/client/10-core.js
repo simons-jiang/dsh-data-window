@@ -156,6 +156,7 @@ function dwExplainFailure(translate, error) {
     'ENOTFOUND': 'error.unresolved',
     'ER_QUERY_INTERRUPTED': 'error.interrupted',
     'manual-connect-failed': 'error.manualConnectFailed',
+    'saved-connection-missing': 'error.savedConnectionMissing',
   }
   const key = known[code]
   if (key !== undefined) {
@@ -727,6 +728,20 @@ function dwCreateStore(translate) {
         await store.loadDiscovery({ quiet: true })
       } catch (error) {
         pushLog('error', t('log.forgetDatabaseFailed', { message: dwExplainFailure(t, error) }))
+      }
+    },
+
+    /** Delete a whole manually added environment, then re-read the tree. */
+    async removeManualEnvironment(label) {
+      const root = state.root
+      const name = String(label ?? '').trim()
+      if (root === '' || name === '') return
+      try {
+        await dwRpc('removeManualEnvironment', { root, from: name })
+        pushLog('info', t('log.removedEnvironment', { name }))
+        await store.loadDiscovery({ quiet: true })
+      } catch (error) {
+        pushLog('error', t('log.removeEnvironmentFailed', { message: dwExplainFailure(t, error) }))
       }
     },
 

@@ -39,6 +39,15 @@
   the workspace. The Host proves the connection with a read-only `SELECT VERSION()`
   before saving it, keeps the entries in a 0600 file per workspace, groups them by
   environment name, and offers “Remove this connection” in the tree's context menu.
+  The form can also import a connection that any workspace on this machine already
+  resolved or added: host, port, account and schema are filled in, and the password
+  is reused from the Host store (looked up by source id at save time) instead of
+  being shown or retyped. Importing also fills the environment name from the saved
+  connection, and a manual environment can be renamed from the tree — the databases
+  already picked for it move with the new name instead of being stranded. A manual
+  environment can also be deleted as a whole (with a confirmation): its connections,
+  picked databases and pools go away, and it stays out of the tree until the
+  connection is imported again from another workspace.
 - An optional AI fallback for workspaces whose configuration shape the rule-based
   scan does not recognise. The model (chosen the first time it is needed, from the
   providers configured in DSH, and changeable in settings) only points at files and

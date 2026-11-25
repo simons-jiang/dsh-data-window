@@ -8,10 +8,12 @@
 import { existsSync, statSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
 import { AiDiscovery } from './ai.js'
+import { ConnectionCatalog } from './catalog.js'
 import { DiscoveryCache, fingerprint } from './cache.js'
 import { ConsoleStore } from './consoles.js'
 import { discoverProject } from './discovery.js'
 import { ManualStore, manualEnvironments, normalizeManualEntry } from './manual.js'
+import { stableId } from './discovery.js'
 import { RememberedStore } from './remembered.js'
 import { DataGateway, ReadOnlyViolation } from './mysql.js'
 
@@ -50,6 +52,7 @@ export class DataController {
     this.consoles = options.consoles ?? new ConsoleStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'workspaces'))
     this.manual = options.manual ?? new ManualStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'manual'))
     this.remembered = options.remembered ?? new RememberedStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'remembered'))
+    this.catalog = options.catalog ?? new ConnectionCatalog(options.cacheDirectory ?? '')
     // `llm` is a getter: the Host may provide the LLM service after this plugin
     // activates, and the fallback must not pin a service that is still arriving.
     this.ai = options.ai ?? new AiDiscovery({
@@ -241,6 +244,11 @@ export class DataController {
     return { remembered: this.remembered.add(root, entry) }
   }
 
+  /** Connections already resolved or added on this machine, without passwords. */
+  savedConnections() {
+    return { connections: this.catalog.list() }
+  }
+
   /** Replace the databases shown for one instance (the picker's Apply). */
   selectDatabases(payload = {}) {
     const root = typeof payload.root === 'string' ? payload.root.trim() : ''
@@ -274,7 +282,17 @@ export class DataController {
   async manualSave(payload = {}) {
     const root = typeof payload.root === 'string' ? payload.root.trim() : ''
     if (root === '' || !isAbsolute(root)) throw new RouteFailure(400, 'invalid-root', 'workspace root must be an absolute path')
-    const entry = normalizeManualEntry(payload.entry)
+    const submitted = payload.entry !== null && typeof payload.entry === 'object' ? { ...payload.entry } : undefined
+    // The picker sends `sourceId` instead of a password: the credential stays on the
+    // Host, which is also what lets another workspace's connection be reused without
+    // the browser ever seeing its secret.
+    const sourceId = typeof payload.sourceId === 'string' ? payload.sourceId.trim() : ''
+    if (sourceId !== '' && String(submitted?.password ?? '') === '') {
+      const stored = this.catalog.passwordFor(sourceId)
+      if (stored === undefined) throw new RouteFailure(400, 'saved-connection-missing', 'the imported connection is no longer available')
+      submitted.password = stored
+    }
+    const entry = normalizeManualEntry(submitted)
     if (entry === undefined) throw new RouteFailure(400, 'invalid-connection', 'host, port and user are required')
     const probeId = `m:${entry.id.slice(2)}:probe`
     try {
@@ -296,6 +314,71 @@ export class DataController {
     await this.gateway.forget(probeId).catch(() => undefined)
     this.manual.upsert(root, entry)
     return { entry: { ...entry, password: undefined }, environments: manualEnvironments(this.manual.load(root).entries).environments }
+  }
+
+  /**
+   * Rename one manually added environment.
+   *
+   * The environment name is part of every derived id (entry, instance, remembered
+   * schemas), so a rename moves all three together — otherwise the user's picked
+   * databases would be stranded under an id nothing renders any more.
+   */
+  renameManualEnvironment(payload = {}) {
+    const root = typeof payload.root === 'string' ? payload.root.trim() : ''
+    if (root === '' || !isAbsolute(root)) throw new RouteFailure(400, 'invalid-root', 'workspace root must be an absolute path')
+    const from = String(payload.from ?? '').trim()
+    const to = String(payload.to ?? '').trim().slice(0, 40)
+    if (from === '' || to === '') throw new RouteFailure(400, 'invalid-connection', 'both names are required')
+    const { entries } = this.manual.load(root)
+    const affected = entries.filter((entry) => entry.label === from)
+    if (affected.length === 0) throw new RouteFailure(404, 'unknown-environment', 'no manual connection uses that environment name')
+    if (from === to) return { renamed: 0 }
+    const untouched = entries.filter((entry) => entry.label !== from)
+    const renamed = []
+    for (const entry of affected) {
+      const next = normalizeManualEntry({ ...entry, label: to })
+      if (next === undefined) continue
+      if (untouched.some((existing) => existing.id === next.id)) {
+        throw new RouteFailure(400, 'duplicate-connection', 'another connection already uses that name for this host and account')
+      }
+      renamed.push(next)
+    }
+    const mapping = new Map()
+    for (const entry of affected) {
+      const next = renamed.find((candidate) => candidate.host === entry.host && candidate.port === entry.port && candidate.user === entry.user)
+      if (next === undefined) continue
+      mapping.set(
+        `i:${stableId('manual', `manual:${stableId('manual-env', from)}`, entry.host, String(entry.port), entry.user)}`,
+        `i:${stableId('manual', `manual:${stableId('manual-env', to)}`, entry.host, String(entry.port), entry.user)}`,
+      )
+    }
+    this.manual.save(root, [...untouched, ...renamed])
+    this.remembered.remap(root, mapping)
+    return { renamed: renamed.length }
+  }
+
+  /**
+   * Delete one manually added environment: every connection under it, the schemas
+   * picked for them, and the pools those schemas used.
+   *
+   * The connection stays re-importable: its catalog entry comes from other
+   * workspaces' data, not from this one, so "unless imported again" is exactly how
+   * it behaves.
+   */
+  removeManualEnvironment(payload = {}) {
+    const root = typeof payload.root === 'string' ? payload.root.trim() : ''
+    if (root === '' || !isAbsolute(root)) throw new RouteFailure(400, 'invalid-root', 'workspace root must be an absolute path')
+    const from = String(payload.from ?? '').trim()
+    if (from === '') throw new RouteFailure(400, 'invalid-connection', 'an environment name is required')
+    const { entries } = this.manual.load(root)
+    const affected = entries.filter((entry) => entry.label === from)
+    if (affected.length === 0) throw new RouteFailure(404, 'unknown-environment', 'no manual connection uses that environment name')
+    const { targets } = manualEnvironments(affected)
+    const instanceIds = [...targets.values()].filter((target) => target.database === undefined).map((target) => target.id)
+    this.manual.save(root, entries.filter((entry) => entry.label !== from))
+    this.remembered.forgetInstances(root, instanceIds)
+    if (typeof this.gateway.removeTargets === 'function') this.gateway.removeTargets([...targets.keys()])
+    return { removed: affected.length }
   }
 
   /** Drop one manually added connection. */
@@ -342,8 +425,14 @@ export class DataController {
         return this.aiDiscover(payload)
       case 'manualSave':
         return this.manualSave(payload)
+      case 'savedConnections':
+        return this.savedConnections()
       case 'manualRemove':
         return this.manualRemove(payload)
+      case 'renameManualEnvironment':
+        return this.renameManualEnvironment(payload)
+      case 'removeManualEnvironment':
+        return this.removeManualEnvironment(payload)
       case 'rememberDatabase':
         return this.rememberDatabase(payload)
       case 'forgetDatabase':

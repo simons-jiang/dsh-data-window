@@ -25,8 +25,13 @@ connection before it enters the tree.
   chooses the other schemas, and the choice is remembered for that workspace.
 - **Manual connections** — a toolbar button adds a host/port/account/database by
   hand for databases described nowhere in the workspace (a local container, a shared
-  test instance). The connection is tested before it is saved, entries are grouped by
-  environment name, and they can be removed from the tree's context menu.
+  test instance). The form can import a connection another workspace already
+  resolved — host, port, account and schema filled in, the password reused from the
+  Host so it is never shown — because teams share one RDS endpoint across projects.
+  The connection is tested before it is saved, entries are grouped by environment
+  name (imported ones inherit the source's name; a manual environment can be renamed
+  later), and the tree's context menu can remove one connection or delete the whole
+  environment (re-importable from another workspace's data).
 - **Explorer** — environments → instances → databases → tables → columns, with type,
   primary key, nullability and comment. One button reveals every schema on an
   instance, not only the configured ones. The column is draggable, and a

@@ -188,7 +188,7 @@ window.__ModuleLoader__.load({
     "manualHint": "For databases neither the rules nor the AI can find: a local container, a shared test instance, a customer's replica. The connection is tested once before it is saved; a failed test writes nothing.",
     "manualLabel": "Environment name",
     "manualLabelPlaceholder": "e.g. Local / Staging / Customer A",
-    "manualLabelHint": "Connections sharing a name form one environment group",
+    "manualLabelHint": "Connections sharing a name form one environment group; an empty name falls back to “host:port”",
     "manualHost": "Host",
     "manualPort": "Port",
     "manualUser": "User",
@@ -222,6 +222,23 @@ window.__ModuleLoader__.load({
     "schemaLoading": "Reading this instance's databases…",
     "schemaFailed": "Could not read the database list",
     "schemaNoMatch": "No matching database",
+    "manualFromSaved": "Import a saved connection",
+    "manualFromSavedNone": "No import — fill it in",
+    "manualFromSavedHint": "Connections resolved or added in other workspaces appear here; picking one fills host, port, user and database.",
+    "manualSourceHint": "The password is reused from that connection and is never shown in the form.",
+    "error.savedConnectionMissing": "That saved connection no longer exists; enter it again",
+    "renameEnvironment": "Rename environment",
+    "renameTitle": "Rename environment",
+    "renameLabel": "Environment name",
+    "renameHint": "Only the group name changes; databases already picked in this environment stay.",
+    "renameApply": "Save",
+    "log.renamedEnvironment": "Environment renamed",
+    "removeEnvironment": "Delete environment",
+    "removeEnvironmentTitle": "Delete this environment?",
+    "removeEnvironmentHint": "Every connection under “{name}” and its picked databases are removed and no longer shown; import it again from another workspace when needed.",
+    "removeEnvironmentConfirm": "Delete",
+    "log.removedEnvironment": "Environment deleted: {name}",
+    "log.removeEnvironmentFailed": "Could not delete the environment: {message}",
   }
   const DW_TEXT_ZH = {
     "openPanel": "数据窗口",
@@ -403,7 +420,7 @@ window.__ModuleLoader__.load({
     "manualHint": "给规则和 AI 都找不到的库用：本地容器、共享测试库、客户机房实例。保存前会先连一次，连不上不会写入。",
     "manualLabel": "环境名称",
     "manualLabelPlaceholder": "例如：本地 / 测试库 / 客户 A",
-    "manualLabelHint": "同名的连接会合并成同一个环境分组",
+    "manualLabelHint": "同名的连接会合并成同一个环境分组；留空则用「主机:端口」作为环境名",
     "manualHost": "主机",
     "manualPort": "端口",
     "manualUser": "用户名",
@@ -437,6 +454,23 @@ window.__ModuleLoader__.load({
     "schemaLoading": "正在读取实例上的库…",
     "schemaFailed": "读取库列表失败",
     "schemaNoMatch": "没有匹配的库",
+    "manualFromSaved": "从已保存的连接带出",
+    "manualFromSavedNone": "不导入，手动填写",
+    "manualFromSavedHint": "其它工作区解析过、或手动添加过的连接会出现在这里；选中后会填好主机、端口、账号与库。",
+    "manualSourceHint": "密码将复用该连接已保存的凭据，不会显示在表单里。",
+    "error.savedConnectionMissing": "这条已保存的连接已不存在，请重新填写",
+    "renameEnvironment": "重命名环境",
+    "renameTitle": "重命名环境",
+    "renameLabel": "环境名称",
+    "renameHint": "只改显示分组名；这个环境里已选的库会跟着保留。",
+    "renameApply": "保存",
+    "log.renamedEnvironment": "环境已重命名",
+    "removeEnvironment": "删除环境",
+    "removeEnvironmentTitle": "删除这个环境？",
+    "removeEnvironmentHint": "「{name}」下的连接和已选的库都会被移除，树里不再显示；需要时可从其它工作区重新导入。",
+    "removeEnvironmentConfirm": "删除",
+    "log.removedEnvironment": "已删除环境：{name}",
+    "log.removeEnvironmentFailed": "删除环境失败：{message}",
   }
 
 // ---- 00-css.js -----------------------------------------------------------
@@ -1999,6 +2033,7 @@ function dwExplainFailure(translate, error) {
     'ENOTFOUND': 'error.unresolved',
     'ER_QUERY_INTERRUPTED': 'error.interrupted',
     'manual-connect-failed': 'error.manualConnectFailed',
+    'saved-connection-missing': 'error.savedConnectionMissing',
   }
   const key = known[code]
   if (key !== undefined) {
@@ -2570,6 +2605,20 @@ function dwCreateStore(translate) {
         await store.loadDiscovery({ quiet: true })
       } catch (error) {
         pushLog('error', t('log.forgetDatabaseFailed', { message: dwExplainFailure(t, error) }))
+      }
+    },
+
+    /** Delete a whole manually added environment, then re-read the tree. */
+    async removeManualEnvironment(label) {
+      const root = state.root
+      const name = String(label ?? '').trim()
+      if (root === '' || name === '') return
+      try {
+        await dwRpc('removeManualEnvironment', { root, from: name })
+        pushLog('info', t('log.removedEnvironment', { name }))
+        await store.loadDiscovery({ quiet: true })
+      } catch (error) {
+        pushLog('error', t('log.removeEnvironmentFailed', { message: dwExplainFailure(t, error) }))
       }
     },
 
@@ -4536,6 +4585,8 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const [aiOpen, setAiOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [schemaTarget, setSchemaTarget] = useState(null)
+  const [renameTarget, setRenameTarget] = useState(null)
+  const [removeEnvTarget, setRemoveEnvTarget] = useState(null)
   const aiPrompted = useRef(false)
   const panelRef = useRef(null)
   const logRef = useRef(null)
@@ -4906,7 +4957,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
           left: Math.max(rect === undefined ? 0 : rect.left, left),
           top: Math.max(rect === undefined ? 0 : rect.top, top),
         },
-      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node))),
+      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node), (node) => setRenameTarget(node), (node) => setRemoveEnvTarget(node))),
     ])
   }
 
@@ -4945,6 +4996,26 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       onClose: () => setManualOpen(false),
       onSaved: () => void store.loadDiscovery({ quiet: true }),
     }) : null,
+    removeEnvTarget === null ? null : h(DwConfirmDialog, {
+      key: 'remove-env-dialog',
+      tr,
+      title: tr('removeEnvironmentTitle'),
+      message: tr('removeEnvironmentHint', { name: removeEnvTarget.label }),
+      confirmLabel: tr('removeEnvironmentConfirm'),
+      onClose: () => setRemoveEnvTarget(null),
+      onConfirm: async () => {
+        await store.removeManualEnvironment(removeEnvTarget.label)
+        setRemoveEnvTarget(null)
+      },
+    }),
+    renameTarget === null ? null : h(DwRenameEnvDialog, {
+      key: 'rename-dialog',
+      store,
+      tr,
+      label: renameTarget.label,
+      onClose: () => setRenameTarget(null),
+      onRenamed: () => void store.loadDiscovery({ quiet: true }),
+    }),
     schemaTarget === null ? null : h(DwSchemaDialog, {
       key: 'schema-dialog',
       store,
@@ -4963,7 +5034,7 @@ function dwClock(date) {
 }
 
 /** The context menu of one node. */
-function dwMenuItems(node, store, tr, close, openSchemaDialog) {
+function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, openRemoveEnv) {
   const items = []
   const add = (key, label, shortcut, run, tone) => items.push(h('button', {
     key,
@@ -4998,6 +5069,10 @@ function dwMenuItems(node, store, tr, close, openSchemaDialog) {
     }
   } else if (node.kind === 'env') {
     add('expand', tr('menuExpand'), '', () => void store.toggleNode(node))
+    if (node.manual === true) {
+      add('rename', tr('renameEnvironment'), '', () => openRenameEnv(node))
+      add('remove-env', tr('removeEnvironment'), '', () => openRemoveEnv(node), 'dw-menu-danger')
+    }
   } else if (node.kind === 'column') {
     add('name', tr('menuCopyName'), '', () => {
       const write = globalThis.navigator?.clipboard?.writeText?.(node.label)
@@ -5470,6 +5545,8 @@ const DW_MANUAL_FORM = { label: '', host: '127.0.0.1', port: '3306', user: '', p
  */
 function DwManualDialog({ store, tr, onClose, onSaved }) {
   const [form, setForm] = useState(() => ({ ...DW_MANUAL_FORM }))
+  const [connections, setConnections] = useState([])
+  const [sourceId, setSourceId] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const savingRef = useRef(false)
@@ -5484,8 +5561,48 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
     return () => globalThis.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  // Other workspaces usually point at the same hosts and accounts, so the form
+  // offers what this machine already resolved instead of asking for it again.
+  useEffect(() => {
+    let alive = true
+    dwAiWithTimeout(dwRpc('savedConnections'), 10000).then((value) => {
+      if (!alive) return
+      setConnections(Array.isArray(value?.connections) ? value.connections : [])
+    }).catch(() => {
+      // Without the list the form still works; it is a convenience, not a dependency.
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
   const update = (key) => (event) => {
     setForm({ ...form, [key]: event.target.value })
+    // Editing the identity of the connection detaches it from the imported one, so
+    // its stored password is not silently reused for a different host or account.
+    if (key === 'host' || key === 'port' || key === 'user' || key === 'password') setSourceId('')
+  }
+
+  const chooseSource = (event) => {
+    const id = event.target.value
+    const entry = connections.find((item) => item.id === id)
+    setSourceId(entry === undefined ? '' : id)
+    if (entry === undefined) return
+    // An imported connection carries the environment it was saved under ("prod"),
+    // which is what the user expects to see in the tree — but only when they have
+    // not named the new environment themselves.
+    const importedLabel = entry.labels.length > 0
+      ? String(entry.labels[0]).split(' · ').pop().trim()
+      : ''
+    setForm({
+      ...form,
+      label: form.label.trim() === '' ? importedLabel : form.label,
+      host: entry.host,
+      port: String(entry.port),
+      user: entry.user,
+      password: '',
+      database: entry.databases.length === 1 ? entry.databases[0] : form.database,
+    })
   }
 
   const save = async () => {
@@ -5508,6 +5625,7 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
           password: form.password,
           database: form.database,
         },
+        sourceId,
       })
       if (typeof onSaved === 'function') onSaved()
       onClose()
@@ -5550,6 +5668,24 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
     h('div', { key: 'body', className: 'dw-modal-body' }, [
       h('div', { key: 'hint', className: 'dw-ai-note' }, tr('manualHint')),
       h('div', { key: 'form', className: 'dw-form' }, [
+        connections.length === 0
+          ? null
+          : h('label', { key: 'source', className: 'dw-form-row' }, [
+            h('span', { key: 'l', className: 'dw-form-label' }, tr('manualFromSaved')),
+            h('select', {
+              key: 's',
+              className: 'dw-form-input',
+              value: sourceId,
+              onChange: chooseSource,
+            }, [
+              h('option', { key: 'none', value: '' }, tr('manualFromSavedNone')),
+              ...connections.map((entry) => h('option', {
+                key: entry.id,
+                value: entry.id,
+              }, `${entry.host}:${entry.port} · ${entry.user}${entry.labels.length > 0 ? ` · ${entry.labels[0]}` : ''}`)),
+            ]),
+            h('span', { key: 'h', className: 'dw-form-hint' }, sourceId === '' ? tr('manualFromSavedHint') : tr('manualSourceHint')),
+          ]),
         field('label', tr('manualLabel'), { placeholder: tr('manualLabelPlaceholder') }, tr('manualLabelHint')),
         h('div', { key: 'addr', className: 'dw-form-split' }, [
           field('host', tr('manualHost'), { placeholder: 'mysql.internal' }),
@@ -5579,6 +5715,157 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
         disabled: saving === true,
         onClick: () => void save(),
       }, saving === true ? tr('manualSaving') : tr('manualSave')),
+    ]),
+  ]))
+}
+
+/**
+ * Rename one manual environment.
+ *
+ * The environment name is what the tree groups by, and it also feeds the derived
+ * instance ids — the Host moves the user's remembered databases along with the new
+ * name, so renaming never costs the schema selection.
+ */
+function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
+  const [value, setValue] = useState(label)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const savingRef = useRef(false)
+  savingRef.current = saving
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key !== 'Escape' || savingRef.current) return
+      onClose()
+    }
+    globalThis.addEventListener('keydown', onKey)
+    return () => globalThis.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const save = async () => {
+    if (saving === true) return
+    const root = String(store.getState?.()?.root ?? '')
+    const next = String(value ?? '').trim().slice(0, 40)
+    if (root === '' || next === '' || next === label) {
+      onClose()
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      await dwRpc('renameManualEnvironment', { root, from: label, to: next })
+      if (typeof onRenamed === 'function') onRenamed()
+      onClose()
+    } catch (failure) {
+      setError(dwExplainFailure(tr, failure))
+      setSaving(false)
+    }
+  }
+
+  return h('div', {
+    className: 'dw-modal',
+    onClick: (event) => {
+      if (event.target === event.currentTarget && saving !== true) onClose()
+    },
+  }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-label': tr('renameTitle'),
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, [
+      h(DwIcon, { key: 'i', name: 'link', size: 15 }),
+      h('span', { key: 't' }, tr('renameTitle')),
+    ]),
+    h('div', { key: 'body', className: 'dw-modal-body' }, [
+      h('label', { key: 'field', className: 'dw-form-row' }, [
+        h('span', { key: 'l', className: 'dw-form-label' }, tr('renameLabel')),
+        h('input', {
+          key: 'i',
+          className: 'dw-form-input',
+          value,
+          spellCheck: false,
+          autoComplete: 'off',
+          onChange: (event) => setValue(event.target.value),
+          onKeyDown: (event) => {
+            if (event.key === 'Enter') void save()
+          },
+        }),
+      ]),
+      h('div', { key: 'hint', className: 'dw-ai-note' }, tr('renameHint')),
+      error === ''
+        ? null
+        : h('div', { key: 'err', className: 'dw-ai-note dw-ai-warn' }, error),
+    ]),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
+      h('button', { key: 'cancel', type: 'button', className: 'dw-btn', disabled: saving === true, onClick: onClose }, tr('cancel')),
+      h('button', {
+        key: 'save',
+        type: 'button',
+        className: 'dw-btn dw-btn-accent',
+        disabled: saving === true,
+        onClick: () => void save(),
+      }, saving === true ? tr('schemaApplying') : tr('renameApply')),
+    ]),
+  ]))
+}
+
+/**
+ * A small confirmation for one destructive tree action.
+ *
+ * Removing an environment also removes the databases picked inside it, so the action
+ * asks once instead of acting on a stray right-click.
+ */
+function DwConfirmDialog({ tr, title, message, confirmLabel, onConfirm, onClose }) {
+  const [busy, setBusy] = useState(false)
+  const busyRef = useRef(false)
+  busyRef.current = busy
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key !== 'Escape' || busyRef.current) return
+      onClose()
+    }
+    globalThis.addEventListener('keydown', onKey)
+    return () => globalThis.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const confirm = async () => {
+    if (busy === true) return
+    setBusy(true)
+    try {
+      await onConfirm()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return h('div', {
+    className: 'dw-modal',
+    onClick: (event) => {
+      if (event.target === event.currentTarget && busy !== true) onClose()
+    },
+  }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-label': title,
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, title),
+    h('div', { key: 'body', className: 'dw-modal-body' }, [
+      h('div', { key: 'm', className: 'dw-ai-note' }, message),
+    ]),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
+      h('button', { key: 'cancel', type: 'button', className: 'dw-btn', disabled: busy === true, onClick: onClose }, tr('cancel')),
+      h('button', {
+        key: 'confirm',
+        type: 'button',
+        className: 'dw-btn dw-btn-accent',
+        disabled: busy === true,
+        onClick: () => void confirm(),
+      }, confirmLabel),
     ]),
   ]))
 }

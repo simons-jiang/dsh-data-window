@@ -128,6 +128,41 @@ export class RememberedStore {
     return { databases: [...seen] }
   }
 
+  /**
+   * Move remembered schemas to their instance's new id.
+   *
+   * Renaming a manual environment changes the derived instance id; without this the
+   * user's picked databases would silently disappear from the tree.
+   */
+  remap(root, mapping) {
+    if (!(mapping instanceof Map) || mapping.size === 0) return 0
+    const { databases } = this.load(root)
+    const seen = new Set()
+    const next = []
+    let moved = 0
+    for (const entry of databases) {
+      const target = mapping.get(entry.instanceId) ?? entry.instanceId
+      if (target !== entry.instanceId) moved += 1
+      const key = `${target}\u0000${entry.database}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      next.push({ instanceId: target, database: entry.database })
+    }
+    if (moved > 0) this.save(root, next)
+    return moved
+  }
+
+  /** Drop every remembered schema of the given instances (a deleted environment). */
+  forgetInstances(root, instanceIds) {
+    const ids = new Set((Array.isArray(instanceIds) ? instanceIds : []).filter((id) => typeof id === 'string' && id !== ''))
+    if (ids.size === 0) return 0
+    const { databases } = this.load(root)
+    const next = databases.filter((entry) => !ids.has(entry.instanceId))
+    const removed = databases.length - next.length
+    if (removed > 0) this.save(root, next)
+    return removed
+  }
+
   /** Forget one database; returns whether it was remembered. */
   remove(root, entry) {
     const normalized = normalizeEntry(entry)

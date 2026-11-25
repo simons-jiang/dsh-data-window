@@ -185,6 +185,8 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const [aiOpen, setAiOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [schemaTarget, setSchemaTarget] = useState(null)
+  const [renameTarget, setRenameTarget] = useState(null)
+  const [removeEnvTarget, setRemoveEnvTarget] = useState(null)
   const aiPrompted = useRef(false)
   const panelRef = useRef(null)
   const logRef = useRef(null)
@@ -555,7 +557,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
           left: Math.max(rect === undefined ? 0 : rect.left, left),
           top: Math.max(rect === undefined ? 0 : rect.top, top),
         },
-      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node))),
+      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node), (node) => setRenameTarget(node), (node) => setRemoveEnvTarget(node))),
     ])
   }
 
@@ -594,6 +596,26 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       onClose: () => setManualOpen(false),
       onSaved: () => void store.loadDiscovery({ quiet: true }),
     }) : null,
+    removeEnvTarget === null ? null : h(DwConfirmDialog, {
+      key: 'remove-env-dialog',
+      tr,
+      title: tr('removeEnvironmentTitle'),
+      message: tr('removeEnvironmentHint', { name: removeEnvTarget.label }),
+      confirmLabel: tr('removeEnvironmentConfirm'),
+      onClose: () => setRemoveEnvTarget(null),
+      onConfirm: async () => {
+        await store.removeManualEnvironment(removeEnvTarget.label)
+        setRemoveEnvTarget(null)
+      },
+    }),
+    renameTarget === null ? null : h(DwRenameEnvDialog, {
+      key: 'rename-dialog',
+      store,
+      tr,
+      label: renameTarget.label,
+      onClose: () => setRenameTarget(null),
+      onRenamed: () => void store.loadDiscovery({ quiet: true }),
+    }),
     schemaTarget === null ? null : h(DwSchemaDialog, {
       key: 'schema-dialog',
       store,
@@ -612,7 +634,7 @@ function dwClock(date) {
 }
 
 /** The context menu of one node. */
-function dwMenuItems(node, store, tr, close, openSchemaDialog) {
+function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, openRemoveEnv) {
   const items = []
   const add = (key, label, shortcut, run, tone) => items.push(h('button', {
     key,
@@ -647,6 +669,10 @@ function dwMenuItems(node, store, tr, close, openSchemaDialog) {
     }
   } else if (node.kind === 'env') {
     add('expand', tr('menuExpand'), '', () => void store.toggleNode(node))
+    if (node.manual === true) {
+      add('rename', tr('renameEnvironment'), '', () => openRenameEnv(node))
+      add('remove-env', tr('removeEnvironment'), '', () => openRemoveEnv(node), 'dw-menu-danger')
+    }
   } else if (node.kind === 'column') {
     add('name', tr('menuCopyName'), '', () => {
       const write = globalThis.navigator?.clipboard?.writeText?.(node.label)
