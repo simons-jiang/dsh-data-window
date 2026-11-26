@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- SQL console tabs have a right-click menu: close, close others, close all, close
+  tabs to the left/right, copy the tab's reference (`schema.table` or `schema`), and
+  copy that reference into the chat composer when it is open (clipboard fallback
+  otherwise). Bulk closes pick the neighbouring tab and save the console snapshot
+  immediately. The menu reuses the code workspace's IDEA-style layout: icons,
+  separators, 27px rows, disabled side items, placement clamped to the panel.
+
 ## [0.1.1] — 2026-11-25
 
 ### Fixed

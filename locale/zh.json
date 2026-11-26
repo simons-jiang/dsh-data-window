@@ -282,5 +282,16 @@
   "aiModelUnknown": "未配置",
   "optimizeNotes": "优化说明",
   "optimizeCopy": "复制 SQL",
-  "log.optimizeCopied": "优化后的 SQL 已复制"
+  "log.optimizeCopied": "优化后的 SQL 已复制",
+  "tabClose": "关闭",
+  "tabCloseOthers": "关闭其他标签页",
+  "tabCloseAll": "关闭所有标签页",
+  "tabCloseLeft": "关闭左侧标签页",
+  "tabCloseRight": "关闭右侧标签页",
+  "copyReference": "复制引用",
+  "copyReferenceToChat": "复制引用到对话",
+  "log.copiedReference": "已复制引用：{reference}",
+  "log.copiedReferenceToChat": "已把引用插入对话：{reference}",
+  "log.copiedReferenceOnly": "对话输入框未打开，已复制引用：{reference}",
+  "tabMenuLabel": "标签页菜单"
 }

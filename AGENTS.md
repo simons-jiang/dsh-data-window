@@ -27,7 +27,7 @@ DataGrip 风格的 DSH 数据库窗口插件。本文件是这个工作区的**�
 | `src/host/manual.js` | 手动连接：全机共享一份 0600 条目文件（首次启动合并旧的按工作区文件）+ 环境/实例/库与连接目标表 |
 | `src/host/catalog.js` | 本机已解析/已手动添加的连接目录（跨工作区去重，列表不含密码，保存时按 id 取密码） |
 | `src/host/remembered.js` | 记住用户勾选的库（全机共享一份 0600 文件），下次发现时并进实例 |
-| `src/host/shared.js` | 把各工作区发现结果 + 共享手动连接 + 共享勾选库拼成**同一棵树**，并返回本工作区的 `focus` |
+| `src/host/shared.js` | 把各工作区发现结果 + 共享手动连接 + 共享勾选库拼成**同一棵树**，并返回本工作区的 `focus`；本项目发现出来的库带 `inWorkspace: true`（树是全机共享的，别的项目的库也会挂进来，`openSql` 靠这个标记选库） |
 | `src/client/*.js` | 面板源码，`node build.mjs` 拼成单文件 `client.js` |
 | `build.mjs` | 拼接 + 注入语言字典 + 未定义 helper 检查 + 去掉模块语法 |
 | `locale/{en,zh}.json` | 显示名（`meta`）+ 全部界面文案，客户端把它内联进 bundle |

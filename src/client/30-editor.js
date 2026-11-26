@@ -7,42 +7,170 @@
  * statement gets its own id from the store, never a rewrite of the first.
  */
 
+/** The reference a tab copies: `schema.table`, or the schema alone. */
+function dwTabReference(tab) {
+  const database = String(tab?.database ?? '').trim()
+  // Table consoles keep the table in their id (`sql:<dbId>:tbl:<table>`).
+  const id = String(tab?.id ?? '')
+  const table = String(tab?.table ?? '').trim()
+    || (id.includes(':tbl:') ? id.split(':tbl:').slice(1).join(':tbl:') : '')
+  if (database !== '' && table !== '') return `${database}.${table}`
+  if (database !== '') return database
+  return String(tab?.title ?? '')
+}
+
+/** Insert text into the chat composer when it is open; false when it is not. */
+function dwInsertComposerText(text) {
+  const doc = globalThis.document
+  if (doc === undefined || typeof doc.querySelector !== 'function') return false
+  const seat = doc.querySelector('[data-composer-seat]')
+  if (seat === null) return false
+  const editor = seat.querySelector('[contenteditable="true"], textarea')
+  if (editor === null) return false
+  try {
+    editor.focus()
+    if (editor.tagName === 'TEXTAREA') {
+      const setter = Object.getOwnPropertyDescriptor(globalThis.HTMLTextAreaElement.prototype, 'value')?.set
+      const start = editor.selectionStart ?? editor.value.length
+      const end = editor.selectionEnd ?? start
+      if (typeof setter === 'function') setter.call(editor, `${editor.value.slice(0, start)}${text}${editor.value.slice(end)}`)
+      editor.setSelectionRange(start + text.length, start + text.length)
+      editor.dispatchEvent(new Event('input', { bubbles: true }))
+      return true
+    }
+    const before = editor.textContent
+    const selection = typeof globalThis.getSelection === 'function' ? globalThis.getSelection() : null
+    if (selection === null || selection === undefined) return false
+    const range = doc.createRange()
+    range.selectNodeContents(editor)
+    range.collapse(false)
+    selection.removeAllRanges()
+    selection.addRange(range)
+    doc.execCommand('insertText', false, text)
+    return editor.textContent !== before
+  } catch (error) {
+    void error
+    return false
+  }
+}
+
 function DwTabs({ store, state, tr }) {
+  const [menu, setMenu] = useState(null)
   if ((state.tabs ?? []).length === 0) return null
-  return h('div', { className: 'dw-tabs', role: 'tablist' }, state.tabs.map((tab) => {
-    const active = tab.id === state.activeTab
-    return h('div', {
-      key: tab.id,
-      role: 'tab',
-      'aria-selected': active,
-      className: `dw-tab${active ? ' dw-tab-active' : ''}`,
-      title: tab.subtitle ?? tab.title,
-      onClick: () => store.setActiveTab(tab.id),
-      onAuxClick: (event) => {
-        if (event.button === 1) {
+
+  const copyReference = (tab) => {
+    const reference = dwTabReference(tab)
+    const write = globalThis.navigator?.clipboard?.writeText?.(reference)
+    if (write === undefined) {
+      store.pushLog('warn', tr('copyUpdateFailed'))
+      return
+    }
+    write
+      .then(() => store.pushLog('info', tr('log.copiedReference', { reference })))
+      .catch(() => store.pushLog('warn', tr('copyUpdateFailed')))
+  }
+
+  const copyReferenceToChat = (tab) => {
+    const reference = dwTabReference(tab)
+    const inserted = dwInsertComposerText(`${reference} `)
+    const write = globalThis.navigator?.clipboard?.writeText?.(reference)
+    if (write !== undefined) write.catch(() => undefined)
+    store.pushLog('info', tr(inserted ? 'log.copiedReferenceToChat' : 'log.copiedReferenceOnly', { reference }))
+  }
+
+  const menuItem = (key, icon, label, disabled, run) => h('button', {
+    key,
+    type: 'button',
+    role: 'menuitem',
+    className: 'dw-tabmenu-item',
+    disabled,
+    onClick: () => {
+      setMenu(null)
+      run()
+    },
+  }, [
+    h('span', { key: 'ic', className: 'dw-tabmenu-icon' }, h(DwIcon, { name: icon, size: 13 })),
+    h('span', { key: 'lb', className: 'dw-tabmenu-label' }, label),
+  ])
+
+  const index = menu === null ? -1 : (state.tabs ?? []).findIndex((tab) => tab.id === menu.tab.id)
+  const menuLayer = menu === null ? null : h('div', {
+    key: 'backdrop',
+    className: 'dw-tabmenu-backdrop',
+    onPointerDown: () => setMenu(null),
+    onContextMenu: (event) => {
+      event.preventDefault()
+      setMenu(null)
+    },
+  }, h('div', {
+    key: 'menu',
+    className: 'dw-tabmenu',
+    role: 'menu',
+    'aria-label': tr('tabMenuLabel'),
+    style: { left: menu.x, top: menu.y },
+    onPointerDown: (event) => event.stopPropagation(),
+  }, [
+    menuItem('close', 'close', tr('tabClose'), false, () => store.closeTab(menu.tab.id)),
+    menuItem('close-others', 'layers', tr('tabCloseOthers'), (state.tabs ?? []).length <= 1, () => store.closeOtherTabs(menu.tab.id)),
+    menuItem('close-all', 'stack', tr('tabCloseAll'), false, () => store.closeAllTabs()),
+    menuItem('close-left', 'arrow-left', tr('tabCloseLeft'), index <= 0, () => store.closeTabsToLeft(menu.tab.id)),
+    menuItem('close-right', 'arrow-right', tr('tabCloseRight'), index < 0 || index >= (state.tabs ?? []).length - 1, () => store.closeTabsToRight(menu.tab.id)),
+    h('div', { key: 'sep', className: 'dw-tabmenu-sep' }),
+    menuItem('copy-reference', 'copy', tr('copyReference'), false, () => copyReference(menu.tab)),
+    menuItem('copy-reference-chat', 'at', tr('copyReferenceToChat'), false, () => copyReferenceToChat(menu.tab)),
+  ]))
+
+  return h(React.Fragment, null, [
+    h('div', { key: 'tabs', className: 'dw-tabs', role: 'tablist' }, state.tabs.map((tab) => {
+      const active = tab.id === state.activeTab
+      return h('div', {
+        key: tab.id,
+        role: 'tab',
+        'aria-selected': active,
+        className: `dw-tab${active ? ' dw-tab-active' : ''}`,
+        title: tab.subtitle ?? tab.title,
+        onClick: () => store.setActiveTab(tab.id),
+        onContextMenu: (event) => {
           event.preventDefault()
-          store.closeTab(tab.id)
-        }
-      },
-    }, [
-      h(DwIcon, { key: 'ic', name: tab.kind === 'ddl' ? 'ddl' : 'database', size: 12 }),
-      h('span', { key: 'lb', className: 'dw-tab-label' }, tab.title),
-      // Several environments can hold a schema of the same name, so the tab says
-      // which one it is; the full text stays in the tooltip.
-      tab.env !== '' ? h('span', { key: 'env', className: 'dw-badge', style: { marginLeft: 2 } }, tab.env) : null,
-      h('button', {
-        key: 'cl',
-        type: 'button',
-        className: 'dw-tab-close',
-        title: tr('closeTab'),
-        'aria-label': tr('closeTab'),
-        onClick: (event) => {
-          event.stopPropagation()
-          store.closeTab(tab.id)
+          // Keep the menu inside the panel, like the code workspace's menu does.
+          const rect = typeof document === 'undefined' ? null : document.querySelector('.dw-root')?.getBoundingClientRect()
+          const left = rect === null || rect === undefined ? 8 : Math.max(8, rect.left + 8)
+          const top = rect === null || rect === undefined ? 8 : Math.max(8, rect.top + 8)
+          const right = (rect === null || rect === undefined ? (globalThis.innerWidth ?? 1200) : rect.right) - 248
+          const bottom = (rect === null || rect === undefined ? (globalThis.innerHeight ?? 800) : rect.bottom) - 238
+          setMenu({
+            x: Math.max(left, Math.min(event.clientX, Math.max(left, right))),
+            y: Math.max(top, Math.min(event.clientY, Math.max(top, bottom))),
+            tab,
+          })
         },
-      }, h(DwIcon, { name: 'close', size: 10 })),
-    ])
-  }))
+        onAuxClick: (event) => {
+          if (event.button === 1) {
+            event.preventDefault()
+            store.closeTab(tab.id)
+          }
+        },
+      }, [
+        h(DwIcon, { key: 'ic', name: tab.kind === 'ddl' ? 'ddl' : 'database', size: 12 }),
+        h('span', { key: 'lb', className: 'dw-tab-label' }, tab.title),
+        // Several environments can hold a schema of the same name, so the tab says
+        // which one it is; the full text stays in the tooltip.
+        tab.env !== '' ? h('span', { key: 'env', className: 'dw-badge', style: { marginLeft: 2 } }, tab.env) : null,
+        h('button', {
+          key: 'cl',
+          type: 'button',
+          className: 'dw-tab-close',
+          title: tr('closeTab'),
+          'aria-label': tr('closeTab'),
+          onClick: (event) => {
+            event.stopPropagation()
+            store.closeTab(tab.id)
+          },
+        }, h(DwIcon, { name: 'close', size: 10 })),
+      ])
+    })),
+    menuLayer,
+  ])
 }
 
 /** A draggable horizontal divider that resizes the editor. */

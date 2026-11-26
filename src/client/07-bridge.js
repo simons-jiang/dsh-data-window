@@ -43,6 +43,9 @@ function dwBridgeDatabases(state) {
           env: environment.env,
           envLabel: environment.label ?? environment.env,
           instanceLabel: instance.label ?? '',
+          // 资源树是全机共享的，同一个实例下会挂着别的项目的库；只有本项目发现出来的
+          // 库才带这个标记，`openSql` 靠它选库。
+          inWorkspace: database.inWorkspace === true,
         })
       }
     }
@@ -154,7 +157,13 @@ async function dwBridgeHandle(detail, deps) {
         return
       }
       const schema = typeof detail.schema === 'string' ? detail.schema.trim() : ''
-      const target = databases.find((entry) => schema !== '' && entry.database === schema) ?? databases[0]
+      // 库的定位：显式 schema 优先；没有就只在本项目发现出来的库里挑。
+      // 以前直接取 databases[0]，共享资源树里第一个常常是别的项目的库
+      // （bluewhale-order-service 的 Mapper 被打开在 tiangong_tk_order 下）。
+      const own = databases.filter((entry) => entry.inWorkspace === true)
+      const pool = own.length > 0 ? own : databases
+      const target = (schema === '' ? null : databases.find((entry) => entry.database === schema))
+        ?? pool[0]
       layout()?.selectPanel?.(DW_PANEL_ID)
       // Paste only: Mapper SQL usually carries #{...} parameters and dynamic
       // fragments, so running it automatically would just produce an error.

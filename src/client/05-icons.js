@@ -65,6 +65,25 @@ function DwIcon({ name, size = 14, className }) {
       return h('svg', { ...common, fill: 'currentColor', stroke: 'none' }, [h('path', { d: 'M4.6 2.9l8 5.1-8 5.1z' })])
     case 'stop':
       return h('svg', { ...common, fill: 'currentColor', stroke: 'none' }, [h('rect', { x: 4, y: 4, width: 8, height: 8, rx: 1.4 })])
+    case 'layers':
+      return h('svg', common, [
+        h('rect', { key: 'a', x: 2.4, y: 2.4, width: 7, height: 7, rx: 1.4 }),
+        h('rect', { key: 'b', x: 6.6, y: 6.6, width: 7, height: 7, rx: 1.4 }),
+      ])
+    case 'stack':
+      return h('svg', common, [
+        h('path', { key: 'a', d: 'M2 6 8 3.2 14 6 8 8.8Z' }),
+        h('path', { key: 'b', d: 'M2 10.4 8 13.2 14 10.4' }),
+      ])
+    case 'arrow-left':
+      return h('svg', common, [h('path', { key: 'a', d: 'M12.5 8H3.5M7 4.5 3.5 8 7 11.5' })])
+    case 'arrow-right':
+      return h('svg', common, [h('path', { key: 'a', d: 'M3.5 8h9M9 4.5 12.5 8 9 11.5' })])
+    case 'at':
+      return h('svg', common, [
+        h('circle', { key: 'a', cx: 8, cy: 8, r: 2.4 }),
+        h('path', { key: 'b', d: 'M10.4 8v1.4a2.1 2.1 0 0 0 4.2 0V8A6.4 6.4 0 1 0 8 14.4c1.2 0 2.2-.2 3-.7' }),
+      ])
     case 'close':
       return h('svg', common, [h('path', { d: 'M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6' })])
     case 'download':

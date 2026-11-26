@@ -75,6 +75,12 @@ window.dispatchEvent(new CustomEvent('dsh-data-window:response', {
 3. 多个候选时按**环境顺序取第一个**，回执里带全部 `candidates`，调用方可提示用户；
 4. 没有候选 → `table-not-found`。
 
+`openSql` 不查表，按这条顺序选库：
+
+1. 请求带了 `schema` → 精确匹配该库；
+2. 否则**只在本工作区发现出来的库**里取第一个（资源树是全机共享的，同一个实例下还挂着别的项目的库；`shared.js` 会给本项目发现的库打 `inWorkspace: true`）；
+3. 本工作区一个库都没发现（比如只有共享/手动连接）→ 退回全量列表的第一个。
+
 ## 只读边界
 
 桥只负责打开控制台、粘贴文本、执行生成的只读 `SELECT`。所有真正发往 MySQL 的语句仍然经过 Host 的只读网关（白名单 / 单语句 / 写关键字 / `SET SESSION TRANSACTION READ ONLY`）。`openSql` 从不自动执行外部传入的 SQL。

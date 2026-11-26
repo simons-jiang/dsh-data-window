@@ -282,5 +282,16 @@
   "aiModelUnknown": "not configured",
   "optimizeNotes": "Notes",
   "optimizeCopy": "Copy SQL",
-  "log.optimizeCopied": "Optimized SQL copied"
+  "log.optimizeCopied": "Optimized SQL copied",
+  "tabClose": "Close",
+  "tabCloseOthers": "Close other tabs",
+  "tabCloseAll": "Close all tabs",
+  "tabCloseLeft": "Close tabs to the left",
+  "tabCloseRight": "Close tabs to the right",
+  "copyReference": "Copy reference",
+  "copyReferenceToChat": "Copy reference to chat",
+  "log.copiedReference": "Reference copied: {reference}",
+  "log.copiedReferenceToChat": "Reference inserted into the chat: {reference}",
+  "log.copiedReferenceOnly": "Chat input is closed; reference copied: {reference}",
+  "tabMenuLabel": "Tab menu"
 }

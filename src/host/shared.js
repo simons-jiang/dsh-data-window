@@ -89,8 +89,16 @@ export function buildSharedTree(options) {
         for (const database of Array.isArray(instance.databases) ? instance.databases : []) {
           const name = String(database?.name ?? '')
           if (name === '') continue
-          if (current.databases.some((candidate) => candidate.name === name)) continue
-          current.databases.push(databaseEntry(database, current))
+          const existing = current.databases.find((candidate) => candidate.name === name)
+          if (existing !== undefined) {
+            // 同一个库可能先被别的项目带进来：本项目的发现仍然要盖一个「属于本项目」
+            // 的戳，打开 SQL 时才知道该选哪个库。
+            if (isCurrent === true) existing.inWorkspace = true
+            continue
+          }
+          const entry = databaseEntry(database, current)
+          if (isCurrent === true) entry.inWorkspace = true
+          current.databases.push(entry)
         }
       }
     }

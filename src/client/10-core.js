@@ -1114,19 +1114,45 @@ function dwCreateStore(translate) {
       }
     },
 
-    /** Close one tab and pick a neighbour. */
-    closeTab(id) {
-      const index = state.tabs.findIndex((tab) => tab.id === id)
-      if (index < 0) return
-      const tabs = state.tabs.filter((tab) => tab.id !== id)
+    /** Close one or more tabs and keep the active selection on a neighbour. */
+    closeTabs(ids) {
+      const removing = new Set(Array.isArray(ids) ? ids : [])
+      if (removing.size === 0) return
+      const tabs = state.tabs.filter((tab) => !removing.has(tab.id))
       let activeTab = state.activeTab
-      if (activeTab === id) {
-        const neighbour = tabs[index] ?? tabs[index - 1]
+      if (removing.has(activeTab)) {
+        const index = state.tabs.findIndex((tab) => tab.id === activeTab)
+        const neighbour = state.tabs.slice(index + 1).find((tab) => !removing.has(tab.id))
+          ?? state.tabs.slice(0, index).reverse().find((tab) => !removing.has(tab.id))
         activeTab = neighbour?.id ?? ''
       }
       patch({ tabs, activeTab })
       // Closing a console is deliberate: drop it from storage now, not later.
       flushConsoles()
+    },
+
+    closeTab(id) {
+      store.closeTabs([id])
+    },
+
+    closeOtherTabs(id) {
+      store.closeTabs(state.tabs.filter((tab) => tab.id !== id).map((tab) => tab.id))
+    },
+
+    closeAllTabs() {
+      store.closeTabs(state.tabs.map((tab) => tab.id))
+    },
+
+    closeTabsToLeft(id) {
+      const index = state.tabs.findIndex((tab) => tab.id === id)
+      if (index <= 0) return
+      store.closeTabs(state.tabs.slice(0, index).map((tab) => tab.id))
+    },
+
+    closeTabsToRight(id) {
+      const index = state.tabs.findIndex((tab) => tab.id === id)
+      if (index < 0) return
+      store.closeTabs(state.tabs.slice(index + 1).map((tab) => tab.id))
     },
 
     setActiveTab(id) {

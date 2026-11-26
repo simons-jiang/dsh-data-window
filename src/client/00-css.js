@@ -631,6 +631,63 @@ const DW_CSS = `
   background: var(--dsw-alias-bg-overlay, #23262d);
   box-shadow: 0 10px 26px rgba(0,0,0,.42);
 }
+.dw-tabmenu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: transparent;
+}
+/* The tab menu mirrors the code workspace's menu (icons + labels, IDEA-like). */
+.dw-tabmenu {
+  position: fixed;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-width: 232px;
+  padding: 5px;
+  border: 0.5px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, .1));
+  border-radius: var(--dsw-radius-md, 10px);
+  background: var(--dsw-specific-menu, var(--dsw-alias-bg-layer-2, #23262b));
+  backdrop-filter: var(--dsw-menu-backdrop-filter, none);
+  box-shadow: var(--dsw-elevation-prominent, 0 12px 32px rgba(0, 0, 0, .35));
+  color: var(--dsw-alias-label-primary, inherit);
+}
+.dw-tabmenu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 27px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--dsw-radius-sm, 6px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 27px;
+  text-align: left;
+  cursor: default;
+}
+.dw-tabmenu-item:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, .08)); }
+.dw-tabmenu-item:disabled { opacity: .45; }
+.dw-tabmenu-item:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary, #4a7dff));
+}
+.dw-tabmenu-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  color: var(--dsw-alias-label-secondary, inherit);
+}
+.dw-tabmenu-label { flex: 1 1 auto; }
+.dw-tabmenu-sep {
+  height: 0.5px;
+  margin: 5px 8px;
+  background: var(--dsw-alias-border-l1, rgba(255, 255, 255, .08));
+}
 .dw-menu-note {
   padding: 4px 8px 5px;
   color: var(--dsw-alias-label-secondary, #8b919d);

@@ -52,6 +52,9 @@ double-click on the divider restores its default width.
 - **Refresh structure** — right-click a connection, database or table to re-read
   its structure (databases, tables or columns) without reloading the panel; an open
   DDL tab for that table refreshes with it. Metadata only, never a write.
+- **Tab context menu** — right-click a console tab to close it, close the tabs on
+  either side (or all of them), copy its reference (`schema.table` or `schema`), or
+  put that reference into the chat composer when the chat input is open.
 - **Paging for LIMIT queries** — a statement ending in `LIMIT` gets previous/next
   controls whose page size is that limit; the next page is built as
   `… LIMIT n OFFSET m` and run without touching the editor. An empty next page ends
