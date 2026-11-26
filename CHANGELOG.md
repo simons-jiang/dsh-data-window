@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Changed
+
+- Clicking a tree row only selects it now; expanding/collapsing belongs to the
+  twisty, while double-click opens the node (database console, table data, or the
+  list for an environment/instance).
+- The create statement opens in a dialog with a copy button instead of a work tab;
+  the F4 / ⌘⇧D shortcut and the context-menu entry stay. Right-clicking a database
+  (or F4 on it) reads every table's create statement with progress, and marks the
+  tables that could not be read at the end of the script. The DDL keeps the server's
+  formatting: long lines scroll horizontally instead of wrapping, and the code box
+  is the dialog's only scroll container (no nested scrollbar pair).
+
+### Added
+
+- The SQL optimization dialog is now a side-by-side diff: the original statement on
+  the left, the optimized one on the right, with changed tokens highlighted (red
+  left, green right) and synchronized scrolling. The comparison is token-based so a
+  model that collapses the statement into one line still diffs cleanly.
+
 ### Added
 
 - SQL console tabs have a right-click menu: close, close others, close all, close

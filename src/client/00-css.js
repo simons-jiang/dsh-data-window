@@ -965,7 +965,67 @@ const DW_CSS = `
   word-break: break-all;
 }
 .dw-cell-dialog { width: min(720px, 100%); }
-.dw-optimize-dialog { width: min(760px, 100%); }
+.dw-optimize-dialog { width: min(1100px, 100%); }
+.dw-ddl-dialog { width: min(900px, 100%); }
+/*
+ * The DDL is the only scroll container in this dialog: one scrollbar pair, at the
+ * code box, instead of the modal body plus the pre each growing their own.
+ */
+.dw-ddl-dialog .dw-modal-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.dw-ddl-result {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.dw-ddl-result .dw-log-warn { margin-bottom: 6px; }
+.dw-ddl-code {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+  /* Keep the server's line breaks: long COMMENTs scroll sideways, never wrap. */
+  white-space: pre;
+  word-break: normal;
+}
+.dw-diff { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dw-diff-col { display: flex; flex-direction: column; min-width: 0; }
+.dw-diff-head {
+  padding-bottom: 5px;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 11px;
+}
+.dw-diff-pane {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.dw-diff-del {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary, #e5534b) 26%, transparent);
+}
+.dw-diff-add {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--dsw-alias-state-success-primary, #3fb950) 26%, transparent);
+}
+@media (max-width: 720px) {
+  .dw-diff { grid-template-columns: 1fr; }
+}
 .dw-optimize-model { padding-bottom: 8px; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 11px; }
 .dw-optimize-notes {
   max-height: 120px;

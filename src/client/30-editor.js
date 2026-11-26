@@ -151,7 +151,7 @@ function DwTabs({ store, state, tr }) {
           }
         },
       }, [
-        h(DwIcon, { key: 'ic', name: tab.kind === 'ddl' ? 'ddl' : 'database', size: 12 }),
+        h(DwIcon, { key: 'ic', name: 'database', size: 12 }),
         h('span', { key: 'lb', className: 'dw-tab-label' }, tab.title),
         // Several environments can hold a schema of the same name, so the tab says
         // which one it is; the full text stays in the tooltip.
@@ -607,59 +607,136 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
   ])
 }
 
-/** The DDL document: the create statement plus the column summary above it. */
-function DwDdlView({ tab, tr, store }) {
-  const bar = h('div', { key: 'bar', className: 'dw-result-bar' }, [
-    h('span', { key: 'n' }, [tab.env, tab.database, tab.table].filter((part) => typeof part === 'string' && part !== '').join(' / ')),
-    h('span', { key: 'c' }, `${tab.columns.length} ${tr('columns')}`),
-    h('span', { key: 'sp', className: 'dw-spacer' }),
-    h('button', {
-      key: 'data',
-      type: 'button',
-      className: 'dw-btn',
-      onClick: () => {
-        store.seedStatement(
-          { dbId: tab.dbId, database: tab.database, table: tab.table, env: tab.env, instanceLabel: tab.instanceLabel },
-          `SELECT *\nFROM \`${tab.database}\`.\`${tab.table}\`\nLIMIT 100`,
-        )
-        void store.runActiveTab()
-      },
-    }, [h(DwIcon, { key: 'i', name: 'table', size: 11 }), h('span', { key: 't' }, tr('openData'))]),
-    h('button', {
-      key: 'copy',
-      type: 'button',
-      className: 'dw-btn',
-      onClick: () => {
-        globalThis.navigator?.clipboard?.writeText?.(tab.ddl).catch(() => undefined)
-        store.pushLog('info', tr('log.copiedDdl', { table: tab.table }))
-      },
-    }, [h(DwIcon, { key: 'i', name: 'copy', size: 11 }), h('span', { key: 't' }, tr('copyDdl'))]),
-    h('button', {
-      key: 'refresh',
-      type: 'button',
-      className: 'dw-btn dw-btn-icon',
-      title: tr('refreshDdl'),
-      disabled: tab.loading === true,
-      onClick: () => void store.refreshDdl(tab.id),
-    }, h(DwIcon, { name: tab.loading === true ? 'spinner' : 'refresh', size: 12 })),
-  ])
+/** The create statement as a dialog: copy it and close, no work tab involved. */
+function DwDdlDialog({ node, tr, store, onClose }) {
+  const allTables = node.kind === 'database'
+  const [phase, setPhase] = useState('loading')
+  const [ddl, setDdl] = useState('')
+  const [error, setError] = useState('')
+  const [progress, setProgress] = useState({ done: 0, total: 0 })
+  const [failureCount, setFailureCount] = useState(0)
+  const [count, setCount] = useState(0)
 
-  if (tab.loading === true) {
-    return h('div', { className: 'dw-ddl' }, [bar, h('div', { key: 'body', className: 'dw-empty' }, [
+  useEffect(() => {
+    let alive = true
+    const fail = (failure, name) => {
+      if (!alive) return
+      const message = dwExplainFailure(tr, failure)
+      setError(message)
+      setPhase('error')
+      store.pushLog('error', tr('log.loadFailed', { name, message }))
+    }
+
+    const loadTable = async () => {
+      try {
+        const value = await dwRpc('ddl', { id: node.dbId, table: node.table })
+        if (!alive) return
+        setDdl(String(value?.ddl ?? ''))
+        setCount(1)
+        setPhase('done')
+        store.pushLog('info', tr('log.ddl', { table: node.table, ms: dwDuration(value?.statementTime ?? 0) }))
+      } catch (failure) {
+        fail(failure, node.table)
+      }
+    }
+
+    // A whole database: list the tables, then read each statement in turn so the
+    // dialog can show progress and a closed dialog stops issuing round trips.
+    const loadDatabase = async () => {
+      const startedAt = Date.now()
+      try {
+        const listed = await dwRpc('tables', { id: node.dbId })
+        if (!alive) return
+        const names = (Array.isArray(listed?.tables) ? listed.tables : [])
+          .map((table) => String(table?.name ?? ''))
+          .filter((name) => name !== '')
+        setProgress({ done: 0, total: names.length })
+        const parts = []
+        const failures = []
+        for (let index = 0; index < names.length; index += 1) {
+          if (!alive) return
+          try {
+            const value = await dwRpc('ddl', { id: node.dbId, table: names[index] })
+            const text = String(value?.ddl ?? '').trim().replace(/;+$/, '')
+            if (text !== '') parts.push(`-- ${names[index]}\n${text};`)
+          } catch (failure) {
+            failures.push(`${names[index]}: ${dwExplainFailure(tr, failure).replace(/\s+/g, ' ')}`)
+          }
+          if (alive) setProgress({ done: index + 1, total: names.length })
+        }
+        if (!alive) return
+        const failedBlock = failures.length === 0 ? '' : failures.map((line) => `-- ${line}`).join('\n')
+        setDdl([...parts, failedBlock].filter((part) => part !== '').join('\n\n'))
+        setCount(parts.length)
+        setFailureCount(failures.length)
+        setPhase('done')
+        store.pushLog('info', tr('log.ddlAll', { database: node.database, count: parts.length, ms: Date.now() - startedAt }))
+      } catch (failure) {
+        fail(failure, node.database)
+      }
+    }
+
+    if (allTables) void loadDatabase()
+    else void loadTable()
+    return () => { alive = false }
+  }, [])
+
+  const loadingHint = allTables && progress.total > 0
+    ? `${tr('ddlLoading')} ${progress.done}/${progress.total}`
+    : tr('ddlLoading')
+  const body = phase === 'loading'
+    ? h('div', { key: 'loading', className: 'dw-empty', style: { minHeight: 120 } }, [
       h(DwIcon, { key: 'i', name: 'spinner', size: 18 }),
-      h('div', { key: 't', className: 'dw-empty-hint' }, tr('ddlLoading')),
-    ])])
-  }
-  if (tab.error !== '') {
-    return h('div', { className: 'dw-ddl' }, [bar, h('div', { key: 'body', className: 'dw-empty' }, [
-      h('div', { key: 't', className: 'dw-empty-title', style: { color: 'var(--dsw-alias-state-error-primary)' } }, tr('ddlFailed')),
-      h('div', { key: 'm', className: 'dw-error-text' }, tab.error),
-    ])])
-  }
-  return h('div', { className: 'dw-ddl' }, [
-    bar,
-    h('pre', { key: 'body', className: 'dw-ddl-body' }, h('code', null, tab.ddl === '' ? tr('ddlEmpty') : tab.ddl)),
-  ])
+      h('div', { key: 't', className: 'dw-empty-hint' }, loadingHint),
+    ])
+    : phase === 'error'
+      ? h('div', { key: 'error' }, [
+        h('div', { key: 't', className: 'dw-empty-title', style: { color: 'var(--dsw-alias-state-error-primary)', fontSize: 12 } }, tr('ddlFailed')),
+        h('div', { key: 'm', className: 'dw-error-text' }, error),
+      ])
+      : h('div', { key: 'done', className: 'dw-ddl-result' }, [
+        failureCount > 0
+          ? h('div', { key: 'warn', className: 'dw-log-warn' }, tr('ddlAllPartial', { count: failureCount }))
+          : null,
+        h('pre', { key: 'ddl', className: 'dw-cell-view dw-ddl-code' },
+          ddl === '' ? tr(allTables ? 'ddlAllEmpty' : 'ddlEmpty') : ddl),
+      ])
+
+  return h('div', { className: 'dw-modal', onClick: onClose }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card dw-ddl-dialog',
+    onClick: (event) => event.stopPropagation(),
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, [
+      h(DwIcon, { key: 'i', name: 'ddl', size: 13 }),
+      h('span', { key: 't' }, tr(allTables ? 'menuDdlAll' : 'menuDdl')),
+      h('span', { key: 'p', style: { color: 'var(--dsw-alias-label-secondary)', fontWeight: 400, fontSize: 11 } },
+        [node.env, node.database, node.table].filter((part) => typeof part === 'string' && part !== '').join(' / ')),
+    ]),
+    h('div', { key: 'body', className: 'dw-modal-body' }, body),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
+      phase === 'done' && ddl !== ''
+        ? h('button', {
+          key: 'copy',
+          type: 'button',
+          className: 'dw-btn',
+          onClick: () => {
+            const write = globalThis.navigator?.clipboard?.writeText?.(ddl)
+            if (write === undefined) {
+              store.pushLog('warn', tr('copyUpdateFailed'))
+              return
+            }
+            write
+              .then(() => store.pushLog('info', allTables
+                ? tr('log.copiedDdlAll', { database: node.database, count })
+                : tr('log.copiedDdl', { table: node.table })))
+              .catch(() => store.pushLog('warn', tr('copyUpdateFailed')))
+          },
+        }, [h(DwIcon, { key: 'i', name: 'copy', size: 11 }), h('span', { key: 't' }, tr('copyDdl'))])
+        : null,
+      h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: onClose }, tr('close')),
+    ]),
+  ]))
 }
 
-export { DwTabs, DwEditor, DwDdlView, DwDragHandle }
+export { DwTabs, DwEditor, DwDdlDialog, DwDragHandle }

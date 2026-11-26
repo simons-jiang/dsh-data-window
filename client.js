@@ -299,6 +299,13 @@ window.__ModuleLoader__.load({
     "log.copiedReferenceToChat": "Reference inserted into the chat: {reference}",
     "log.copiedReferenceOnly": "Chat input is closed; reference copied: {reference}",
     "tabMenuLabel": "Tab menu",
+    "optimizeOriginal": "Original SQL",
+    "optimizeOptimized": "Optimized SQL",
+    "menuDdlAll": "Show all create statements",
+    "ddlAllEmpty": "This database has no tables",
+    "ddlAllPartial": "{count} table(s) could not be read; noted at the end of the script",
+    "log.ddlAll": "Read all create statements of {database}: {count} tables · {ms}",
+    "log.copiedDdlAll": "Copied all create statements of {database} ({count} tables)",
   }
   const DW_TEXT_ZH = {
     "openPanel": "数据窗口",
@@ -591,6 +598,13 @@ window.__ModuleLoader__.load({
     "log.copiedReferenceToChat": "已把引用插入对话：{reference}",
     "log.copiedReferenceOnly": "对话输入框未打开，已复制引用：{reference}",
     "tabMenuLabel": "标签页菜单",
+    "optimizeOriginal": "原始 SQL",
+    "optimizeOptimized": "优化后 SQL",
+    "menuDdlAll": "查看全部建表语句",
+    "ddlAllEmpty": "这个库还没有表",
+    "ddlAllPartial": "{count} 张表读取失败，已在脚本末尾用注释标出",
+    "log.ddlAll": "读取 {database} 的全部建表语句：{count} 张表 · {ms}",
+    "log.copiedDdlAll": "已复制 {database} 的全部建表语句（{count} 张表）",
   }
 
 // ---- 00-css.js -----------------------------------------------------------
@@ -1561,7 +1575,67 @@ const DW_CSS = `
   word-break: break-all;
 }
 .dw-cell-dialog { width: min(720px, 100%); }
-.dw-optimize-dialog { width: min(760px, 100%); }
+.dw-optimize-dialog { width: min(1100px, 100%); }
+.dw-ddl-dialog { width: min(900px, 100%); }
+/*
+ * The DDL is the only scroll container in this dialog: one scrollbar pair, at the
+ * code box, instead of the modal body plus the pre each growing their own.
+ */
+.dw-ddl-dialog .dw-modal-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.dw-ddl-result {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.dw-ddl-result .dw-log-warn { margin-bottom: 6px; }
+.dw-ddl-code {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+  /* Keep the server's line breaks: long COMMENTs scroll sideways, never wrap. */
+  white-space: pre;
+  word-break: normal;
+}
+.dw-diff { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dw-diff-col { display: flex; flex-direction: column; min-width: 0; }
+.dw-diff-head {
+  padding-bottom: 5px;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 11px;
+}
+.dw-diff-pane {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.dw-diff-del {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary, #e5534b) 26%, transparent);
+}
+.dw-diff-add {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--dsw-alias-state-success-primary, #3fb950) 26%, transparent);
+}
+@media (max-width: 720px) {
+  .dw-diff { grid-template-columns: 1fr; }
+}
 .dw-optimize-model { padding-bottom: 8px; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 11px; }
 .dw-optimize-notes {
   max-height: 120px;
@@ -3032,10 +3106,6 @@ function dwCreateStore(translate) {
       void store.loadSchema(node.dbId)
       await store.ensureChildren(node)
       if (state.loadState.get(node.key) === 'error') return
-      if (node.kind === 'table' || node.kind === 'view') {
-        const tab = state.tabs.find((entry) => entry.kind === 'ddl' && entry.dbId === node.dbId && entry.table === node.table)
-        if (tab !== undefined) await store.refreshDdl(tab.id)
-      }
       pushLog('info', t('log.refreshedStructure', { name: node.label }))
     },
 
@@ -3268,60 +3338,6 @@ function dwCreateStore(translate) {
       // workspace: the next discovery lists it next to the configured databases.
       if (node.configured === false) void store.rememberDatabase(node)
       return tab
-    },
-
-    /**
-     * Open the DDL of one table.
-     *
-     * Requirement: the create statement is one keystroke away. The tab is keyed by
-     * table, so asking twice focuses the same document instead of stacking copies.
-     */
-    async openDdl(node) {
-      if (node === null || node === undefined || node.table === undefined) return
-      const id = `ddl:${node.dbId}:${node.table}`
-      const existing = state.tabs.find((tab) => tab.id === id)
-      if (existing !== undefined) {
-        patch({ activeTab: id })
-        if (existing.loading !== true && existing.ddl !== '') return
-        await store.refreshDdl(id)
-        return
-      }
-      const tab = {
-        id,
-        kind: 'ddl',
-        title: node.table,
-        env: node.env ?? '',
-        subtitle: [node.env, node.database].filter((part) => typeof part === 'string' && part !== '').join(' · '),
-        dbId: node.dbId,
-        database: node.database,
-        instanceLabel: node.instanceLabel ?? '',
-        table: node.table,
-        ddl: '',
-        columns: [],
-        loading: true,
-        error: '',
-      }
-      patch({ tabs: [...state.tabs, tab], activeTab: id })
-      await store.refreshDdl(id)
-    },
-
-    /** Re-read one DDL tab (a schema change is exactly why the tab exists). */
-    async refreshDdl(id) {
-      const tab = state.tabs.find((entry) => entry.id === id)
-      if (tab === undefined || tab.kind !== 'ddl') return
-      patch({ tabs: state.tabs.map((entry) => (entry.id === id ? { ...entry, loading: true, error: '' } : entry)) })
-      try {
-        const value = await call('ddl', { id: tab.dbId, table: tab.table })
-        patch({
-          tabs: state.tabs.map((entry) => (entry.id === id
-            ? { ...entry, ddl: value.ddl ?? '', columns: value.columns ?? [], loading: false, error: '' }
-            : entry)),
-        })
-        pushLog('info', t('log.ddl', { table: tab.table, ms: dwDuration(value.statementTime) }))
-      } catch (error) {
-        patch({ tabs: state.tabs.map((entry) => (entry.id === id ? { ...entry, loading: false, error: dwExplainFailure(t, error) } : entry)) })
-        pushLog('error', t('log.loadFailed', { name: tab.table, message: dwExplainFailure(t, error) }))
-      }
     },
 
     /** Close one or more tabs and keep the active selection on a neighbour. */
@@ -3744,7 +3760,18 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
     [state.environments, state.expanded, state.children, state.loadState, state.filter],
   )
 
+  // A row click only selects: expanding belongs to the twisty (and to double-click
+  // for the kinds whose whole purpose is to be opened).
   const activate = (row) => {
+    const node = row.node
+    if (node.kind === 'retry') {
+      store.retryNode(node.retryOf)
+      return
+    }
+    store.select(node)
+  }
+
+  const openRow = (row) => {
     const node = row.node
     if (node.kind === 'retry') {
       store.retryNode(node.retryOf)
@@ -3753,9 +3780,11 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
     store.select(node)
     if (node.kind === 'database') {
       store.openDatabase(node)
-      // Opening the workbench also reveals its tables: that is the list the user
-      // came for, and one click is better than two.
       if (row.open !== true) void store.toggleNode(node)
+      return
+    }
+    if (node.kind === 'table' || node.kind === 'view') {
+      openTableData(row)
       return
     }
     if (node.kind === 'instance' && (node.databases ?? []).length === 0) {
@@ -3803,10 +3832,9 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
         className: 'dw-node-twisty',
         style: { transform: row.open === true ? 'rotate(90deg)' : 'none', transition: 'transform 110ms ease', cursor: 'pointer' },
         onClick: (event) => {
-          // The twisty is the only control that collapses a node: clicking the row
-          // of a database opens its workbench and never closes the list.
+          // The twisty is the only control that expands or collapses a node;
+          // clicking the row never changes the expansion.
           event.stopPropagation()
-          store.select(node)
           void store.toggleNode(node)
         },
       }, row.loading === true ? h(DwIcon, { name: 'spinner', size: 11 }) : h(DwIcon, { name: 'chevron', size: 11 }))
@@ -3833,7 +3861,7 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
         ].filter((part) => part !== '').join('  ·  ')
         : `${node.title ?? `${node.label}${node.detail ? `  ${node.detail}` : ''}`}`,
       onClick: () => activate(row),
-      onDoubleClick: () => (node.kind === 'table' || node.kind === 'view' ? openTableData(row) : undefined),
+      onDoubleClick: () => openRow(row),
       onContextMenu: (event) => {
         event.preventDefault()
         store.select(node)
@@ -4654,7 +4682,7 @@ function DwTabs({ store, state, tr }) {
           }
         },
       }, [
-        h(DwIcon, { key: 'ic', name: tab.kind === 'ddl' ? 'ddl' : 'database', size: 12 }),
+        h(DwIcon, { key: 'ic', name: 'database', size: 12 }),
         h('span', { key: 'lb', className: 'dw-tab-label' }, tab.title),
         // Several environments can hold a schema of the same name, so the tab says
         // which one it is; the full text stays in the tooltip.
@@ -5110,59 +5138,136 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
   ])
 }
 
-/** The DDL document: the create statement plus the column summary above it. */
-function DwDdlView({ tab, tr, store }) {
-  const bar = h('div', { key: 'bar', className: 'dw-result-bar' }, [
-    h('span', { key: 'n' }, [tab.env, tab.database, tab.table].filter((part) => typeof part === 'string' && part !== '').join(' / ')),
-    h('span', { key: 'c' }, `${tab.columns.length} ${tr('columns')}`),
-    h('span', { key: 'sp', className: 'dw-spacer' }),
-    h('button', {
-      key: 'data',
-      type: 'button',
-      className: 'dw-btn',
-      onClick: () => {
-        store.seedStatement(
-          { dbId: tab.dbId, database: tab.database, table: tab.table, env: tab.env, instanceLabel: tab.instanceLabel },
-          `SELECT *\nFROM \`${tab.database}\`.\`${tab.table}\`\nLIMIT 100`,
-        )
-        void store.runActiveTab()
-      },
-    }, [h(DwIcon, { key: 'i', name: 'table', size: 11 }), h('span', { key: 't' }, tr('openData'))]),
-    h('button', {
-      key: 'copy',
-      type: 'button',
-      className: 'dw-btn',
-      onClick: () => {
-        globalThis.navigator?.clipboard?.writeText?.(tab.ddl).catch(() => undefined)
-        store.pushLog('info', tr('log.copiedDdl', { table: tab.table }))
-      },
-    }, [h(DwIcon, { key: 'i', name: 'copy', size: 11 }), h('span', { key: 't' }, tr('copyDdl'))]),
-    h('button', {
-      key: 'refresh',
-      type: 'button',
-      className: 'dw-btn dw-btn-icon',
-      title: tr('refreshDdl'),
-      disabled: tab.loading === true,
-      onClick: () => void store.refreshDdl(tab.id),
-    }, h(DwIcon, { name: tab.loading === true ? 'spinner' : 'refresh', size: 12 })),
-  ])
+/** The create statement as a dialog: copy it and close, no work tab involved. */
+function DwDdlDialog({ node, tr, store, onClose }) {
+  const allTables = node.kind === 'database'
+  const [phase, setPhase] = useState('loading')
+  const [ddl, setDdl] = useState('')
+  const [error, setError] = useState('')
+  const [progress, setProgress] = useState({ done: 0, total: 0 })
+  const [failureCount, setFailureCount] = useState(0)
+  const [count, setCount] = useState(0)
 
-  if (tab.loading === true) {
-    return h('div', { className: 'dw-ddl' }, [bar, h('div', { key: 'body', className: 'dw-empty' }, [
+  useEffect(() => {
+    let alive = true
+    const fail = (failure, name) => {
+      if (!alive) return
+      const message = dwExplainFailure(tr, failure)
+      setError(message)
+      setPhase('error')
+      store.pushLog('error', tr('log.loadFailed', { name, message }))
+    }
+
+    const loadTable = async () => {
+      try {
+        const value = await dwRpc('ddl', { id: node.dbId, table: node.table })
+        if (!alive) return
+        setDdl(String(value?.ddl ?? ''))
+        setCount(1)
+        setPhase('done')
+        store.pushLog('info', tr('log.ddl', { table: node.table, ms: dwDuration(value?.statementTime ?? 0) }))
+      } catch (failure) {
+        fail(failure, node.table)
+      }
+    }
+
+    // A whole database: list the tables, then read each statement in turn so the
+    // dialog can show progress and a closed dialog stops issuing round trips.
+    const loadDatabase = async () => {
+      const startedAt = Date.now()
+      try {
+        const listed = await dwRpc('tables', { id: node.dbId })
+        if (!alive) return
+        const names = (Array.isArray(listed?.tables) ? listed.tables : [])
+          .map((table) => String(table?.name ?? ''))
+          .filter((name) => name !== '')
+        setProgress({ done: 0, total: names.length })
+        const parts = []
+        const failures = []
+        for (let index = 0; index < names.length; index += 1) {
+          if (!alive) return
+          try {
+            const value = await dwRpc('ddl', { id: node.dbId, table: names[index] })
+            const text = String(value?.ddl ?? '').trim().replace(/;+$/, '')
+            if (text !== '') parts.push(`-- ${names[index]}\n${text};`)
+          } catch (failure) {
+            failures.push(`${names[index]}: ${dwExplainFailure(tr, failure).replace(/\s+/g, ' ')}`)
+          }
+          if (alive) setProgress({ done: index + 1, total: names.length })
+        }
+        if (!alive) return
+        const failedBlock = failures.length === 0 ? '' : failures.map((line) => `-- ${line}`).join('\n')
+        setDdl([...parts, failedBlock].filter((part) => part !== '').join('\n\n'))
+        setCount(parts.length)
+        setFailureCount(failures.length)
+        setPhase('done')
+        store.pushLog('info', tr('log.ddlAll', { database: node.database, count: parts.length, ms: Date.now() - startedAt }))
+      } catch (failure) {
+        fail(failure, node.database)
+      }
+    }
+
+    if (allTables) void loadDatabase()
+    else void loadTable()
+    return () => { alive = false }
+  }, [])
+
+  const loadingHint = allTables && progress.total > 0
+    ? `${tr('ddlLoading')} ${progress.done}/${progress.total}`
+    : tr('ddlLoading')
+  const body = phase === 'loading'
+    ? h('div', { key: 'loading', className: 'dw-empty', style: { minHeight: 120 } }, [
       h(DwIcon, { key: 'i', name: 'spinner', size: 18 }),
-      h('div', { key: 't', className: 'dw-empty-hint' }, tr('ddlLoading')),
-    ])])
-  }
-  if (tab.error !== '') {
-    return h('div', { className: 'dw-ddl' }, [bar, h('div', { key: 'body', className: 'dw-empty' }, [
-      h('div', { key: 't', className: 'dw-empty-title', style: { color: 'var(--dsw-alias-state-error-primary)' } }, tr('ddlFailed')),
-      h('div', { key: 'm', className: 'dw-error-text' }, tab.error),
-    ])])
-  }
-  return h('div', { className: 'dw-ddl' }, [
-    bar,
-    h('pre', { key: 'body', className: 'dw-ddl-body' }, h('code', null, tab.ddl === '' ? tr('ddlEmpty') : tab.ddl)),
-  ])
+      h('div', { key: 't', className: 'dw-empty-hint' }, loadingHint),
+    ])
+    : phase === 'error'
+      ? h('div', { key: 'error' }, [
+        h('div', { key: 't', className: 'dw-empty-title', style: { color: 'var(--dsw-alias-state-error-primary)', fontSize: 12 } }, tr('ddlFailed')),
+        h('div', { key: 'm', className: 'dw-error-text' }, error),
+      ])
+      : h('div', { key: 'done', className: 'dw-ddl-result' }, [
+        failureCount > 0
+          ? h('div', { key: 'warn', className: 'dw-log-warn' }, tr('ddlAllPartial', { count: failureCount }))
+          : null,
+        h('pre', { key: 'ddl', className: 'dw-cell-view dw-ddl-code' },
+          ddl === '' ? tr(allTables ? 'ddlAllEmpty' : 'ddlEmpty') : ddl),
+      ])
+
+  return h('div', { className: 'dw-modal', onClick: onClose }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card dw-ddl-dialog',
+    onClick: (event) => event.stopPropagation(),
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, [
+      h(DwIcon, { key: 'i', name: 'ddl', size: 13 }),
+      h('span', { key: 't' }, tr(allTables ? 'menuDdlAll' : 'menuDdl')),
+      h('span', { key: 'p', style: { color: 'var(--dsw-alias-label-secondary)', fontWeight: 400, fontSize: 11 } },
+        [node.env, node.database, node.table].filter((part) => typeof part === 'string' && part !== '').join(' / ')),
+    ]),
+    h('div', { key: 'body', className: 'dw-modal-body' }, body),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
+      phase === 'done' && ddl !== ''
+        ? h('button', {
+          key: 'copy',
+          type: 'button',
+          className: 'dw-btn',
+          onClick: () => {
+            const write = globalThis.navigator?.clipboard?.writeText?.(ddl)
+            if (write === undefined) {
+              store.pushLog('warn', tr('copyUpdateFailed'))
+              return
+            }
+            write
+              .then(() => store.pushLog('info', allTables
+                ? tr('log.copiedDdlAll', { database: node.database, count })
+                : tr('log.copiedDdl', { table: node.table })))
+              .catch(() => store.pushLog('warn', tr('copyUpdateFailed')))
+          },
+        }, [h(DwIcon, { key: 'i', name: 'copy', size: 11 }), h('span', { key: 't' }, tr('copyDdl'))])
+        : null,
+      h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: onClose }, tr('close')),
+    ]),
+  ]))
 }
 
 
@@ -6145,6 +6250,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const [aiOpen, setAiOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [schemaTarget, setSchemaTarget] = useState(null)
+  const [ddlTarget, setDdlTarget] = useState(null)
   const [renameTarget, setRenameTarget] = useState(null)
   const [removeEnvTarget, setRemoveEnvTarget] = useState(null)
   const aiPrompted = useRef(false)
@@ -6247,10 +6353,10 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       if (!isDdl) return
       const selected = store.getState().selectedNode
       if (selected === null || selected === undefined) return
-      if (selected.kind !== 'table' && selected.kind !== 'view') return
+      if (selected.kind !== 'table' && selected.kind !== 'view' && selected.kind !== 'database') return
       event.preventDefault()
       event.stopPropagation()
-      void store.openDdl(selected)
+      setDdlTarget(selected)
     }
     globalThis.addEventListener('keydown', onKey, true)
     return () => globalThis.removeEventListener('keydown', onKey, true)
@@ -6349,7 +6455,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
 
   const selectedTable = state.selectedNode !== null
     && state.selectedNode !== undefined
-    && (state.selectedNode.kind === 'table' || state.selectedNode.kind === 'view')
+    && (state.selectedNode.kind === 'table' || state.selectedNode.kind === 'view' || state.selectedNode.kind === 'database')
 
   const side = h('aside', { key: 'side', className: 'dw-side', style: { width: sideWidth } }, [
     h('div', { key: 'head', className: 'dw-side-head' }, [
@@ -6429,9 +6535,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       h(DwTabs, { key: 'tabs', store, state, tr }),
       activeTab === undefined
         ? h(DwEmpty, { key: 'empty', tr, state, onPick: pickWorkspace, onOpenAi: () => setAiOpen(true), onOpenManual: () => setManualOpen(true) })
-        : activeTab.kind === 'ddl'
-          ? h(DwDdlView, { key: activeTab.id, tab: activeTab, tr, store })
-          : h(React.Fragment, { key: activeTab.id }, [
+        : h(React.Fragment, { key: activeTab.id }, [
             h(DwEditor, {
               key: 'editor',
               store,
@@ -6507,7 +6611,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
           left: Math.max(rect === undefined ? 0 : rect.left, left),
           top: Math.max(rect === undefined ? 0 : rect.top, top),
         },
-      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node), (node) => setRenameTarget(node), (node) => setRemoveEnvTarget(node))),
+      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node), (node) => setRenameTarget(node), (node) => setRemoveEnvTarget(node), (node) => setDdlTarget(node))),
     ])
   }
 
@@ -6546,6 +6650,13 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       onClose: () => setManualOpen(false),
       onSaved: () => void store.loadDiscovery({ quiet: true }),
     }) : null,
+    ddlTarget === null ? null : h(DwDdlDialog, {
+      key: 'ddl-dialog',
+      store,
+      tr,
+      node: ddlTarget,
+      onClose: () => setDdlTarget(null),
+    }),
     removeEnvTarget === null ? null : h(DwConfirmDialog, {
       key: 'remove-env-dialog',
       tr,
@@ -6584,7 +6695,7 @@ function dwClock(date) {
 }
 
 /** The context menu of one node. */
-function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, openRemoveEnv) {
+function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, openRemoveEnv, openDdlDialog) {
   const items = []
   const add = (key, label, shortcut, run, tone) => items.push(h('button', {
     key,
@@ -6597,7 +6708,7 @@ function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, op
   }, [h('span', { key: 'l' }, label), shortcut === '' ? null : h('span', { key: 's', className: 'dw-menu-shortcut' }, shortcut)]))
 
   if (node.kind === 'table' || node.kind === 'view') {
-    add('ddl', tr('menuDdl'), 'F4', () => void store.openDdl(node))
+    add('ddl', tr('menuDdl'), 'F4', () => openDdlDialog(node))
     add('data', tr('menuOpenData'), '', () => {
       const statement = `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`
       store.seedStatement(node, statement)
@@ -6610,6 +6721,7 @@ function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, op
     })
   } else if (node.kind === 'database') {
     add('open', tr('menuOpenConsole'), '', () => store.openDatabase(node))
+    add('ddl', tr('menuDdlAll'), 'F4', () => openDdlDialog(node))
     add('refresh', tr('refreshStructure'), '', () => void store.refreshNode(node))
     if (node.remembered === true) {
       add('forget-database', tr('forgetDatabase'), '', () => void store.forgetDatabase(node), 'dw-menu-danger')
@@ -7760,6 +7872,97 @@ function DwAiSettingsRow({ tr, prefs, onOpen }) {
  * overwrite user SQL" rule intact.
  */
 
+/** SQL tokens keep whitespace, so the diff can highlight words without reformatting. */
+const DW_DIFF_TOKEN = /(\s+|[A-Za-z0-9_$]+|[^\sA-Za-z0-9_$]+)/g
+
+function dwDiffTokenize(text) {
+  const tokens = []
+  DW_DIFF_TOKEN.lastIndex = 0
+  let match
+  const source = String(text ?? '')
+  while ((match = DW_DIFF_TOKEN.exec(source)) !== null) tokens.push({ value: match[1], space: /^\s+$/.test(match[1]) })
+  return tokens
+}
+
+/**
+ * Token-level LCS between the two statements.
+ *
+ * Line-based diffs are useless here: a model often returns the same query as one
+ * long line, so every line would look changed. Common prefixes and suffixes are
+ * trimmed first; the matrix is capped so a pathological statement cannot hang the
+ * dialog (the middle is then reported as changed as a whole).
+ */
+function dwDiffMarks(leftTokens, rightTokens) {
+  const a = leftTokens.filter((token) => !token.space)
+  const b = rightTokens.filter((token) => !token.space)
+  const removed = new Array(a.length).fill(false)
+  const added = new Array(b.length).fill(false)
+  let start = 0
+  while (start < a.length && start < b.length && a[start].value === b[start].value) start += 1
+  let endA = a.length - 1
+  let endB = b.length - 1
+  while (endA >= start && endB >= start && a[endA].value === b[endB].value) {
+    endA -= 1
+    endB -= 1
+  }
+  const n = endA - start + 1
+  const m = endB - start + 1
+  if (n > 0 && m > 0 && n * m <= 2000000) {
+    const width = m + 1
+    const dp = new Uint32Array((n + 1) * width)
+    for (let i = n - 1; i >= 0; i -= 1) {
+      for (let j = m - 1; j >= 0; j -= 1) {
+        dp[i * width + j] = a[start + i].value === b[start + j].value
+          ? dp[(i + 1) * width + j + 1] + 1
+          : Math.max(dp[(i + 1) * width + j], dp[i * width + j + 1])
+      }
+    }
+    let i = 0
+    let j = 0
+    while (i < n && j < m) {
+      if (a[start + i].value === b[start + j].value) {
+        i += 1
+        j += 1
+      } else if (dp[(i + 1) * width + j] >= dp[i * width + j + 1]) {
+        removed[start + i] = true
+        i += 1
+      } else {
+        added[start + j] = true
+        j += 1
+      }
+    }
+    while (i < n) {
+      removed[start + i] = true
+      i += 1
+    }
+    while (j < m) {
+      added[start + j] = true
+      j += 1
+    }
+  } else {
+    for (let i = start; i <= endA; i += 1) removed[i] = true
+    for (let j = start; j <= endB; j += 1) added[j] = true
+  }
+  return { removed, added }
+}
+
+/** Render one side: changed significant tokens wrapped, whitespace left alone. */
+function dwDiffNodes(tokens, marks, className) {
+  const nodes = []
+  let significant = 0
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index]
+    if (token.space) {
+      nodes.push(token.value)
+      continue
+    }
+    const changed = marks[significant] === true
+    significant += 1
+    nodes.push(changed ? h('span', { key: index, className }, token.value) : token.value)
+  }
+  return nodes
+}
+
 function dwOptimizeModelName(model) {
   return String(model?.name ?? model?.model ?? '')
 }
@@ -7769,6 +7972,15 @@ function DwSqlOptimizeDialog({ store, tr, sql, database, onClose }) {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const model = dwAiModel()
+  const leftRef = useRef(null)
+  const rightRef = useRef(null)
+  const originalTokens = useMemo(() => dwDiffTokenize(sql), [sql])
+  const optimizedTokens = useMemo(() => dwDiffTokenize(result?.sql ?? ''), [result?.sql])
+  const diffMarks = useMemo(() => dwDiffMarks(originalTokens, optimizedTokens), [originalTokens, optimizedTokens])
+  const syncScroll = (from, to) => (event) => {
+    const target = to.current
+    if (target !== null) target.scrollTop = event.currentTarget.scrollTop
+  }
 
   useEffect(() => {
     if (model === null) {
@@ -7811,7 +8023,26 @@ function DwSqlOptimizeDialog({ store, tr, sql, database, onClose }) {
         h('div', { key: 'm', className: 'dw-optimize-model' }, tr('optimizeModelLabel', {
           model: dwOptimizeModelName(result?.model) === '' ? tr('aiModelUnknown') : dwOptimizeModelName(result?.model),
         })),
-        h('pre', { key: 'sql', className: 'dw-cell-view' }, result?.sql ?? ''),
+        h('div', { key: 'diff', className: 'dw-diff' }, [
+          h('div', { key: 'left', className: 'dw-diff-col' }, [
+            h('div', { key: 'h', className: 'dw-diff-head' }, tr('optimizeOriginal')),
+            h('pre', {
+              key: 'p',
+              className: 'dw-diff-pane',
+              ref: leftRef,
+              onScroll: syncScroll(leftRef, rightRef),
+            }, dwDiffNodes(originalTokens, diffMarks.removed, 'dw-diff-del')),
+          ]),
+          h('div', { key: 'right', className: 'dw-diff-col' }, [
+            h('div', { key: 'h', className: 'dw-diff-head' }, tr('optimizeOptimized')),
+            h('pre', {
+              key: 'p',
+              className: 'dw-diff-pane',
+              ref: rightRef,
+              onScroll: syncScroll(rightRef, leftRef),
+            }, dwDiffNodes(optimizedTokens, diffMarks.added, 'dw-diff-add')),
+          ]),
+        ]),
         result?.notes === undefined || result.notes === ''
           ? null
           : h('div', { key: 'notes' }, [

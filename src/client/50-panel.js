@@ -198,6 +198,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const [aiOpen, setAiOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [schemaTarget, setSchemaTarget] = useState(null)
+  const [ddlTarget, setDdlTarget] = useState(null)
   const [renameTarget, setRenameTarget] = useState(null)
   const [removeEnvTarget, setRemoveEnvTarget] = useState(null)
   const aiPrompted = useRef(false)
@@ -300,10 +301,10 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       if (!isDdl) return
       const selected = store.getState().selectedNode
       if (selected === null || selected === undefined) return
-      if (selected.kind !== 'table' && selected.kind !== 'view') return
+      if (selected.kind !== 'table' && selected.kind !== 'view' && selected.kind !== 'database') return
       event.preventDefault()
       event.stopPropagation()
-      void store.openDdl(selected)
+      setDdlTarget(selected)
     }
     globalThis.addEventListener('keydown', onKey, true)
     return () => globalThis.removeEventListener('keydown', onKey, true)
@@ -402,7 +403,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
 
   const selectedTable = state.selectedNode !== null
     && state.selectedNode !== undefined
-    && (state.selectedNode.kind === 'table' || state.selectedNode.kind === 'view')
+    && (state.selectedNode.kind === 'table' || state.selectedNode.kind === 'view' || state.selectedNode.kind === 'database')
 
   const side = h('aside', { key: 'side', className: 'dw-side', style: { width: sideWidth } }, [
     h('div', { key: 'head', className: 'dw-side-head' }, [
@@ -482,9 +483,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       h(DwTabs, { key: 'tabs', store, state, tr }),
       activeTab === undefined
         ? h(DwEmpty, { key: 'empty', tr, state, onPick: pickWorkspace, onOpenAi: () => setAiOpen(true), onOpenManual: () => setManualOpen(true) })
-        : activeTab.kind === 'ddl'
-          ? h(DwDdlView, { key: activeTab.id, tab: activeTab, tr, store })
-          : h(React.Fragment, { key: activeTab.id }, [
+        : h(React.Fragment, { key: activeTab.id }, [
             h(DwEditor, {
               key: 'editor',
               store,
@@ -560,7 +559,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
           left: Math.max(rect === undefined ? 0 : rect.left, left),
           top: Math.max(rect === undefined ? 0 : rect.top, top),
         },
-      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node), (node) => setRenameTarget(node), (node) => setRemoveEnvTarget(node))),
+      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node), (node) => setRenameTarget(node), (node) => setRemoveEnvTarget(node), (node) => setDdlTarget(node))),
     ])
   }
 
@@ -599,6 +598,13 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       onClose: () => setManualOpen(false),
       onSaved: () => void store.loadDiscovery({ quiet: true }),
     }) : null,
+    ddlTarget === null ? null : h(DwDdlDialog, {
+      key: 'ddl-dialog',
+      store,
+      tr,
+      node: ddlTarget,
+      onClose: () => setDdlTarget(null),
+    }),
     removeEnvTarget === null ? null : h(DwConfirmDialog, {
       key: 'remove-env-dialog',
       tr,
@@ -637,7 +643,7 @@ function dwClock(date) {
 }
 
 /** The context menu of one node. */
-function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, openRemoveEnv) {
+function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, openRemoveEnv, openDdlDialog) {
   const items = []
   const add = (key, label, shortcut, run, tone) => items.push(h('button', {
     key,
@@ -650,7 +656,7 @@ function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, op
   }, [h('span', { key: 'l' }, label), shortcut === '' ? null : h('span', { key: 's', className: 'dw-menu-shortcut' }, shortcut)]))
 
   if (node.kind === 'table' || node.kind === 'view') {
-    add('ddl', tr('menuDdl'), 'F4', () => void store.openDdl(node))
+    add('ddl', tr('menuDdl'), 'F4', () => openDdlDialog(node))
     add('data', tr('menuOpenData'), '', () => {
       const statement = `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`
       store.seedStatement(node, statement)
@@ -663,6 +669,7 @@ function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, op
     })
   } else if (node.kind === 'database') {
     add('open', tr('menuOpenConsole'), '', () => store.openDatabase(node))
+    add('ddl', tr('menuDdlAll'), 'F4', () => openDdlDialog(node))
     add('refresh', tr('refreshStructure'), '', () => void store.refreshNode(node))
     if (node.remembered === true) {
       add('forget-database', tr('forgetDatabase'), '', () => void store.forgetDatabase(node), 'dw-menu-danger')

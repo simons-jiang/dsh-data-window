@@ -293,5 +293,12 @@
   "log.copiedReference": "Reference copied: {reference}",
   "log.copiedReferenceToChat": "Reference inserted into the chat: {reference}",
   "log.copiedReferenceOnly": "Chat input is closed; reference copied: {reference}",
-  "tabMenuLabel": "Tab menu"
+  "tabMenuLabel": "Tab menu",
+  "optimizeOriginal": "Original SQL",
+  "optimizeOptimized": "Optimized SQL",
+  "menuDdlAll": "Show all create statements",
+  "ddlAllEmpty": "This database has no tables",
+  "ddlAllPartial": "{count} table(s) could not be read; noted at the end of the script",
+  "log.ddlAll": "Read all create statements of {database}: {count} tables · {ms}",
+  "log.copiedDdlAll": "Copied all create statements of {database} ({count} tables)"
 }

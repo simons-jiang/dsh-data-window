@@ -822,10 +822,6 @@ function dwCreateStore(translate) {
       void store.loadSchema(node.dbId)
       await store.ensureChildren(node)
       if (state.loadState.get(node.key) === 'error') return
-      if (node.kind === 'table' || node.kind === 'view') {
-        const tab = state.tabs.find((entry) => entry.kind === 'ddl' && entry.dbId === node.dbId && entry.table === node.table)
-        if (tab !== undefined) await store.refreshDdl(tab.id)
-      }
       pushLog('info', t('log.refreshedStructure', { name: node.label }))
     },
 
@@ -1058,60 +1054,6 @@ function dwCreateStore(translate) {
       // workspace: the next discovery lists it next to the configured databases.
       if (node.configured === false) void store.rememberDatabase(node)
       return tab
-    },
-
-    /**
-     * Open the DDL of one table.
-     *
-     * Requirement: the create statement is one keystroke away. The tab is keyed by
-     * table, so asking twice focuses the same document instead of stacking copies.
-     */
-    async openDdl(node) {
-      if (node === null || node === undefined || node.table === undefined) return
-      const id = `ddl:${node.dbId}:${node.table}`
-      const existing = state.tabs.find((tab) => tab.id === id)
-      if (existing !== undefined) {
-        patch({ activeTab: id })
-        if (existing.loading !== true && existing.ddl !== '') return
-        await store.refreshDdl(id)
-        return
-      }
-      const tab = {
-        id,
-        kind: 'ddl',
-        title: node.table,
-        env: node.env ?? '',
-        subtitle: [node.env, node.database].filter((part) => typeof part === 'string' && part !== '').join(' · '),
-        dbId: node.dbId,
-        database: node.database,
-        instanceLabel: node.instanceLabel ?? '',
-        table: node.table,
-        ddl: '',
-        columns: [],
-        loading: true,
-        error: '',
-      }
-      patch({ tabs: [...state.tabs, tab], activeTab: id })
-      await store.refreshDdl(id)
-    },
-
-    /** Re-read one DDL tab (a schema change is exactly why the tab exists). */
-    async refreshDdl(id) {
-      const tab = state.tabs.find((entry) => entry.id === id)
-      if (tab === undefined || tab.kind !== 'ddl') return
-      patch({ tabs: state.tabs.map((entry) => (entry.id === id ? { ...entry, loading: true, error: '' } : entry)) })
-      try {
-        const value = await call('ddl', { id: tab.dbId, table: tab.table })
-        patch({
-          tabs: state.tabs.map((entry) => (entry.id === id
-            ? { ...entry, ddl: value.ddl ?? '', columns: value.columns ?? [], loading: false, error: '' }
-            : entry)),
-        })
-        pushLog('info', t('log.ddl', { table: tab.table, ms: dwDuration(value.statementTime) }))
-      } catch (error) {
-        patch({ tabs: state.tabs.map((entry) => (entry.id === id ? { ...entry, loading: false, error: dwExplainFailure(t, error) } : entry)) })
-        pushLog('error', t('log.loadFailed', { name: tab.table, message: dwExplainFailure(t, error) }))
-      }
     },
 
     /** Close one or more tabs and keep the active selection on a neighbour. */

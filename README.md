@@ -51,7 +51,7 @@ double-click on the divider restores its default width.
   opens in a dialog with a copy button. Nothing is executed or written back.
 - **Refresh structure** — right-click a connection, database or table to re-read
   its structure (databases, tables or columns) without reloading the panel; an open
-  DDL tab for that table refreshes with it. Metadata only, never a write.
+  DDL view for that table. Metadata only, never a write.
 - **Tab context menu** — right-click a console tab to close it, close the tabs on
   either side (or all of them), copy its reference (`schema.table` or `schema`), or
   put that reference into the chat composer when the chat input is open.
@@ -59,7 +59,9 @@ double-click on the divider restores its default width.
   controls whose page size is that limit; the next page is built as
   `… LIMIT n OFFSET m` and run without touching the editor. An empty next page ends
   the paging in place, leaving only “previous” available.
-- **Create statement in one keystroke** — `F4` or `⌘/Ctrl + Shift + D` on a table.
+- **Create statement in one keystroke** — `F4` or `⌘/Ctrl + Shift + D` on a table
+  opens it in a dialog with a copy button (no extra work tab); on a database the same
+  key (or the context menu) reads the create statement of every table in it.
 - **One workbench per database**, kept as tabs, with a result grid, copy-as-TSV,
   a row limit, a draggable editor/result split and a collapsible run log. Opening a
   table's rows never overwrites SQL you already typed: a second console is added

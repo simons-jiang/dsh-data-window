@@ -293,5 +293,12 @@
   "log.copiedReference": "已复制引用：{reference}",
   "log.copiedReferenceToChat": "已把引用插入对话：{reference}",
   "log.copiedReferenceOnly": "对话输入框未打开，已复制引用：{reference}",
-  "tabMenuLabel": "标签页菜单"
+  "tabMenuLabel": "标签页菜单",
+  "optimizeOriginal": "原始 SQL",
+  "optimizeOptimized": "优化后 SQL",
+  "menuDdlAll": "查看全部建表语句",
+  "ddlAllEmpty": "这个库还没有表",
+  "ddlAllPartial": "{count} 张表读取失败，已在脚本末尾用注释标出",
+  "log.ddlAll": "读取 {database} 的全部建表语句：{count} 张表 · {ms}",
+  "log.copiedDdlAll": "已复制 {database} 的全部建表语句（{count} 张表）"
 }

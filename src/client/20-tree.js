@@ -155,7 +155,18 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
     [state.environments, state.expanded, state.children, state.loadState, state.filter],
   )
 
+  // A row click only selects: expanding belongs to the twisty (and to double-click
+  // for the kinds whose whole purpose is to be opened).
   const activate = (row) => {
+    const node = row.node
+    if (node.kind === 'retry') {
+      store.retryNode(node.retryOf)
+      return
+    }
+    store.select(node)
+  }
+
+  const openRow = (row) => {
     const node = row.node
     if (node.kind === 'retry') {
       store.retryNode(node.retryOf)
@@ -164,9 +175,11 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
     store.select(node)
     if (node.kind === 'database') {
       store.openDatabase(node)
-      // Opening the workbench also reveals its tables: that is the list the user
-      // came for, and one click is better than two.
       if (row.open !== true) void store.toggleNode(node)
+      return
+    }
+    if (node.kind === 'table' || node.kind === 'view') {
+      openTableData(row)
       return
     }
     if (node.kind === 'instance' && (node.databases ?? []).length === 0) {
@@ -214,10 +227,9 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
         className: 'dw-node-twisty',
         style: { transform: row.open === true ? 'rotate(90deg)' : 'none', transition: 'transform 110ms ease', cursor: 'pointer' },
         onClick: (event) => {
-          // The twisty is the only control that collapses a node: clicking the row
-          // of a database opens its workbench and never closes the list.
+          // The twisty is the only control that expands or collapses a node;
+          // clicking the row never changes the expansion.
           event.stopPropagation()
-          store.select(node)
           void store.toggleNode(node)
         },
       }, row.loading === true ? h(DwIcon, { name: 'spinner', size: 11 }) : h(DwIcon, { name: 'chevron', size: 11 }))
@@ -244,7 +256,7 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
         ].filter((part) => part !== '').join('  ·  ')
         : `${node.title ?? `${node.label}${node.detail ? `  ${node.detail}` : ''}`}`,
       onClick: () => activate(row),
-      onDoubleClick: () => (node.kind === 'table' || node.kind === 'view' ? openTableData(row) : undefined),
+      onDoubleClick: () => openRow(row),
       onContextMenu: (event) => {
         event.preventDefault()
         store.select(node)
