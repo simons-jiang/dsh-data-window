@@ -12,7 +12,10 @@ window.__ModuleLoader__.load({
     "openPanel": "Data window",
     "openPanelHint": "Open the data window",
     "treeTitle": "Explorer",
+    "treeTabsLabel": "Resource manager tabs",
+    "treeTabDatabases": "Databases",
     "filterPlaceholder": "Filter the loaded databases and tables",
+    "filterFavoritesPlaceholder": "Filter saved SQL by name, schema or table",
     "treeLoading": "Loading…",
     "treeNoMatch": "Nothing matches this filter",
     "treeEmpty": "No database configuration found for this workspace",
@@ -101,6 +104,7 @@ window.__ModuleLoader__.load({
     "warning.unparsed-jdbc-url": "A datasource URL could not be parsed as jdbc:mysql.",
     "projectSwitch": "Switch workspace",
     "resizeTree": "Drag to resize the list (double-click resets)",
+    "resizeLog": "Drag to resize the run log (double-click resets)",
     "hideSidebar": "Hide the DSH sidebar",
     "showSidebar": "Show the DSH sidebar",
     "formatSql": "Format",
@@ -306,12 +310,56 @@ window.__ModuleLoader__.load({
     "ddlAllPartial": "{count} table(s) could not be read; noted at the end of the script",
     "log.ddlAll": "Read all create statements of {database}: {count} tables · {ms}",
     "log.copiedDdlAll": "Copied all create statements of {database} ({count} tables)",
+    "favoritesTitle": "Favorites",
+    "favoritesCount": "saved",
+    "favoritesEmptyHint": "No saved SQL yet. Right-click in the editor and choose “Save SQL”.",
+    "favoritesReload": "Reload favorites",
+    "favoriteNoTable": "No table",
+    "favoriteNoDatabase": "Unknown schema",
+    "favoriteSave": "Save SQL",
+    "favoriteSaveTitle": "Save SQL",
+    "favoriteEditTitle": "Edit saved SQL",
+    "favoriteDialogHint": "The schema and table are stored with the statement and group the favorites node; typing @ indexes it by name.",
+    "favoriteName": "Name",
+    "favoriteNameHint": "Unique among saved SQL, and the keyword used by the @ index",
+    "favoriteDatabase": "Schema",
+    "favoriteDatabaseHint": "Prefilled from the workbench; editable",
+    "favoriteTable": "Table",
+    "favoriteTableHint": "Optional; empty goes under “No table”",
+    "favoriteSql": "SQL",
+    "favoriteSaveAction": "Save",
+    "favoriteUpdateAction": "Save changes",
+    "favoriteNameRequired": "Give this statement a name first",
+    "favoriteDatabaseRequired": "A schema name is required",
+    "favoriteMentionLabel": "Saved SQL",
+    "favoriteMentionEmpty": "No saved SQL matches",
+    "favoriteMentionNoFavorites": "No saved SQL yet: right-click in the editor and choose “Save SQL”",
+    "suggestFavorite": "saved",
+    "menuOpenFavorite": "Open saved SQL",
+    "menuCopyFavoriteSql": "Copy SQL",
+    "menuEditFavorite": "Edit saved SQL",
+    "menuRemoveFavorite": "Delete saved SQL",
+    "removeFavoriteTitle": "Delete saved SQL",
+    "removeFavoriteHint": "Delete “{name}”? This cannot be undone.",
+    "removeFavoriteConfirm": "Delete",
+    "log.favoriteSaved": "Saved SQL: {name} ({database})",
+    "log.favoriteRemoved": "Deleted saved SQL: {name}",
+    "log.favoriteOpened": "Opened saved SQL: {name}",
+    "log.favoriteNoDatabase": "The tree has no schema {database}, so this saved statement cannot be opened",
+    "log.favoriteLoadFailed": "Reading saved SQL failed: {message}",
+    "log.favoriteInserted": "Inserted saved SQL: {name}",
+    "log.favoriteCopied": "Copied saved SQL: {name}",
+    "log.favoriteRemoveFailed": "Deleting saved SQL failed: {message}",
+    "error.duplicateFavorite": "That name is already taken by another saved statement",
   }
   const DW_TEXT_ZH = {
     "openPanel": "数据窗口",
     "openPanelHint": "打开数据窗口",
     "treeTitle": "资源管理器",
+    "treeTabsLabel": "资源管理标签",
+    "treeTabDatabases": "数据库",
     "filterPlaceholder": "过滤已加载的库名与表名",
+    "filterFavoritesPlaceholder": "过滤收藏的名称、库名与表名",
     "treeLoading": "加载中…",
     "treeNoMatch": "没有匹配的节点",
     "treeEmpty": "没有在当前工作区发现数据库配置",
@@ -400,6 +448,7 @@ window.__ModuleLoader__.load({
     "warning.unparsed-jdbc-url": "有数据源地址无法解析为 jdbc:mysql。",
     "projectSwitch": "切换工作区",
     "resizeTree": "拖动调整列表宽度（双击还原）",
+    "resizeLog": "拖动调整运行日志高度（双击还原）",
     "hideSidebar": "隐藏 DSH 侧栏",
     "showSidebar": "显示 DSH 侧栏",
     "formatSql": "格式化",
@@ -605,6 +654,47 @@ window.__ModuleLoader__.load({
     "ddlAllPartial": "{count} 张表读取失败，已在脚本末尾用注释标出",
     "log.ddlAll": "读取 {database} 的全部建表语句：{count} 张表 · {ms}",
     "log.copiedDdlAll": "已复制 {database} 的全部建表语句（{count} 张表）",
+    "favoritesTitle": "收藏夹",
+    "favoritesCount": "条",
+    "favoritesEmptyHint": "还没有收藏 SQL。在编辑器里右键 →「收藏 SQL」即可收藏当前语句。",
+    "favoritesReload": "刷新收藏夹",
+    "favoriteNoTable": "未指定表",
+    "favoriteNoDatabase": "未知库",
+    "favoriteSave": "收藏 SQL",
+    "favoriteSaveTitle": "收藏 SQL",
+    "favoriteEditTitle": "编辑收藏",
+    "favoriteDialogHint": "保存时会连同库名与表名一起记录，收藏夹按这两层分组；输入 @ 时用名称索引这条 SQL。",
+    "favoriteName": "名称",
+    "favoriteNameHint": "名称在收藏夹里唯一，也是 @ 索引时输入的关键字",
+    "favoriteDatabase": "库名",
+    "favoriteDatabaseHint": "从工作台带入，可修改",
+    "favoriteTable": "表名",
+    "favoriteTableHint": "可选；留空归入「未指定表」",
+    "favoriteSql": "SQL",
+    "favoriteSaveAction": "收藏",
+    "favoriteUpdateAction": "保存修改",
+    "favoriteNameRequired": "请先给这条 SQL 起一个名称",
+    "favoriteDatabaseRequired": "请填写库名",
+    "favoriteMentionLabel": "收藏的 SQL",
+    "favoriteMentionEmpty": "没有匹配的收藏 SQL",
+    "favoriteMentionNoFavorites": "还没有收藏 SQL：在编辑器里右键 →「收藏 SQL」",
+    "suggestFavorite": "收藏",
+    "menuOpenFavorite": "打开收藏的 SQL",
+    "menuCopyFavoriteSql": "复制 SQL",
+    "menuEditFavorite": "编辑收藏",
+    "menuRemoveFavorite": "删除收藏",
+    "removeFavoriteTitle": "删除收藏",
+    "removeFavoriteHint": "确定删除收藏「{name}」？删除后不可恢复。",
+    "removeFavoriteConfirm": "删除",
+    "log.favoriteSaved": "已收藏 SQL：{name}（{database}）",
+    "log.favoriteRemoved": "已删除收藏：{name}",
+    "log.favoriteOpened": "已打开收藏的 SQL：{name}",
+    "log.favoriteNoDatabase": "资源树里没有库 {database}，无法打开这条收藏",
+    "log.favoriteLoadFailed": "读取收藏夹失败：{message}",
+    "log.favoriteInserted": "已插入收藏的 SQL：{name}",
+    "log.favoriteCopied": "已复制收藏的 SQL：{name}",
+    "log.favoriteRemoveFailed": "删除收藏失败：{message}",
+    "error.duplicateFavorite": "这个名称已经被收藏了，请换一个名称",
   }
 
 // ---- 00-css.js -----------------------------------------------------------
@@ -751,6 +841,13 @@ const DW_CSS = `
   color: var(--dsw-alias-label-primary-inverted, #fff);
   font-weight: 600;
 }
+/*
+ * The panel and the sidebar-foot action each inject this stylesheet, so the second
+ * copy's plain .dw-btn color rule would otherwise override the first copy's accent
+ * label and paint white text on the brand fill. The extra class keeps the inverted
+ * label winning wherever the rules land.
+ */
+.dw-btn.dw-btn-accent { color: var(--dsw-alias-label-primary-inverted, #fff); }
 .dw-btn-accent:hover { filter: brightness(1.08); background: var(--dsw-alias-brand-primary, #4b8bf5); }
 .dw-btn-icon { width: 26px; padding: 0; justify-content: center; }
 /*
@@ -834,6 +931,59 @@ const DW_CSS = `
   font-size: 11px;
   letter-spacing: .04em;
   text-transform: uppercase;
+}
+/* The resource manager's tabs: the configured tree and the saved statements. */
+.dw-tree-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2f36);
+}
+.dw-tree-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dw-tree-tab:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12)); color: var(--dsw-alias-label-primary, #e6e8ec); }
+.dw-tree-tab.on {
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  border-bottom-color: var(--dsw-alias-brand-primary, #4b8bf5);
+}
+.dw-tree-tab-count {
+  min-width: 14px;
+  padding: 0 4px;
+  border-radius: 7px;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12));
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+}
+.dw-tree-tabs .dw-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+}
+.dw-tree-tabs .dw-btn:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12));
+  color: var(--dsw-alias-label-primary, #e6e8ec);
 }
 .dw-tree { flex: 1 1 auto; overflow: auto; padding: 4px 0 12px; }
 .dw-node {
@@ -1060,6 +1210,32 @@ const DW_CSS = `
 .dw-complete-label { flex: 1 1 auto; font-family: var(--ds-font-family-code, ui-monospace, Menlo, monospace); font-size: 12px; }
 .dw-complete-detail { flex: 0 1 auto; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 10.5px; }
 .dw-complete-kind { flex: 0 0 auto; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 10px; opacity: .8; }
+.dw-complete-empty {
+  padding: 6px 9px;
+  max-width: 300px;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+/* The at-sign index: statements, so a little wider than the column list. */
+.dw-mention { min-width: 280px; max-width: 420px; }
+.dw-fav-sql {
+  margin: 0;
+  max-height: 170px;
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--ds-font-family-code, ui-monospace, Menlo, monospace);
+  font-size: 11.5px;
+  line-height: 1.55;
+  white-space: pre;
+}
+.dw-fav-dialog { width: min(620px, 100%); }
+.dw-fav-split { display: flex; gap: 10px; }
+.dw-fav-split .dw-form-row { flex: 1 1 0; min-width: 0; }
 
 .dw-drag {
   height: 5px;
@@ -1806,6 +1982,8 @@ function DwIcon({ name, size = 14, className }) {
         h('circle', { key: 'a', cx: 8, cy: 8, r: 2.4 }),
         h('path', { key: 'b', d: 'M10.4 8v1.4a2.1 2.1 0 0 0 4.2 0V8A6.4 6.4 0 1 0 8 14.4c1.2 0 2.2-.2 3-.7' }),
       ])
+    case 'star':
+      return h('svg', common, [h('path', { d: 'M8 2.1l1.82 3.69 4.07.59-2.94 2.87.69 4.06L8 11.4l-3.64 1.91.69-4.06L2.11 6.38l4.07-.59z' })])
     case 'close':
       return h('svg', common, [h('path', { d: 'M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6' })])
     case 'download':
@@ -2419,6 +2597,20 @@ function dwLogEntry(level, text) {
 }
 
 /**
+ * Whether a key event belongs to an input-method composition.
+ *
+ * The Enter/Escape that picks or cancels a Chinese or Japanese candidate belongs
+ * to the IME, not to this window: it must never submit a dialog, blur a cell or
+ * pick a suggestion. Chromium marks those events with `isComposing` and the legacy
+ * 229 keyCode; React's synthetic keyboard event does not expose `isComposing`, so
+ * the native event is what is checked.
+ */
+function dwImeComposing(event) {
+  const native = event?.nativeEvent ?? event
+  return native?.isComposing === true || (native?.keyCode ?? event?.keyCode) === 229
+}
+
+/**
  * Turn a Host failure into a sentence.
  *
  * The read-only gate answers with codes such as `write-keyword`, and a user who is
@@ -2441,6 +2633,7 @@ function dwExplainFailure(translate, error) {
     'ER_QUERY_INTERRUPTED': 'error.interrupted',
     'manual-connect-failed': 'error.manualConnectFailed',
     'saved-connection-missing': 'error.savedConnectionMissing',
+    'duplicate-favorite': 'error.duplicateFavorite',
   }
   const key = known[code]
   if (key !== undefined) {
@@ -2511,6 +2704,19 @@ const DW_CONSOLE_KEY = 'dsh-data-window:consoles'
 
 /** Client-side preferences edited in the plugin's settings section. */
 const DW_PREFS_KEY = 'dsh-data-window:prefs'
+
+/** Which side-panel tab was last shown: the database tree or the favorites list. */
+const DW_TREE_TAB_KEY = 'dsh-data-window:tree-tab'
+
+/** The remembered side-panel tab; unknown or blocked storage means the tree. */
+function dwReadTreeTab() {
+  try {
+    return globalThis.localStorage?.getItem(DW_TREE_TAB_KEY) === 'favorites' ? 'favorites' : 'databases'
+  } catch (error) {
+    void error
+    return 'databases'
+  }
+}
 
 /** Read the display preferences, tolerating a blocked storage. */
 function dwReadPrefs() {
@@ -2613,6 +2819,9 @@ function dwCreateStore(translate) {
     aiRunning: false,
     // tree
     filter: '',
+    // The resource manager has two tabs, like DataGrip's Database window: the
+    // configured tree and the saved statements. Both read the same filter.
+    treeTab: dwReadTreeTab(),
     expanded: new Set(),
     loadState: new Map(),
     children: new Map(),
@@ -2624,6 +2833,11 @@ function dwCreateStore(translate) {
     // Table/column maps for the editor's completion, one per database.
     schemas: new Map(),
     limit: DW_DEFAULT_LIMIT,
+    // Saved statements (machine-wide, not per workspace) and the `@` index they
+    // feed; the tree's favorites node is rendered from this list.
+    favorites: [],
+    favoritesLoading: false,
+    favoritesError: '',
     // log
     logOpen: false,
     log: [dwLogEntry('info', t('log.ready'))],
@@ -3027,6 +3241,108 @@ function dwCreateStore(translate) {
       }
     },
 
+    /**
+     * Read the saved statements.
+     *
+     * The list belongs to the machine, not to one workspace, so it is loaded when
+     * the panel opens; saves and deletes patch it in place. No workspace is needed.
+     */
+    async loadFavorites(options = {}) {
+      if (state.favoritesLoading === true && options.force !== true) return
+      patch({ favoritesLoading: true })
+      try {
+        const value = await dwRpc('favorites')
+        patch({
+          favorites: Array.isArray(value?.favorites) ? value.favorites : [],
+          favoritesLoading: false,
+          favoritesError: '',
+        })
+      } catch (error) {
+        patch({ favoritesLoading: false, favoritesError: dwExplainFailure(t, error) })
+        if (options.quiet !== true) pushLog('warn', t('log.favoriteLoadFailed', { message: dwExplainFailure(t, error) }))
+      }
+    },
+
+    /** Save one statement under its unique name, and open the favorites node. */
+    async saveFavorite(input) {
+      const value = await dwRpc('saveFavorite', { favorite: { ...input } })
+      const favorite = value?.favorite
+      if (favorite !== undefined && favorite !== null) {
+        const favorites = [...state.favorites]
+        const index = favorites.findIndex((entry) => entry.id === favorite.id)
+        if (index >= 0) favorites[index] = favorite
+        else favorites.push(favorite)
+        patch({ favorites })
+        pushLog('info', t('log.favoriteSaved', { name: favorite.name, database: favorite.database }))
+        const tableKey = String(favorite.table ?? '').trim().toLowerCase()
+        // The saved statement lives on the favorites tab now; switching there and
+        // expanding its schema/table is the only visible acknowledgement that the
+        // save landed, since the database tree cannot show it.
+        store.setTreeTab('favorites')
+        store.expand(
+          dwNodeKey('favoriteDatabase', favorite.database),
+          dwNodeKey('favoriteTable', favorite.database, tableKey),
+        )
+        const favoriteKey = dwNodeKey('favorite', favorite.id)
+        store.select({ key: favoriteKey, kind: 'favorite', label: favorite.name, favorite })
+      }
+      return value
+    },
+
+    /** Delete one saved statement. */
+    async removeFavorite(id) {
+      const value = await dwRpc('removeFavorite', { id })
+      if (value?.removed === true) {
+        const favorite = state.favorites.find((entry) => entry.id === id)
+        patch({ favorites: state.favorites.filter((entry) => entry.id !== id) })
+        pushLog('info', t('log.favoriteRemoved', { name: favorite?.name ?? id }))
+      }
+      return value
+    },
+
+    /**
+     * Open a saved statement in the workbench of the schema it was saved from.
+     *
+     * Opening by name is what keeps a favorite useful across workspaces: the
+     * statement was written in `bw_order` in one project and is still a `bw_order`
+     * statement in the next tree. When that schema is not in the tree at all, the
+     * log says which one is missing instead of opening an unrelated console.
+     */
+    openFavorite(favorite) {
+      if (favorite === null || favorite === undefined) return false
+      const target = dwFindDatabaseTarget(state.environments, favorite.database, favorite.env)
+      if (target === undefined) {
+        pushLog('warn', t('log.favoriteNoDatabase', { database: favorite.database }))
+        return false
+      }
+      const opened = store.openDatabase(target.node)
+      const tabId = typeof opened?.id === 'string' ? opened.id : ''
+      if (tabId === '') return false
+      store.appendStatement(tabId, favorite.sql)
+      pushLog('info', t('log.favoriteOpened', { name: favorite.name }))
+      return true
+    },
+
+    /** Append a statement to one console without touching what is already typed. */
+    appendStatement(tabId, sql) {
+      const statement = String(sql ?? '').trim()
+      const tab = state.tabs.find((entry) => entry.id === tabId)
+      if (statement === '' || tab === undefined) return
+      const current = String(tab.sql ?? '').replace(/\s+$/, '')
+      if (current.includes(statement)) {
+        store.setActiveTab(tabId)
+        return
+      }
+      const next = current === '' ? statement : `${current}\n\n${statement}`
+      patch({
+        tabs: state.tabs.map((entry) => (entry.id === tabId
+          ? { ...entry, sql: next, result: undefined, error: '' }
+          : entry)),
+        activeTab: tabId,
+      })
+      scheduleConsoles()
+    },
+
     /** Delete a whole manually added environment, then re-read the tree. */
     async removeManualEnvironment(label) {
       const root = state.root
@@ -3207,6 +3523,18 @@ function dwCreateStore(translate) {
     /** Select one row; a table also becomes the target of the DDL shortcut. */
     select(node) {
       patch({ selected: node?.key ?? '', selectedNode: node ?? null })
+    },
+
+    /** Switch the resource manager between the database tree and the favorites. */
+    setTreeTab(tab) {
+      const next = tab === 'favorites' ? 'favorites' : 'databases'
+      if (next === state.treeTab) return
+      try {
+        globalThis.localStorage?.setItem(DW_TREE_TAB_KEY, next)
+      } catch (error) {
+        void error
+      }
+      patch({ treeTab: next })
     },
 
     /**
@@ -3615,7 +3943,7 @@ function dwCreateStore(translate) {
  */
 
 /** One nested tree of what the store currently knows, before filtering. */
-function dwBuildTree(state, tr) {
+function dwBuildTree(state, tr, mode = 'databases') {
   const loadStateOf = (key) => state.loadState.get(key)
   const childrenOf = (node, depth) => {
     const rows = []
@@ -3631,7 +3959,12 @@ function dwBuildTree(state, tr) {
     return rows
   }
 
-  const environments = []
+  // The favorites tab is derived from the saved list, not from `children`: it never
+  // needs a round trip to expand, and a save anywhere in the panel is visible the
+  // moment the store patches the list.
+  if (mode === 'favorites') return dwBuildFavoriteRows(state.favorites, tr)
+
+  const rows = []
   for (const environment of state.environments ?? []) {
     const envKey = dwNodeKey('env', environment.env)
     const instanceRows = []
@@ -3678,7 +4011,7 @@ function dwBuildTree(state, tr) {
         children: databaseRows,
       })
     }
-    environments.push({
+    rows.push({
       node: {
         key: envKey,
         kind: 'env',
@@ -3692,7 +4025,7 @@ function dwBuildTree(state, tr) {
       children: instanceRows,
     })
   }
-  return environments
+  return rows
 }
 
 /** Prune a tree to the nodes that match, keeping their ancestors. */
@@ -3735,7 +4068,7 @@ function dwFlattenTree(tree, state, filter, depth = 0, into = []) {
 /** One row per visible node, in display order. */
 function dwVisibleRows(state, tr) {
   const filter = String(state.filter ?? '').trim().toLowerCase()
-  const tree = dwPruneTree(dwBuildTree(state, tr), filter)
+  const tree = dwPruneTree(dwBuildTree(state, tr, state.treeTab), filter)
   return dwFlattenTree(tree, state, filter)
 }
 
@@ -3748,6 +4081,9 @@ function dwNodeIconName(node) {
     case 'view': return 'view'
     case 'table': return 'table'
     case 'column': return node.column?.key === 'PRI' ? 'key' : 'column'
+    case 'favorite': return 'star'
+    case 'favoriteDatabase': return 'database'
+    case 'favoriteTable': return 'table'
     case 'retry': return 'refresh'
     case 'error': return 'close'
     default: return 'panel'
@@ -3757,7 +4093,7 @@ function dwNodeIconName(node) {
 function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
   const rows = useMemo(
     () => dwVisibleRows(state, tr),
-    [state.environments, state.expanded, state.children, state.loadState, state.filter],
+    [state.root, state.treeTab, state.environments, state.expanded, state.children, state.loadState, state.filter, state.favorites, state.favoritesError],
   )
 
   // A row click only selects: expanding belongs to the twisty (and to double-click
@@ -3769,6 +4105,9 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
       return
     }
     store.select(node)
+    // The favorites branches exist to be browsed, so a single click unfolds them;
+    // every other row keeps the "select only" behaviour of the tree.
+    if (node.kind === 'favoriteDatabase' || node.kind === 'favoriteTable') void store.toggleNode(node)
   }
 
   const openRow = (row) => {
@@ -3778,6 +4117,10 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
       return
     }
     store.select(node)
+    if (node.kind === 'favorite') {
+      store.openFavorite(node.favorite)
+      return
+    }
     if (node.kind === 'database') {
       store.openDatabase(node)
       if (row.open !== true) void store.toggleNode(node)
@@ -3805,14 +4148,21 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
   }
 
   if (rows.length === 0) {
-    const empty = state.phase === 'loading'
-      ? tr('treeLoading')
-      : String(state.filter ?? '') !== ''
+    const filtered = String(state.filter ?? '') !== ''
+    const empty = state.treeTab === 'favorites'
+      ? filtered
         ? tr('treeNoMatch')
-        : tr('treeEmpty')
+        : String(state.favoritesError ?? '') !== ''
+          ? tr('log.favoriteLoadFailed', { message: state.favoritesError })
+          : tr('favoritesEmptyHint')
+      : state.phase === 'loading'
+        ? tr('treeLoading')
+        : filtered
+          ? tr('treeNoMatch')
+          : tr('treeEmpty')
     return h('div', { className: 'dw-tree' }, h('div', { className: 'dw-empty', style: { padding: 18 } }, [
       h('div', { key: 't', className: 'dw-empty-hint' }, empty),
-      String(state.filter ?? '') !== ''
+      filtered
         ? h('button', {
           key: 'c',
           type: 'button',
@@ -4528,6 +4878,338 @@ function dwFormatSql(text) {
 }
 
 
+// ---- 27-favorites.js -----------------------------------------------------
+/**
+ * Saved SQL: the favorites tab's rows, the dialog that names one, and the `@`
+ * index the workbench inserts from.
+ *
+ * One statement is saved with its name, its schema and its table. The favorites
+ * tab groups by schema then table, which is the shape the user recognised the
+ * statement in; the workbench only needs the name, because the caret is already in
+ * a console. Both views read the same list, so a save from one is visible in the
+ * other without a reload.
+ */
+
+/** A console's table, from its id (`sql:<dbId>:tbl:<table>`). */
+function dwTabTableName(tab) {
+  const id = String(tab?.id ?? '')
+  const index = id.indexOf(':tbl:')
+  return index < 0 ? '' : id.slice(index + 5)
+}
+
+/** Every schema name the tree knows, for the favorite dialog's datalist. */
+function dwDatabaseNames(environments) {
+  const names = new Set()
+  for (const environment of Array.isArray(environments) ? environments : []) {
+    for (const instance of Array.isArray(environment?.instances) ? environment.instances : []) {
+      for (const database of Array.isArray(instance?.databases) ? instance.databases : []) {
+        const name = String(database?.name ?? '')
+        if (name !== '') names.add(name)
+      }
+    }
+  }
+  return [...names].sort((left, right) => left.localeCompare(right))
+}
+
+/**
+ * The tree node a favorite's schema name points at.
+ *
+ * A favorite stores a name, not a database id, because the tree is shared and the
+ * same schema may be reachable through another workspace later. The environment
+ * the statement was saved under breaks ties when two environments hold a schema of
+ * the same name.
+ */
+function dwFindDatabaseTarget(environments, database, env) {
+  const name = String(database ?? '').trim().toLowerCase()
+  if (name === '') return undefined
+  const preferred = String(env ?? '').trim().toLowerCase()
+  let fallback
+  for (const environment of Array.isArray(environments) ? environments : []) {
+    for (const instance of Array.isArray(environment?.instances) ? environment.instances : []) {
+      for (const entry of Array.isArray(instance?.databases) ? instance.databases : []) {
+        if (String(entry?.name ?? '').toLowerCase() !== name) continue
+        if (typeof entry?.id !== 'string' || entry.id === '') continue
+        const target = {
+          env: environment.env,
+          node: {
+            key: dwNodeKey('db', entry.id),
+            kind: 'database',
+            label: entry.name,
+            detail: '',
+            dbId: entry.id,
+            database: entry.name,
+            env: environment.env,
+            instanceLabel: instance.label ?? '',
+            configured: entry.discovered !== true,
+          },
+        }
+        if (preferred !== '' && String(environment.env ?? '').toLowerCase() === preferred) return target
+        if (fallback === undefined) fallback = target
+      }
+    }
+  }
+  return fallback
+}
+
+/** One favorite as a tree leaf. */
+function dwFavoriteLeaf(favorite) {
+  const reference = [favorite.database, favorite.table].filter((part) => typeof part === 'string' && part !== '').join('.')
+  return {
+    node: {
+      key: dwNodeKey('favorite', favorite.id),
+      kind: 'favorite',
+      label: favorite.name,
+      detail: '',
+      title: `${favorite.name}  ·  ${reference}\n\n${favorite.sql}`,
+      favorite,
+    },
+    children: [],
+  }
+}
+
+/**
+ * The favorites tab's rows: schema → table → statement.
+ *
+ * A statement saved without a table name still gets a table group, so the tab
+ * keeps one shape instead of mixing leaves and groups under a schema.
+ */
+function dwBuildFavoriteRows(favorites, tr) {
+  const list = (Array.isArray(favorites) ? favorites : []).filter((favorite) => favorite !== null
+    && typeof favorite === 'object'
+    && typeof favorite.id === 'string'
+    && favorite.id !== '')
+  if (list.length === 0) return []
+  const byDatabase = new Map()
+  for (const favorite of list) {
+    const database = String(favorite.database ?? '').trim() || tr('favoriteNoDatabase')
+    const table = String(favorite.table ?? '').trim()
+    const tableKey = table === '' ? '' : table.toLowerCase()
+    if (!byDatabase.has(database)) byDatabase.set(database, new Map())
+    const tables = byDatabase.get(database)
+    if (!tables.has(tableKey)) tables.set(tableKey, { table, favorites: [] })
+    tables.get(tableKey).favorites.push(favorite)
+  }
+
+  const rows = []
+  const databaseNames = [...byDatabase.keys()].sort((left, right) => left.localeCompare(right))
+  for (const databaseName of databaseNames) {
+    const tables = byDatabase.get(databaseName)
+    const tableKeys = [...tables.keys()].sort((left, right) => {
+      if (left === '') return 1
+      if (right === '') return -1
+      return left.localeCompare(right)
+    })
+    const tableRows = []
+    let statementCount = 0
+    for (const tableKey of tableKeys) {
+      const group = tables.get(tableKey)
+      const leaves = group.favorites
+        .slice()
+        .sort((left, right) => String(left.name ?? '').localeCompare(String(right.name ?? '')))
+        .map(dwFavoriteLeaf)
+      statementCount += leaves.length
+      tableRows.push({
+        node: {
+          key: dwNodeKey('favoriteTable', databaseName, tableKey),
+          kind: 'favoriteTable',
+          label: tableKey === '' ? tr('favoriteNoTable') : group.table,
+          detail: `${leaves.length} ${tr('favoritesCount')}`,
+          title: `${databaseName}${tableKey === '' ? '' : `.${group.table}`}`,
+          database: databaseName,
+          table: group.table,
+        },
+        children: leaves,
+      })
+    }
+    rows.push({
+      node: {
+        key: dwNodeKey('favoriteDatabase', databaseName),
+        kind: 'favoriteDatabase',
+        label: databaseName,
+        detail: `${statementCount} ${tr('favoritesCount')}`,
+        title: `${tr('favoritesTitle')} · ${databaseName}`,
+        database: databaseName,
+      },
+      children: tableRows,
+    })
+  }
+  return rows
+}
+
+/** Whether an `@` typed at `index` starts a favorite mention rather than `@var`. */
+function dwFavoriteMentionStart(text, index) {
+  if (index <= 0) return true
+  const before = text[index - 1]
+  return /\s/.test(before) || '(),;=<>+-*/'.includes(before)
+}
+
+/** The saved statements matching what was typed after `@`, name first. */
+function dwFavoriteMatches(favorites, query) {
+  const needle = String(query ?? '').trim().toLowerCase()
+  const list = (Array.isArray(favorites) ? favorites : []).filter((favorite) => favorite !== null
+    && typeof favorite === 'object'
+    && typeof favorite.name === 'string')
+  const matched = needle === ''
+    ? list
+    : list.filter((favorite) => [favorite.name, favorite.database, favorite.table]
+      .some((value) => String(value ?? '').toLowerCase().includes(needle)))
+  return matched
+    .slice()
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .slice(0, 50)
+}
+
+/**
+ * Name one statement and keep it.
+ *
+ * The SQL is a read-only preview: what is collected is exactly the selection (or
+ * the whole editor) the user right-clicked, and a rename or a re-collection is the
+ * way to change it. The schema and table are editable because the console only
+ * knows its own database — a statement that joins another schema is the user's
+ * call, and it is what the tree groups by.
+ */
+function DwFavoriteDialog({ store, tr, draft, onClose, onSaved }) {
+  const editing = String(draft?.id ?? '') !== ''
+  const [name, setName] = useState(String(draft?.name ?? ''))
+  const [database, setDatabase] = useState(String(draft?.database ?? ''))
+  const [table, setTable] = useState(String(draft?.table ?? ''))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const sql = String(draft?.sql ?? '')
+  const savingRef = useRef(false)
+  savingRef.current = saving
+  // A Chinese/Japanese name is typed through the IME: its Enter belongs to the
+  // candidate list, not to the dialog. Chromium already flags the composition
+  // keystroke, and the short grace period covers a browser that ends the
+  // composition just before delivering that Enter.
+  const composingRef = useRef(false)
+  const compositionEndedAtRef = useRef(0)
+  const imeBusy = (event) => dwImeComposing(event)
+    || composingRef.current === true
+    || Date.now() - compositionEndedAtRef.current < 100
+  const databaseNames = dwDatabaseNames(store.getState?.()?.environments)
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key !== 'Escape' || savingRef.current) return
+      if (imeBusy(event)) return
+      onClose()
+    }
+    globalThis.addEventListener('keydown', onKey)
+    return () => globalThis.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const submit = async () => {
+    if (saving === true) return
+    const nextName = name.trim()
+    const nextDatabase = database.trim()
+    if (nextName === '') {
+      setError(tr('favoriteNameRequired'))
+      return
+    }
+    if (nextDatabase === '') {
+      setError(tr('favoriteDatabaseRequired'))
+      return
+    }
+    // The Host owns the real check; this one only saves a round trip on the
+    // failure the user is most likely to hit while typing a name.
+    const taken = (store.getState?.()?.favorites ?? []).find((favorite) => String(favorite?.name ?? '').trim().toLowerCase() === nextName.toLowerCase()
+      && favorite?.id !== draft?.id)
+    if (taken !== undefined) {
+      setError(tr('error.duplicateFavorite'))
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const value = await store.saveFavorite({
+        id: draft?.id,
+        name: nextName,
+        database: nextDatabase,
+        table: table.trim(),
+        env: draft?.env ?? '',
+        sql,
+      })
+      if (typeof onSaved === 'function') onSaved(value?.favorite)
+      onClose()
+    } catch (failure) {
+      setError(dwExplainFailure(tr, failure))
+      setSaving(false)
+    }
+  }
+
+  const field = (key, label, value, onChange, hint, options) => h('label', { key, className: 'dw-form-row' }, [
+    h('span', { key: 'l', className: 'dw-form-label' }, label),
+    h('input', {
+      key: 'i',
+      className: 'dw-form-input',
+      value,
+      spellCheck: false,
+      autoComplete: 'off',
+      autoFocus: options?.focus === true,
+      list: options?.list,
+      maxLength: options?.maxLength,
+      onChange: (event) => onChange(event.target.value),
+      onCompositionStart: () => {
+        composingRef.current = true
+      },
+      onCompositionEnd: () => {
+        composingRef.current = false
+        compositionEndedAtRef.current = Date.now()
+      },
+      onKeyDown: (event) => {
+        if (event.key !== 'Enter') return
+        if (imeBusy(event)) return
+        void submit()
+      },
+    }),
+    hint === undefined ? null : h('span', { key: 'h', className: 'dw-form-hint' }, hint),
+  ])
+
+  return h('div', {
+    className: 'dw-modal',
+    onClick: (event) => {
+      if (event.target === event.currentTarget && saving !== true) onClose()
+    },
+  }, h('div', {
+    key: 'card',
+    className: 'dw-modal-card dw-favorite-dialog',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-label': tr(editing ? 'favoriteEditTitle' : 'favoriteSaveTitle'),
+  }, [
+    h('div', { key: 'title', className: 'dw-modal-title' }, [
+      h(DwIcon, { key: 'i', name: 'star', size: 15 }),
+      h('span', { key: 't' }, tr(editing ? 'favoriteEditTitle' : 'favoriteSaveTitle')),
+    ]),
+    h('div', { key: 'body', className: 'dw-modal-body' }, h('div', { key: 'form', className: 'dw-form' }, [
+      field('name', tr('favoriteName'), name, setName, tr('favoriteNameHint'), { focus: true, maxLength: 80 }),
+      h('div', { key: 'split', className: 'dw-fav-split' }, [
+        field('database', tr('favoriteDatabase'), database, setDatabase, tr('favoriteDatabaseHint'), { list: 'dw-favorite-databases', maxLength: 64 }),
+        field('table', tr('favoriteTable'), table, setTable, tr('favoriteTableHint'), { maxLength: 64 }),
+      ]),
+      h('datalist', { key: 'names', id: 'dw-favorite-databases' }, databaseNames.map((value) => h('option', { key: value, value }))),
+      h('div', { key: 'sql-label', className: 'dw-form-label' }, tr('favoriteSql')),
+      h('pre', { key: 'sql', className: 'dw-fav-sql' }, sql),
+      h('div', { key: 'hint', className: 'dw-ai-note' }, tr('favoriteDialogHint')),
+      error === ''
+        ? null
+        : h('div', { key: 'err', className: 'dw-ai-note dw-ai-warn' }, error),
+    ])),
+    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
+      h('button', { key: 'cancel', type: 'button', className: 'dw-btn', disabled: saving === true, onClick: onClose }, tr('cancel')),
+      h('button', {
+        key: 'save',
+        type: 'button',
+        className: 'dw-btn dw-btn-accent',
+        disabled: saving === true,
+        onClick: () => void submit(),
+      }, saving === true ? tr('schemaApplying') : tr(editing ? 'favoriteUpdateAction' : 'favoriteSaveAction')),
+    ]),
+  ]))
+}
+
+
 // ---- 30-editor.js --------------------------------------------------------
 /**
  * Workbench tabs, the SQL editor and the DDL document.
@@ -4585,7 +5267,7 @@ function dwInsertComposerText(text) {
   }
 }
 
-function DwTabs({ store, state, tr }) {
+function DwTabs({ store, state, tr, onFavorite }) {
   const [menu, setMenu] = useState(null)
   if ((state.tabs ?? []).length === 0) return null
 
@@ -4647,6 +5329,9 @@ function DwTabs({ store, state, tr }) {
     menuItem('close-left', 'arrow-left', tr('tabCloseLeft'), index <= 0, () => store.closeTabsToLeft(menu.tab.id)),
     menuItem('close-right', 'arrow-right', tr('tabCloseRight'), index < 0 || index >= (state.tabs ?? []).length - 1, () => store.closeTabsToRight(menu.tab.id)),
     h('div', { key: 'sep', className: 'dw-tabmenu-sep' }),
+    menuItem('favorite', 'star', tr('favoriteSave'), String(menu.tab.sql ?? '').trim() === '', () => {
+      if (typeof onFavorite === 'function') onFavorite(menu.tab)
+    }),
     menuItem('copy-reference', 'copy', tr('copyReference'), false, () => copyReference(menu.tab)),
     menuItem('copy-reference-chat', 'at', tr('copyReferenceToChat'), false, () => copyReferenceToChat(menu.tab)),
   ]))
@@ -4668,7 +5353,7 @@ function DwTabs({ store, state, tr }) {
           const left = rect === null || rect === undefined ? 8 : Math.max(8, rect.left + 8)
           const top = rect === null || rect === undefined ? 8 : Math.max(8, rect.top + 8)
           const right = (rect === null || rect === undefined ? (globalThis.innerWidth ?? 1200) : rect.right) - 248
-          const bottom = (rect === null || rect === undefined ? (globalThis.innerHeight ?? 800) : rect.bottom) - 238
+          const bottom = (rect === null || rect === undefined ? (globalThis.innerHeight ?? 800) : rect.bottom) - 268
           setMenu({
             x: Math.max(left, Math.min(event.clientX, Math.max(left, right))),
             y: Math.max(top, Math.min(event.clientY, Math.max(top, bottom))),
@@ -4704,24 +5389,36 @@ function DwTabs({ store, state, tr }) {
   ])
 }
 
-/** A draggable horizontal divider that resizes the editor. */
-function DwDragHandle({ value, onChange, min, max }) {
+/**
+ * A draggable horizontal divider.
+ *
+ * `invert` is for a handle whose panel grows upward (the run log): dragging up
+ * must make it taller. `onCommit` fires once on release, which is when a caller
+ * should persist the value; writing on every pointermove would hit storage
+ * sixty times a second.
+ */
+function DwDragHandle({ value, onChange, min, max, invert, title, onStart, onCommit, onReset }) {
   return h('div', {
     className: 'dw-drag',
     role: 'separator',
     'aria-orientation': 'horizontal',
-    title: '↕',
+    title: title ?? '↕',
+    onDoubleClick: typeof onReset === 'function' ? onReset : undefined,
     onPointerDown: (event) => {
       event.preventDefault()
+      if (typeof onStart === 'function') onStart()
       const startY = event.clientY
       const startValue = value
+      const direction = invert === true ? -1 : 1
+      let latest = value
       const onMove = (moveEvent) => {
-        const next = Math.min(max, Math.max(min, startValue + (moveEvent.clientY - startY)))
-        onChange(next)
+        latest = Math.min(max, Math.max(min, startValue + (moveEvent.clientY - startY) * direction))
+        onChange(latest)
       }
       const onUp = () => {
         globalThis.removeEventListener('pointermove', onMove)
         globalThis.removeEventListener('pointerup', onUp)
+        if (typeof onCommit === 'function') onCommit(latest)
       }
       globalThis.addEventListener('pointermove', onMove)
       globalThis.addEventListener('pointerup', onUp)
@@ -4763,17 +5460,21 @@ function dwCaretPoint(area, text, caret) {
 }
 
 /** The SQL editor: highlighted text, completion and one-keystroke formatting. */
-function DwEditor({ store, tab, tr, onRun, height, schema }) {
+function DwEditor({ store, tab, tr, onRun, height, schema, favorites }) {
   const value = tab.sql ?? ''
   const tokens = useMemo(() => dwSqlLex(value), [value])
   const lines = useMemo(() => value.split('\n').length, [value])
+  const favoriteList = Array.isArray(favorites) ? favorites : []
   const gutterRef = useRef(null)
   const areaRef = useRef(null)
   const highlightRef = useRef(null)
   const completionRef = useRef(null)
+  const mentionRef = useRef(null)
   const [completion, setCompletion] = useState(null)
+  const [mention, setMention] = useState(null)
   const [editorMenu, setEditorMenu] = useState(null)
   const [optimize, setOptimize] = useState(null)
+  const [favoriteDraft, setFavoriteDraft] = useState(null)
 
   useEffect(() => {
     const area = areaRef.current
@@ -4782,7 +5483,14 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     // lands where the user is about to type.
     area.focus()
     area.setSelectionRange(area.value.length, area.value.length)
+    setMention(null)
   }, [tab.id])
+
+  // The `@` index reads the machine-wide saved statements; one round trip the
+  // first time a console opens, cached in the store afterwards.
+  useEffect(() => {
+    void store.loadFavorites()
+  }, [store])
 
   // The completion list needs the schema of this database; one round trip, cached
   // by the store. A failure only degrades the list to keywords.
@@ -4821,6 +5529,7 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
   // Re-evaluate the caret once the map arrives so the popup appears on its own.
   useEffect(() => {
     if (schema === undefined) return
+    if (mention !== null) return
     const area = areaRef.current
     if (area === null || document.activeElement !== area) return
     refreshCompletion(value, area.selectionStart)
@@ -4839,6 +5548,18 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     else if (bottom > popup.scrollTop + popup.clientHeight) popup.scrollTop = bottom - popup.clientHeight
   }, [completion])
 
+  // Same keyboard-follows-list behaviour for the `@` index.
+  useEffect(() => {
+    const popup = mentionRef.current
+    if (popup === null || mention === null) return
+    const active = popup.querySelector('.dw-complete-row.active')
+    if (active === null) return
+    const top = active.offsetTop
+    const bottom = top + active.offsetHeight
+    if (top < popup.scrollTop) popup.scrollTop = top
+    else if (bottom > popup.scrollTop + popup.clientHeight) popup.scrollTop = bottom - popup.clientHeight
+  }, [mention])
+
   const applyCompletion = (item) => {
     const current = completion
     if (current === null || item === undefined) return
@@ -4853,6 +5574,54 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
       area.setSelectionRange(position, position)
     })
   }
+
+  /**
+   * The text a mention is filtering on, or `undefined` when the caret left it.
+   *
+   * A name may contain spaces (and Chinese), so the popup only ends at characters
+   * that cannot appear in a name the user would type.
+   */
+  const mentionQueryAt = (text, from, caret) => {
+    if (from < 0 || text[from] !== '@' || caret <= from) return undefined
+    const query = text.slice(from + 1, caret)
+    if (query.length > 60 || /[\r\n,;()]/.test(query)) return undefined
+    // `@ ` is a sentence, not a mention: keep whitespace only once a name started.
+    if (query !== '' && query.trim() === '') return undefined
+    return query
+  }
+
+  /** Grow the mention popup while its query is typed, or close it. */
+  const refreshMention = (area, text, caret) => {
+    const query = mentionQueryAt(text, mention.from, caret)
+    if (query === undefined) {
+      setMention(null)
+      return false
+    }
+    const point = dwCaretPoint(area, text, caret)
+    setMention({ ...mention, to: caret, query, index: 0, left: point.left, top: point.top + 20 })
+    return true
+  }
+
+  /** Put one saved statement where the `@…` token is, and keep the caret after it. */
+  const insertFavorite = (favorite) => {
+    const current = mention
+    if (current === null || favorite === undefined || favorite === null) return
+    const statement = String(favorite.sql ?? '')
+    if (statement.trim() === '') return
+    const next = `${value.slice(0, current.from)}${statement}${value.slice(current.to)}`
+    const position = current.from + statement.length
+    store.setTabSql(tab.id, next)
+    setMention(null)
+    requestAnimationFrame(() => {
+      const area = areaRef.current
+      if (area === null) return
+      area.focus()
+      area.setSelectionRange(position, position)
+    })
+    store.pushLog('info', tr('log.favoriteInserted', { name: favorite.name }))
+  }
+
+  const mentionItems = mention === null ? [] : dwFavoriteMatches(favoriteList, mention.query)
 
   const runStatement = () => {
     const area = areaRef.current
@@ -4951,6 +5720,28 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     setOptimize({ sql: text, database: tab.database })
   }
 
+  // Collect the selection when there is one, the whole console otherwise: that is
+  // exactly the statement the user right-clicked. The schema comes from the console
+  // and the table from its id, falling back to the first table the statement names.
+  const openFavorite = () => {
+    const area = areaRef.current
+    const selected = area !== null && area.selectionEnd > area.selectionStart
+      ? value.slice(area.selectionStart, area.selectionEnd)
+      : ''
+    const text = selected.trim() === '' ? value.trim() : selected.trim()
+    if (text === '') {
+      store.pushLog('warn', tr('log.noStatement'))
+      return
+    }
+    setFavoriteDraft({
+      sql: text,
+      name: '',
+      database: tab.database,
+      table: dwTabTableName(tab) || (dwSqlTableRefs(text)[0]?.table ?? ''),
+      env: tab.env ?? '',
+    })
+  }
+
   const menuItem = (key, label, shortcut, run) => h('button', {
     key,
     type: 'button',
@@ -5015,6 +5806,7 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
       menuItem('paste', tr('editorPaste'), '⌘V', () => void editorPaste()),
       menuItem('select-all', tr('editorSelectAll'), '⌘A', editorSelectAll),
       h('div', { key: 'sep2', className: 'dw-project-sep' }),
+      menuItem('favorite', tr('favoriteSave'), '', openFavorite),
       menuItem('optimize', tr('sqlOptimize'), '', openOptimize),
     ]),
   ])
@@ -5044,13 +5836,29 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
             const text = event.target.value
             const caret = event.target.selectionStart
             store.setTabSql(tab.id, text)
+            if (mention !== null) {
+              // Still inside the same `@…` token: filter it instead of letting the
+              // column list fight the favorites list for the same keystrokes.
+              if (refreshMention(event.target, text, caret)) return
+            }
+            if (caret > 0 && text[caret - 1] === '@' && dwFavoriteMentionStart(text, caret - 1)) {
+              const point = dwCaretPoint(event.target, text, caret)
+              setCompletion(null)
+              setMention({ from: caret - 1, to: caret, query: '', index: 0, left: point.left, top: point.top + 20 })
+              return
+            }
             refreshCompletion(text, caret)
           },
-          onClick: (event) => refreshCompletion(event.target.value, event.target.selectionStart),
+          onClick: (event) => {
+            setMention(null)
+            refreshCompletion(event.target.value, event.target.selectionStart)
+          },
           onContextMenu: (event) => {
             event.preventDefault()
+            setMention(null)
+            setCompletion(null)
             const width = 210
-            const height = 268
+            const height = 300
             const maxX = (globalThis.innerWidth ?? 1200) - width
             const maxY = (globalThis.innerHeight ?? 800) - height
             setEditorMenu({
@@ -5058,10 +5866,42 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
               y: Math.max(8, Math.min(event.clientY, maxY)),
             })
           },
-          onBlur: () => setCompletion(null),
+          onBlur: () => {
+            setCompletion(null)
+            setMention(null)
+          },
           onScroll: (event) => syncScroll(event.target),
           onKeyDown: (event) => {
+            // An IME candidate key (Enter to commit, Escape to cancel, arrows to
+            // move through the list) belongs to the IME: never turn it into a
+            // command, a suggestion pick or a run.
+            if (dwImeComposing(event)) return
             const modifier = event.metaKey || event.ctrlKey
+            if (mention !== null) {
+              const size = mentionItems.length
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                if (size === 0) {
+                  setMention(null)
+                  return
+                }
+                event.preventDefault()
+                const delta = event.key === 'ArrowDown' ? 1 : -1
+                setMention({ ...mention, index: (mention.index + delta + size) % size })
+                return
+              }
+              if ((event.key === 'Enter' && !modifier) || event.key === 'Tab') {
+                if (size > 0) {
+                  event.preventDefault()
+                  insertFavorite(mentionItems[Math.min(mention.index, size - 1)])
+                  return
+                }
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                setMention(null)
+                return
+              }
+            }
             if (completion !== null) {
               if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                 event.preventDefault()
@@ -5124,6 +5964,32 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
             h('span', { key: 'd', className: 'dw-complete-detail' }, item.detail ?? ''),
             h('span', { key: 'k', className: 'dw-complete-kind' }, item.kind === 'column' ? tr('suggestColumn') : item.kind === 'table' ? tr('suggestTable') : tr('suggestKeyword')),
           ]))),
+        mention === null
+          ? null
+          : h('div', {
+            key: 'mention',
+            ref: mentionRef,
+            className: 'dw-complete dw-mention',
+            style: { left: mention.left, top: mention.top },
+            role: 'listbox',
+            'aria-label': tr('favoriteMentionLabel'),
+          }, mentionItems.length === 0
+            ? h('div', { key: 'none', className: 'dw-complete-empty' },
+              favoriteList.length === 0 ? tr('favoriteMentionNoFavorites') : tr('favoriteMentionEmpty'))
+            : mentionItems.map((favorite, index) => h('div', {
+              key: favorite.id,
+              role: 'option',
+              'aria-selected': index === mention.index,
+              className: index === mention.index ? 'dw-complete-row active' : 'dw-complete-row',
+              onMouseDown: (event) => event.preventDefault(),
+              onClick: () => insertFavorite(favorite),
+            }, [
+              h('span', { key: 'ic', className: 'dw-node-icon' }, h(DwIcon, { name: 'star', size: 11 })),
+              h('span', { key: 'l', className: 'dw-complete-label' }, favorite.name),
+              h('span', { key: 'd', className: 'dw-complete-detail' },
+                [favorite.database, favorite.table].filter((part) => typeof part === 'string' && part !== '').join('.')),
+              h('span', { key: 'k', className: 'dw-complete-kind' }, tr('suggestFavorite')),
+            ]))),
       ]),
     ]),
     editorMenuLayer,
@@ -5134,6 +6000,13 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
       sql: optimize.sql,
       database: optimize.database,
       onClose: () => setOptimize(null),
+    }),
+    favoriteDraft === null ? null : h(DwFavoriteDialog, {
+      key: 'favorite',
+      store,
+      tr,
+      draft: favoriteDraft,
+      onClose: () => setFavoriteDraft(null),
     }),
   ])
 }
@@ -5365,6 +6238,9 @@ const DwGrid = React.memo(function DwGrid({
         props.title = tr('editingCellHint')
         props.onBlur = (event) => onEditCommit(rowIndex, cellIndex, column.name, event.currentTarget.textContent)
         props.onKeyDown = (event) => {
+          // Committing an IME candidate with Enter must not blur the editor: the
+          // cell is still being typed, and blur would write the pre-commit value.
+          if (dwImeComposing(event)) return
           if (event.key === 'Enter') {
             event.preventDefault()
             event.currentTarget.blur()
@@ -6070,6 +6946,19 @@ const DW_SIDE_MAX = 720
 const DW_SIDE_DEFAULT = 268
 const DW_SIDE_KEY = 'dsh-data-window:side-width'
 
+/** Bounds for the run log at the bottom of the panel, in pixels. */
+const DW_LOG_MIN = 72
+const DW_LOG_DEFAULT = 132
+const DW_LOG_MAX = 560
+const DW_LOG_KEY = 'dsh-data-window:log-height'
+
+/** Stored run-log height, clamped so a bad value cannot hide the workbench. */
+function dwReadLogHeight() {
+  const raw = Number(globalThis.localStorage?.getItem(DW_LOG_KEY))
+  if (!Number.isFinite(raw) || raw <= 0) return DW_LOG_DEFAULT
+  return Math.min(DW_LOG_MAX, Math.max(DW_LOG_MIN, raw))
+}
+
 /** Wide layouts collapse the navigation column; below this the toggle is a drawer. */
 const DW_WIDE_LAYOUT = 1024
 
@@ -6246,6 +7135,8 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const [menu, setMenu] = useState(null)
   const [editorHeight, setEditorHeight] = useState(168)
   const [sideWidth, setSideWidth] = useState(() => dwReadSideWidth())
+  const [logHeight, setLogHeight] = useState(() => dwReadLogHeight())
+  const [logDragging, setLogDragging] = useState(false)
   const [sidebarHidden, setSidebarHidden] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
@@ -6253,6 +7144,8 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const [ddlTarget, setDdlTarget] = useState(null)
   const [renameTarget, setRenameTarget] = useState(null)
   const [removeEnvTarget, setRemoveEnvTarget] = useState(null)
+  const [favoriteDraft, setFavoriteDraft] = useState(null)
+  const [removeFavoriteTarget, setRemoveFavoriteTarget] = useState(null)
   const aiPrompted = useRef(false)
   const panelRef = useRef(null)
   const logRef = useRef(null)
@@ -6270,6 +7163,12 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   useEffect(() => {
     if (detected !== '') store.setDetectedRoot(detected)
   }, [detected, store])
+
+  // Saved statements are shared by every workspace, so they load once when the
+  // panel opens rather than on each discovery.
+  useEffect(() => {
+    void store.loadFavorites()
+  }, [store])
 
   // First open of a workspace the rule-based scan cannot read: offer the model
   // picker instead of leaving the user with an empty tree and no next step. It
@@ -6343,6 +7242,20 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     sideWidthRef.current = DW_SIDE_DEFAULT
     setSideWidth(DW_SIDE_DEFAULT)
     globalThis.localStorage?.setItem(DW_SIDE_KEY, String(DW_SIDE_DEFAULT))
+  }
+
+  /** Keep the run-log height for the next open; release is the write moment. */
+  const persistLogHeight = (height) => {
+    try {
+      globalThis.localStorage?.setItem(DW_LOG_KEY, String(height))
+    } catch (error) {
+      void error
+    }
+  }
+
+  const resetLogHeight = () => {
+    setLogHeight(DW_LOG_DEFAULT)
+    persistLogHeight(DW_LOG_DEFAULT)
   }
 
   // Requirement 3: one keystroke from the selected table to its create statement.
@@ -6440,29 +7353,47 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       title: sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
       'aria-label': sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
     }, h(DwIcon, { name: 'panel', size: 13 })),
-    h('button', {
-      key: 'refresh',
-      type: 'button',
-      className: 'dw-btn',
-      disabled: state.root === '' || state.refreshing === true || state.phase === 'loading',
-      onClick: () => void store.loadDiscovery({ refresh: true }),
-      title: tr('refreshHint'),
-    }, [
-      h(DwIcon, { key: 'i', name: state.refreshing === true || state.phase === 'loading' ? 'spinner' : 'refresh', size: 12 }),
-      h('span', { key: 't' }, tr('refresh')),
-    ]),
   ])
 
   const selectedTable = state.selectedNode !== null
     && state.selectedNode !== undefined
     && (state.selectedNode.kind === 'table' || state.selectedNode.kind === 'view' || state.selectedNode.kind === 'database')
 
+  // The resource manager has two tabs, like DataGrip's Database window: the
+  // configured tree and the saved statements. The tab strip sits above the filter
+  // so the same search applies to whichever list is showing.
+  const treeTab = state.treeTab === 'favorites' ? 'favorites' : 'databases'
+  const treeTabButton = (key, icon, label, count) => h('button', {
+    key,
+    type: 'button',
+    role: 'tab',
+    'aria-selected': treeTab === key,
+    className: treeTab === key ? 'dw-tree-tab on' : 'dw-tree-tab',
+    onClick: () => store.setTreeTab(key),
+  }, [
+    h(DwIcon, { key: 'i', name: icon, size: 12 }),
+    h('span', { key: 'l' }, label),
+    typeof count === 'number' && count > 0
+      ? h('span', { key: 'c', className: 'dw-tree-tab-count' }, String(count))
+      : null,
+  ])
+
   const side = h('aside', { key: 'side', className: 'dw-side', style: { width: sideWidth } }, [
     h('div', { key: 'head', className: 'dw-side-head' }, [
       h('span', { key: 't' }, tr('treeTitle')),
       h('span', { key: 'sp', className: 'dw-spacer' }),
       selectedTable === true ? h('span', { key: 'n' }, tr('ddlShortcutHint')) : null,
-      // These two belong to the tree, so they live in the tree's own header.
+      // These belong to the explorer, so they live in the explorer's own header:
+      // re-read the workspace, let a model look at it, or add a connection.
+      h('button', {
+        key: 'reload-workspace',
+        type: 'button',
+        className: 'dw-btn dw-btn-icon',
+        disabled: state.root === '' || state.refreshing === true || state.phase === 'loading',
+        onClick: () => void store.loadDiscovery({ refresh: true }),
+        title: tr('refreshHint'),
+        'aria-label': tr('refresh'),
+      }, h(DwIcon, { key: 'i', name: state.refreshing === true || state.phase === 'loading' ? 'spinner' : 'refresh', size: 12 })),
       h('button', {
         key: 'ai',
         type: 'button',
@@ -6484,12 +7415,27 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
         'aria-label': tr('manualOpen'),
       }, h(DwIcon, { key: 'i', name: 'plus', size: 12 })),
     ]),
+    h('div', { key: 'tabs', className: 'dw-tree-tabs', role: 'tablist', 'aria-label': tr('treeTabsLabel') }, [
+      treeTabButton('databases', 'database', tr('treeTabDatabases')),
+      treeTabButton('favorites', 'star', tr('favoritesTitle'), (state.favorites ?? []).length),
+      h('span', { key: 'sp', className: 'dw-spacer' }),
+      treeTab === 'favorites'
+        ? h('button', {
+          key: 'reload-favorites',
+          type: 'button',
+          className: 'dw-btn dw-btn-icon',
+          title: tr('favoritesReload'),
+          'aria-label': tr('favoritesReload'),
+          onClick: () => void store.loadFavorites({ force: true }),
+        }, h(DwIcon, { key: 'i', name: 'refresh', size: 12 }))
+        : null,
+    ]),
     h('div', { key: 'filter', style: { padding: '5px 8px', borderBottom: '1px solid var(--dsw-alias-border-l1)' } }, [
       h('input', {
         key: 'i',
         type: 'search',
         value: state.filter ?? '',
-        placeholder: tr('filterPlaceholder'),
+        placeholder: tr(treeTab === 'favorites' ? 'filterFavoritesPlaceholder' : 'filterPlaceholder'),
         onChange: (event) => store.patch({ filter: event.target.value }),
         style: {
           width: '100%',
@@ -6532,7 +7478,28 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     ]))
   } else {
     main = h('div', { key: 'main', className: 'dw-main' }, [
-      h(DwTabs, { key: 'tabs', store, state, tr }),
+      h(DwTabs, {
+        key: 'tabs',
+        store,
+        state,
+        tr,
+        // A console tab can be collected whole: the tab knows its schema and table,
+        // which is exactly what the favorite has to carry.
+        onFavorite: (tab) => {
+          const sql = String(tab.sql ?? '').trim()
+          if (sql === '') {
+            store.pushLog('warn', tr('log.noStatement'))
+            return
+          }
+          setFavoriteDraft({
+            sql,
+            name: '',
+            database: tab.database,
+            table: dwTabTableName(tab),
+            env: tab.env ?? '',
+          })
+        },
+      }),
       activeTab === undefined
         ? h(DwEmpty, { key: 'empty', tr, state, onPick: pickWorkspace, onOpenAi: () => setAiOpen(true), onOpenManual: () => setManualOpen(true) })
         : h(React.Fragment, { key: activeTab.id }, [
@@ -6543,6 +7510,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
               tr,
               height: editorHeight,
               schema: state.schemas?.get(activeTab.dbId),
+              favorites: state.favorites ?? [],
               onRun: (statement) => void store.runActiveTab(statement),
             }),
             h(DwDragHandle, {
@@ -6557,7 +7525,23 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     ])
   }
 
-  const log = h('div', { key: 'log', className: `dw-log${state.logOpen === true ? '' : ' dw-log-collapsed'}` }, [
+  // The log grows upward; leave the tab strip plus a usable editor/results area
+  // above it, and never exceed the fixed ceiling.
+  const panelHeight = panelRef.current?.getBoundingClientRect?.().height ?? (globalThis.innerHeight ?? 800)
+  const logMax = Math.max(DW_LOG_MIN + 40, Math.min(DW_LOG_MAX, Math.round(panelHeight - 300)))
+  // A window that shrank after the height was stored must not push the workbench
+  // out of the panel; the stored value is kept for when there is room again.
+  const visibleLogHeight = Math.min(logHeight, logMax)
+
+  const log = h('div', {
+    key: 'log',
+    className: `dw-log${state.logOpen === true ? '' : ' dw-log-collapsed'}`,
+    // An open log follows the stored height; while dragging, the CSS open/close
+    // transition must not lag behind the pointer.
+    style: state.logOpen === true
+      ? { height: visibleLogHeight, transition: logDragging === true ? 'none' : undefined }
+      : undefined,
+  }, [
     h('div', { key: 'bar', className: 'dw-log-bar' }, [
       h('button', {
         key: 'toggle',
@@ -6611,7 +7595,18 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
           left: Math.max(rect === undefined ? 0 : rect.left, left),
           top: Math.max(rect === undefined ? 0 : rect.top, top),
         },
-      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node), (node) => setRenameTarget(node), (node) => setRemoveEnvTarget(node), (node) => setDdlTarget(node))),
+      }, dwMenuItems(
+        menu.node,
+        store,
+        tr,
+        () => setMenu(null),
+        (node) => setSchemaTarget(node),
+        (node) => setRenameTarget(node),
+        (node) => setRemoveEnvTarget(node),
+        (node) => setDdlTarget(node),
+        (favorite) => setFavoriteDraft({ ...favorite }),
+        (favorite) => setRemoveFavoriteTarget(favorite),
+      )),
     ])
   }
 
@@ -6631,6 +7626,23 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       }),
       main,
     ]),
+    state.logOpen === true
+      ? h(DwDragHandle, {
+        key: 'log-drag',
+        value: visibleLogHeight,
+        min: DW_LOG_MIN,
+        max: logMax,
+        invert: true,
+        title: tr('resizeLog'),
+        onChange: setLogHeight,
+        onStart: () => setLogDragging(true),
+        onCommit: (height) => {
+          setLogDragging(false)
+          persistLogHeight(height)
+        },
+        onReset: resetLogHeight,
+      })
+      : null,
     log,
     menuLayer,
     aiOpen ? h(DwAiDialog, {
@@ -6684,6 +7696,30 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       instance: schemaTarget,
       onClose: () => setSchemaTarget(null),
     }),
+    favoriteDraft === null ? null : h(DwFavoriteDialog, {
+      key: 'favorite-dialog',
+      store,
+      tr,
+      draft: favoriteDraft,
+      onClose: () => setFavoriteDraft(null),
+      onSaved: () => setMenu(null),
+    }),
+    removeFavoriteTarget === null ? null : h(DwConfirmDialog, {
+      key: 'remove-favorite-dialog',
+      tr,
+      title: tr('removeFavoriteTitle'),
+      message: tr('removeFavoriteHint', { name: removeFavoriteTarget.name }),
+      confirmLabel: tr('removeFavoriteConfirm'),
+      onClose: () => setRemoveFavoriteTarget(null),
+      onConfirm: async () => {
+        try {
+          await store.removeFavorite(removeFavoriteTarget.id)
+        } catch (error) {
+          store.pushLog('error', tr('log.favoriteRemoveFailed', { message: dwExplainFailure(tr, error) }))
+        }
+        setRemoveFavoriteTarget(null)
+      },
+    }),
   ])
 }
 
@@ -6695,7 +7731,7 @@ function dwClock(date) {
 }
 
 /** The context menu of one node. */
-function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, openRemoveEnv, openDdlDialog) {
+function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, openRemoveEnv, openDdlDialog, openFavoriteDialog, confirmRemoveFavorite) {
   const items = []
   const add = (key, label, shortcut, run, tone) => items.push(h('button', {
     key,
@@ -6707,7 +7743,18 @@ function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, op
     },
   }, [h('span', { key: 'l' }, label), shortcut === '' ? null : h('span', { key: 's', className: 'dw-menu-shortcut' }, shortcut)]))
 
-  if (node.kind === 'table' || node.kind === 'view') {
+  if (node.kind === 'favorite') {
+    const favorite = node.favorite
+    add('open-favorite', tr('menuOpenFavorite'), '', () => store.openFavorite(favorite))
+    add('copy-favorite-sql', tr('menuCopyFavoriteSql'), '', () => {
+      const write = globalThis.navigator?.clipboard?.writeText?.(String(favorite.sql ?? ''))
+      if (write !== undefined) write.then(() => store.pushLog('info', tr('log.favoriteCopied', { name: favorite.name }))).catch(() => undefined)
+    })
+    add('edit-favorite', tr('menuEditFavorite'), '', () => openFavoriteDialog(favorite))
+    add('remove-favorite', tr('menuRemoveFavorite'), '', () => confirmRemoveFavorite(favorite), 'dw-menu-danger')
+  } else if (node.kind === 'favoriteDatabase' || node.kind === 'favoriteTable') {
+    add('expand', tr('menuExpand'), '', () => void store.toggleNode(node))
+  } else if (node.kind === 'table' || node.kind === 'view') {
     add('ddl', tr('menuDdl'), 'F4', () => openDdlDialog(node))
     add('data', tr('menuOpenData'), '', () => {
       const statement = `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`
@@ -7035,6 +8082,7 @@ function DwSchemaDialog({ store, tr, instance, onClose }) {
   useEffect(() => {
     const onKey = (event) => {
       if (event.key !== 'Escape' || savingRef.current) return
+      if (dwImeComposing(event)) return
       onClose()
     }
     globalThis.addEventListener('keydown', onKey)
@@ -7220,6 +8268,7 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
   useEffect(() => {
     const onKey = (event) => {
       if (event.key !== 'Escape' || savingRef.current) return
+      if (dwImeComposing(event)) return
       onClose()
     }
     globalThis.addEventListener('keydown', onKey)
@@ -7401,6 +8450,7 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
   useEffect(() => {
     const onKey = (event) => {
       if (event.key !== 'Escape' || savingRef.current) return
+      if (dwImeComposing(event)) return
       onClose()
     }
     globalThis.addEventListener('keydown', onKey)
@@ -7454,7 +8504,9 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
           autoComplete: 'off',
           onChange: (event) => setValue(event.target.value),
           onKeyDown: (event) => {
-            if (event.key === 'Enter') void save()
+            if (event.key !== 'Enter') return
+            if (dwImeComposing(event)) return
+            void save()
           },
         }),
       ]),
@@ -7490,6 +8542,7 @@ function DwConfirmDialog({ tr, title, message, confirmLabel, onConfirm, onClose 
   useEffect(() => {
     const onKey = (event) => {
       if (event.key !== 'Escape' || busyRef.current) return
+      if (dwImeComposing(event)) return
       onClose()
     }
     globalThis.addEventListener('keydown', onKey)
@@ -7638,6 +8691,7 @@ function DwAiDialog({ store, tr, onClose, onManual }) {
     const onKey = (event) => {
       if (event.key !== 'Escape') return
       if (modeRef.current === 'running') return
+      if (dwImeComposing(event)) return
       onClose()
     }
     globalThis.addEventListener('keydown', onKey)

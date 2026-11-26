@@ -10,7 +10,7 @@
  */
 
 /** One nested tree of what the store currently knows, before filtering. */
-function dwBuildTree(state, tr) {
+function dwBuildTree(state, tr, mode = 'databases') {
   const loadStateOf = (key) => state.loadState.get(key)
   const childrenOf = (node, depth) => {
     const rows = []
@@ -26,7 +26,12 @@ function dwBuildTree(state, tr) {
     return rows
   }
 
-  const environments = []
+  // The favorites tab is derived from the saved list, not from `children`: it never
+  // needs a round trip to expand, and a save anywhere in the panel is visible the
+  // moment the store patches the list.
+  if (mode === 'favorites') return dwBuildFavoriteRows(state.favorites, tr)
+
+  const rows = []
   for (const environment of state.environments ?? []) {
     const envKey = dwNodeKey('env', environment.env)
     const instanceRows = []
@@ -73,7 +78,7 @@ function dwBuildTree(state, tr) {
         children: databaseRows,
       })
     }
-    environments.push({
+    rows.push({
       node: {
         key: envKey,
         kind: 'env',
@@ -87,7 +92,7 @@ function dwBuildTree(state, tr) {
       children: instanceRows,
     })
   }
-  return environments
+  return rows
 }
 
 /** Prune a tree to the nodes that match, keeping their ancestors. */
@@ -130,7 +135,7 @@ function dwFlattenTree(tree, state, filter, depth = 0, into = []) {
 /** One row per visible node, in display order. */
 function dwVisibleRows(state, tr) {
   const filter = String(state.filter ?? '').trim().toLowerCase()
-  const tree = dwPruneTree(dwBuildTree(state, tr), filter)
+  const tree = dwPruneTree(dwBuildTree(state, tr, state.treeTab), filter)
   return dwFlattenTree(tree, state, filter)
 }
 
@@ -143,6 +148,9 @@ function dwNodeIconName(node) {
     case 'view': return 'view'
     case 'table': return 'table'
     case 'column': return node.column?.key === 'PRI' ? 'key' : 'column'
+    case 'favorite': return 'star'
+    case 'favoriteDatabase': return 'database'
+    case 'favoriteTable': return 'table'
     case 'retry': return 'refresh'
     case 'error': return 'close'
     default: return 'panel'
@@ -152,7 +160,7 @@ function dwNodeIconName(node) {
 function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
   const rows = useMemo(
     () => dwVisibleRows(state, tr),
-    [state.environments, state.expanded, state.children, state.loadState, state.filter],
+    [state.root, state.treeTab, state.environments, state.expanded, state.children, state.loadState, state.filter, state.favorites, state.favoritesError],
   )
 
   // A row click only selects: expanding belongs to the twisty (and to double-click
@@ -164,6 +172,9 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
       return
     }
     store.select(node)
+    // The favorites branches exist to be browsed, so a single click unfolds them;
+    // every other row keeps the "select only" behaviour of the tree.
+    if (node.kind === 'favoriteDatabase' || node.kind === 'favoriteTable') void store.toggleNode(node)
   }
 
   const openRow = (row) => {
@@ -173,6 +184,10 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
       return
     }
     store.select(node)
+    if (node.kind === 'favorite') {
+      store.openFavorite(node.favorite)
+      return
+    }
     if (node.kind === 'database') {
       store.openDatabase(node)
       if (row.open !== true) void store.toggleNode(node)
@@ -200,14 +215,21 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
   }
 
   if (rows.length === 0) {
-    const empty = state.phase === 'loading'
-      ? tr('treeLoading')
-      : String(state.filter ?? '') !== ''
+    const filtered = String(state.filter ?? '') !== ''
+    const empty = state.treeTab === 'favorites'
+      ? filtered
         ? tr('treeNoMatch')
-        : tr('treeEmpty')
+        : String(state.favoritesError ?? '') !== ''
+          ? tr('log.favoriteLoadFailed', { message: state.favoritesError })
+          : tr('favoritesEmptyHint')
+      : state.phase === 'loading'
+        ? tr('treeLoading')
+        : filtered
+          ? tr('treeNoMatch')
+          : tr('treeEmpty')
     return h('div', { className: 'dw-tree' }, h('div', { className: 'dw-empty', style: { padding: 18 } }, [
       h('div', { key: 't', className: 'dw-empty-hint' }, empty),
-      String(state.filter ?? '') !== ''
+      filtered
         ? h('button', {
           key: 'c',
           type: 'button',

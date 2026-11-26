@@ -84,6 +84,8 @@ function DwIcon({ name, size = 14, className }) {
         h('circle', { key: 'a', cx: 8, cy: 8, r: 2.4 }),
         h('path', { key: 'b', d: 'M10.4 8v1.4a2.1 2.1 0 0 0 4.2 0V8A6.4 6.4 0 1 0 8 14.4c1.2 0 2.2-.2 3-.7' }),
       ])
+    case 'star':
+      return h('svg', common, [h('path', { d: 'M8 2.1l1.82 3.69 4.07.59-2.94 2.87.69 4.06L8 11.4l-3.64 1.91.69-4.06L2.11 6.38l4.07-.59z' })])
     case 'close':
       return h('svg', common, [h('path', { d: 'M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6' })])
     case 'download':

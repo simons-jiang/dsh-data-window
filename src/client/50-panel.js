@@ -18,6 +18,19 @@ const DW_SIDE_MAX = 720
 const DW_SIDE_DEFAULT = 268
 const DW_SIDE_KEY = 'dsh-data-window:side-width'
 
+/** Bounds for the run log at the bottom of the panel, in pixels. */
+const DW_LOG_MIN = 72
+const DW_LOG_DEFAULT = 132
+const DW_LOG_MAX = 560
+const DW_LOG_KEY = 'dsh-data-window:log-height'
+
+/** Stored run-log height, clamped so a bad value cannot hide the workbench. */
+function dwReadLogHeight() {
+  const raw = Number(globalThis.localStorage?.getItem(DW_LOG_KEY))
+  if (!Number.isFinite(raw) || raw <= 0) return DW_LOG_DEFAULT
+  return Math.min(DW_LOG_MAX, Math.max(DW_LOG_MIN, raw))
+}
+
 /** Wide layouts collapse the navigation column; below this the toggle is a drawer. */
 const DW_WIDE_LAYOUT = 1024
 
@@ -194,6 +207,8 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const [menu, setMenu] = useState(null)
   const [editorHeight, setEditorHeight] = useState(168)
   const [sideWidth, setSideWidth] = useState(() => dwReadSideWidth())
+  const [logHeight, setLogHeight] = useState(() => dwReadLogHeight())
+  const [logDragging, setLogDragging] = useState(false)
   const [sidebarHidden, setSidebarHidden] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
@@ -201,6 +216,8 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   const [ddlTarget, setDdlTarget] = useState(null)
   const [renameTarget, setRenameTarget] = useState(null)
   const [removeEnvTarget, setRemoveEnvTarget] = useState(null)
+  const [favoriteDraft, setFavoriteDraft] = useState(null)
+  const [removeFavoriteTarget, setRemoveFavoriteTarget] = useState(null)
   const aiPrompted = useRef(false)
   const panelRef = useRef(null)
   const logRef = useRef(null)
@@ -218,6 +235,12 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
   useEffect(() => {
     if (detected !== '') store.setDetectedRoot(detected)
   }, [detected, store])
+
+  // Saved statements are shared by every workspace, so they load once when the
+  // panel opens rather than on each discovery.
+  useEffect(() => {
+    void store.loadFavorites()
+  }, [store])
 
   // First open of a workspace the rule-based scan cannot read: offer the model
   // picker instead of leaving the user with an empty tree and no next step. It
@@ -291,6 +314,20 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     sideWidthRef.current = DW_SIDE_DEFAULT
     setSideWidth(DW_SIDE_DEFAULT)
     globalThis.localStorage?.setItem(DW_SIDE_KEY, String(DW_SIDE_DEFAULT))
+  }
+
+  /** Keep the run-log height for the next open; release is the write moment. */
+  const persistLogHeight = (height) => {
+    try {
+      globalThis.localStorage?.setItem(DW_LOG_KEY, String(height))
+    } catch (error) {
+      void error
+    }
+  }
+
+  const resetLogHeight = () => {
+    setLogHeight(DW_LOG_DEFAULT)
+    persistLogHeight(DW_LOG_DEFAULT)
   }
 
   // Requirement 3: one keystroke from the selected table to its create statement.
@@ -388,29 +425,47 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       title: sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
       'aria-label': sidebarHidden ? tr('showSidebar') : tr('hideSidebar'),
     }, h(DwIcon, { name: 'panel', size: 13 })),
-    h('button', {
-      key: 'refresh',
-      type: 'button',
-      className: 'dw-btn',
-      disabled: state.root === '' || state.refreshing === true || state.phase === 'loading',
-      onClick: () => void store.loadDiscovery({ refresh: true }),
-      title: tr('refreshHint'),
-    }, [
-      h(DwIcon, { key: 'i', name: state.refreshing === true || state.phase === 'loading' ? 'spinner' : 'refresh', size: 12 }),
-      h('span', { key: 't' }, tr('refresh')),
-    ]),
   ])
 
   const selectedTable = state.selectedNode !== null
     && state.selectedNode !== undefined
     && (state.selectedNode.kind === 'table' || state.selectedNode.kind === 'view' || state.selectedNode.kind === 'database')
 
+  // The resource manager has two tabs, like DataGrip's Database window: the
+  // configured tree and the saved statements. The tab strip sits above the filter
+  // so the same search applies to whichever list is showing.
+  const treeTab = state.treeTab === 'favorites' ? 'favorites' : 'databases'
+  const treeTabButton = (key, icon, label, count) => h('button', {
+    key,
+    type: 'button',
+    role: 'tab',
+    'aria-selected': treeTab === key,
+    className: treeTab === key ? 'dw-tree-tab on' : 'dw-tree-tab',
+    onClick: () => store.setTreeTab(key),
+  }, [
+    h(DwIcon, { key: 'i', name: icon, size: 12 }),
+    h('span', { key: 'l' }, label),
+    typeof count === 'number' && count > 0
+      ? h('span', { key: 'c', className: 'dw-tree-tab-count' }, String(count))
+      : null,
+  ])
+
   const side = h('aside', { key: 'side', className: 'dw-side', style: { width: sideWidth } }, [
     h('div', { key: 'head', className: 'dw-side-head' }, [
       h('span', { key: 't' }, tr('treeTitle')),
       h('span', { key: 'sp', className: 'dw-spacer' }),
       selectedTable === true ? h('span', { key: 'n' }, tr('ddlShortcutHint')) : null,
-      // These two belong to the tree, so they live in the tree's own header.
+      // These belong to the explorer, so they live in the explorer's own header:
+      // re-read the workspace, let a model look at it, or add a connection.
+      h('button', {
+        key: 'reload-workspace',
+        type: 'button',
+        className: 'dw-btn dw-btn-icon',
+        disabled: state.root === '' || state.refreshing === true || state.phase === 'loading',
+        onClick: () => void store.loadDiscovery({ refresh: true }),
+        title: tr('refreshHint'),
+        'aria-label': tr('refresh'),
+      }, h(DwIcon, { key: 'i', name: state.refreshing === true || state.phase === 'loading' ? 'spinner' : 'refresh', size: 12 })),
       h('button', {
         key: 'ai',
         type: 'button',
@@ -432,12 +487,27 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
         'aria-label': tr('manualOpen'),
       }, h(DwIcon, { key: 'i', name: 'plus', size: 12 })),
     ]),
+    h('div', { key: 'tabs', className: 'dw-tree-tabs', role: 'tablist', 'aria-label': tr('treeTabsLabel') }, [
+      treeTabButton('databases', 'database', tr('treeTabDatabases')),
+      treeTabButton('favorites', 'star', tr('favoritesTitle'), (state.favorites ?? []).length),
+      h('span', { key: 'sp', className: 'dw-spacer' }),
+      treeTab === 'favorites'
+        ? h('button', {
+          key: 'reload-favorites',
+          type: 'button',
+          className: 'dw-btn dw-btn-icon',
+          title: tr('favoritesReload'),
+          'aria-label': tr('favoritesReload'),
+          onClick: () => void store.loadFavorites({ force: true }),
+        }, h(DwIcon, { key: 'i', name: 'refresh', size: 12 }))
+        : null,
+    ]),
     h('div', { key: 'filter', style: { padding: '5px 8px', borderBottom: '1px solid var(--dsw-alias-border-l1)' } }, [
       h('input', {
         key: 'i',
         type: 'search',
         value: state.filter ?? '',
-        placeholder: tr('filterPlaceholder'),
+        placeholder: tr(treeTab === 'favorites' ? 'filterFavoritesPlaceholder' : 'filterPlaceholder'),
         onChange: (event) => store.patch({ filter: event.target.value }),
         style: {
           width: '100%',
@@ -480,7 +550,28 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     ]))
   } else {
     main = h('div', { key: 'main', className: 'dw-main' }, [
-      h(DwTabs, { key: 'tabs', store, state, tr }),
+      h(DwTabs, {
+        key: 'tabs',
+        store,
+        state,
+        tr,
+        // A console tab can be collected whole: the tab knows its schema and table,
+        // which is exactly what the favorite has to carry.
+        onFavorite: (tab) => {
+          const sql = String(tab.sql ?? '').trim()
+          if (sql === '') {
+            store.pushLog('warn', tr('log.noStatement'))
+            return
+          }
+          setFavoriteDraft({
+            sql,
+            name: '',
+            database: tab.database,
+            table: dwTabTableName(tab),
+            env: tab.env ?? '',
+          })
+        },
+      }),
       activeTab === undefined
         ? h(DwEmpty, { key: 'empty', tr, state, onPick: pickWorkspace, onOpenAi: () => setAiOpen(true), onOpenManual: () => setManualOpen(true) })
         : h(React.Fragment, { key: activeTab.id }, [
@@ -491,6 +582,7 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
               tr,
               height: editorHeight,
               schema: state.schemas?.get(activeTab.dbId),
+              favorites: state.favorites ?? [],
               onRun: (statement) => void store.runActiveTab(statement),
             }),
             h(DwDragHandle, {
@@ -505,7 +597,23 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
     ])
   }
 
-  const log = h('div', { key: 'log', className: `dw-log${state.logOpen === true ? '' : ' dw-log-collapsed'}` }, [
+  // The log grows upward; leave the tab strip plus a usable editor/results area
+  // above it, and never exceed the fixed ceiling.
+  const panelHeight = panelRef.current?.getBoundingClientRect?.().height ?? (globalThis.innerHeight ?? 800)
+  const logMax = Math.max(DW_LOG_MIN + 40, Math.min(DW_LOG_MAX, Math.round(panelHeight - 300)))
+  // A window that shrank after the height was stored must not push the workbench
+  // out of the panel; the stored value is kept for when there is room again.
+  const visibleLogHeight = Math.min(logHeight, logMax)
+
+  const log = h('div', {
+    key: 'log',
+    className: `dw-log${state.logOpen === true ? '' : ' dw-log-collapsed'}`,
+    // An open log follows the stored height; while dragging, the CSS open/close
+    // transition must not lag behind the pointer.
+    style: state.logOpen === true
+      ? { height: visibleLogHeight, transition: logDragging === true ? 'none' : undefined }
+      : undefined,
+  }, [
     h('div', { key: 'bar', className: 'dw-log-bar' }, [
       h('button', {
         key: 'toggle',
@@ -559,7 +667,18 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
           left: Math.max(rect === undefined ? 0 : rect.left, left),
           top: Math.max(rect === undefined ? 0 : rect.top, top),
         },
-      }, dwMenuItems(menu.node, store, tr, () => setMenu(null), (node) => setSchemaTarget(node), (node) => setRenameTarget(node), (node) => setRemoveEnvTarget(node), (node) => setDdlTarget(node))),
+      }, dwMenuItems(
+        menu.node,
+        store,
+        tr,
+        () => setMenu(null),
+        (node) => setSchemaTarget(node),
+        (node) => setRenameTarget(node),
+        (node) => setRemoveEnvTarget(node),
+        (node) => setDdlTarget(node),
+        (favorite) => setFavoriteDraft({ ...favorite }),
+        (favorite) => setRemoveFavoriteTarget(favorite),
+      )),
     ])
   }
 
@@ -579,6 +698,23 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       }),
       main,
     ]),
+    state.logOpen === true
+      ? h(DwDragHandle, {
+        key: 'log-drag',
+        value: visibleLogHeight,
+        min: DW_LOG_MIN,
+        max: logMax,
+        invert: true,
+        title: tr('resizeLog'),
+        onChange: setLogHeight,
+        onStart: () => setLogDragging(true),
+        onCommit: (height) => {
+          setLogDragging(false)
+          persistLogHeight(height)
+        },
+        onReset: resetLogHeight,
+      })
+      : null,
     log,
     menuLayer,
     aiOpen ? h(DwAiDialog, {
@@ -632,6 +768,30 @@ function DwPanel({ store, translate, useSessions, useWorkspaces, pickDirectory }
       instance: schemaTarget,
       onClose: () => setSchemaTarget(null),
     }),
+    favoriteDraft === null ? null : h(DwFavoriteDialog, {
+      key: 'favorite-dialog',
+      store,
+      tr,
+      draft: favoriteDraft,
+      onClose: () => setFavoriteDraft(null),
+      onSaved: () => setMenu(null),
+    }),
+    removeFavoriteTarget === null ? null : h(DwConfirmDialog, {
+      key: 'remove-favorite-dialog',
+      tr,
+      title: tr('removeFavoriteTitle'),
+      message: tr('removeFavoriteHint', { name: removeFavoriteTarget.name }),
+      confirmLabel: tr('removeFavoriteConfirm'),
+      onClose: () => setRemoveFavoriteTarget(null),
+      onConfirm: async () => {
+        try {
+          await store.removeFavorite(removeFavoriteTarget.id)
+        } catch (error) {
+          store.pushLog('error', tr('log.favoriteRemoveFailed', { message: dwExplainFailure(tr, error) }))
+        }
+        setRemoveFavoriteTarget(null)
+      },
+    }),
   ])
 }
 
@@ -643,7 +803,7 @@ function dwClock(date) {
 }
 
 /** The context menu of one node. */
-function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, openRemoveEnv, openDdlDialog) {
+function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, openRemoveEnv, openDdlDialog, openFavoriteDialog, confirmRemoveFavorite) {
   const items = []
   const add = (key, label, shortcut, run, tone) => items.push(h('button', {
     key,
@@ -655,7 +815,18 @@ function dwMenuItems(node, store, tr, close, openSchemaDialog, openRenameEnv, op
     },
   }, [h('span', { key: 'l' }, label), shortcut === '' ? null : h('span', { key: 's', className: 'dw-menu-shortcut' }, shortcut)]))
 
-  if (node.kind === 'table' || node.kind === 'view') {
+  if (node.kind === 'favorite') {
+    const favorite = node.favorite
+    add('open-favorite', tr('menuOpenFavorite'), '', () => store.openFavorite(favorite))
+    add('copy-favorite-sql', tr('menuCopyFavoriteSql'), '', () => {
+      const write = globalThis.navigator?.clipboard?.writeText?.(String(favorite.sql ?? ''))
+      if (write !== undefined) write.then(() => store.pushLog('info', tr('log.favoriteCopied', { name: favorite.name }))).catch(() => undefined)
+    })
+    add('edit-favorite', tr('menuEditFavorite'), '', () => openFavoriteDialog(favorite))
+    add('remove-favorite', tr('menuRemoveFavorite'), '', () => confirmRemoveFavorite(favorite), 'dw-menu-danger')
+  } else if (node.kind === 'favoriteDatabase' || node.kind === 'favoriteTable') {
+    add('expand', tr('menuExpand'), '', () => void store.toggleNode(node))
+  } else if (node.kind === 'table' || node.kind === 'view') {
     add('ddl', tr('menuDdl'), 'F4', () => openDdlDialog(node))
     add('data', tr('menuOpenData'), '', () => {
       const statement = `SELECT *\nFROM \`${node.database}\`.\`${node.table}\`\nLIMIT 100`

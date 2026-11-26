@@ -141,6 +141,13 @@ const DW_CSS = `
   color: var(--dsw-alias-label-primary-inverted, #fff);
   font-weight: 600;
 }
+/*
+ * The panel and the sidebar-foot action each inject this stylesheet, so the second
+ * copy's plain .dw-btn color rule would otherwise override the first copy's accent
+ * label and paint white text on the brand fill. The extra class keeps the inverted
+ * label winning wherever the rules land.
+ */
+.dw-btn.dw-btn-accent { color: var(--dsw-alias-label-primary-inverted, #fff); }
 .dw-btn-accent:hover { filter: brightness(1.08); background: var(--dsw-alias-brand-primary, #4b8bf5); }
 .dw-btn-icon { width: 26px; padding: 0; justify-content: center; }
 /*
@@ -224,6 +231,59 @@ const DW_CSS = `
   font-size: 11px;
   letter-spacing: .04em;
   text-transform: uppercase;
+}
+/* The resource manager's tabs: the configured tree and the saved statements. */
+.dw-tree-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, #2c2f36);
+}
+.dw-tree-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dw-tree-tab:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12)); color: var(--dsw-alias-label-primary, #e6e8ec); }
+.dw-tree-tab.on {
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  border-bottom-color: var(--dsw-alias-brand-primary, #4b8bf5);
+}
+.dw-tree-tab-count {
+  min-width: 14px;
+  padding: 0 4px;
+  border-radius: 7px;
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12));
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+}
+.dw-tree-tabs .dw-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+}
+.dw-tree-tabs .dw-btn:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, .12));
+  color: var(--dsw-alias-label-primary, #e6e8ec);
 }
 .dw-tree { flex: 1 1 auto; overflow: auto; padding: 4px 0 12px; }
 .dw-node {
@@ -450,6 +510,32 @@ const DW_CSS = `
 .dw-complete-label { flex: 1 1 auto; font-family: var(--ds-font-family-code, ui-monospace, Menlo, monospace); font-size: 12px; }
 .dw-complete-detail { flex: 0 1 auto; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 10.5px; }
 .dw-complete-kind { flex: 0 0 auto; color: var(--dsw-alias-label-secondary, #8b919d); font-size: 10px; opacity: .8; }
+.dw-complete-empty {
+  padding: 6px 9px;
+  max-width: 300px;
+  color: var(--dsw-alias-label-secondary, #8b919d);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+/* The at-sign index: statements, so a little wider than the column list. */
+.dw-mention { min-width: 280px; max-width: 420px; }
+.dw-fav-sql {
+  margin: 0;
+  max-height: 170px;
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-2, #262930);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--ds-font-family-code, ui-monospace, Menlo, monospace);
+  font-size: 11.5px;
+  line-height: 1.55;
+  white-space: pre;
+}
+.dw-fav-dialog { width: min(620px, 100%); }
+.dw-fav-split { display: flex; gap: 10px; }
+.dw-fav-split .dw-form-row { flex: 1 1 0; min-width: 0; }
 
 .dw-drag {
   height: 5px;

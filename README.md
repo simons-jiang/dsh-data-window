@@ -55,6 +55,14 @@ double-click on the divider restores its default width.
 - **Tab context menu** — right-click a console tab to close it, close the tabs on
   either side (or all of them), copy its reference (`schema.table` or `schema`), or
   put that reference into the chat composer when the chat input is open.
+- **Saved SQL and a favorites tab** — right-click a statement in the editor (or a
+  console tab) and choose “Save SQL” to keep it under a unique name together with
+  its schema and table. The resource manager has two tabs like DataGrip's Database
+  window: the database tree and ★ Favorites, which groups the saved statements
+  schema → table → name; double-clicking one opens it in that schema's workbench.
+  Typing `@` in the editor indexes them by name, and the chosen statement is
+  inserted at the caret. Saving, renaming, copying and deleting never execute
+  anything.
 - **Paging for LIMIT queries** — a statement ending in `LIMIT` gets previous/next
   controls whose page size is that limit; the next page is built as
   `… LIMIT n OFFSET m` and run without touching the editor. An empty next page ends
@@ -63,7 +71,8 @@ double-click on the divider restores its default width.
   opens it in a dialog with a copy button (no extra work tab); on a database the same
   key (or the context menu) reads the create statement of every table in it.
 - **One workbench per database**, kept as tabs, with a result grid, copy-as-TSV,
-  a row limit, a draggable editor/result split and a collapsible run log. Opening a
+  a row limit, a draggable editor/result split and a collapsible run log whose
+  height is dragged from its top edge (double-click resets it). Opening a
   table's rows never overwrites SQL you already typed: a second console is added
   instead.
 - **Export the page** — the result bar exports the current page (with any local cell

@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.1.3] — 2026-11-26
+
+### Added
+
+- The run log's height is dragged from the 5px divider above its title bar (drag up
+  to grow, double-click to reset to the default). The height is stored per browser
+  in `localStorage` and restored on the next open; it is clamped so the workbench
+  keeps a usable area in a small window.
+- Saved SQL: the editor's context menu and a console tab's menu can collect a
+  statement under a unique name together with its schema and table. Entries live in
+  one machine-wide 0600 file (`storages/dsh-data-window/favorites/favorites.json`),
+  written atomically, and are shared by every workspace like the tree.
+- The resource manager is split into two tabs like DataGrip's Database window: a
+  **Databases** tab with the configured tree and a ★ **Favorites** tab that groups
+  saved statements by schema and then table (with a count badge and its own reload
+  button). Saving a statement switches to the favorites tab, expands its
+  schema/table and selects the new entry. Double-click opens a statement in the
+  matching schema's workbench; the node's menu opens, copies, edits
+  (rename/schema/table) or deletes it.
+- The workbench indexes saved statements behind `@`: typing `@` opens a picker
+  filtered by name, schema or table, and Enter/Tab (or a click) replaces the
+  `@keyword` token with the statement, leaving the caret after it.
+
+### Fixed
+
+- Input-method composition no longer triggers commands: the Enter that confirms a
+  Chinese/Japanese candidate (and the Escape that cancels it) is left to the IME
+  instead of submitting the favorite dialog, blurring an edited result cell,
+  closing a dialog, picking an `@` suggestion or running a statement. A short
+  grace period after `compositionend` covers browsers that deliver the confirming
+  Enter as a plain key event.
+
+### Changed
+
+- The workspace refresh button moved from the top toolbar into the resource
+  manager's header, beside the AI and add-connection actions: the toolbar keeps the
+  workspace's identity and shell controls, and the explorer owns the actions that
+  act on its tree.
+
 ## [0.1.2] — 2026-11-26
 
 ### Added

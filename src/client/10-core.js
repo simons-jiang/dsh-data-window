@@ -135,6 +135,20 @@ function dwLogEntry(level, text) {
 }
 
 /**
+ * Whether a key event belongs to an input-method composition.
+ *
+ * The Enter/Escape that picks or cancels a Chinese or Japanese candidate belongs
+ * to the IME, not to this window: it must never submit a dialog, blur a cell or
+ * pick a suggestion. Chromium marks those events with `isComposing` and the legacy
+ * 229 keyCode; React's synthetic keyboard event does not expose `isComposing`, so
+ * the native event is what is checked.
+ */
+function dwImeComposing(event) {
+  const native = event?.nativeEvent ?? event
+  return native?.isComposing === true || (native?.keyCode ?? event?.keyCode) === 229
+}
+
+/**
  * Turn a Host failure into a sentence.
  *
  * The read-only gate answers with codes such as `write-keyword`, and a user who is
@@ -157,6 +171,7 @@ function dwExplainFailure(translate, error) {
     'ER_QUERY_INTERRUPTED': 'error.interrupted',
     'manual-connect-failed': 'error.manualConnectFailed',
     'saved-connection-missing': 'error.savedConnectionMissing',
+    'duplicate-favorite': 'error.duplicateFavorite',
   }
   const key = known[code]
   if (key !== undefined) {
@@ -227,6 +242,19 @@ const DW_CONSOLE_KEY = 'dsh-data-window:consoles'
 
 /** Client-side preferences edited in the plugin's settings section. */
 const DW_PREFS_KEY = 'dsh-data-window:prefs'
+
+/** Which side-panel tab was last shown: the database tree or the favorites list. */
+const DW_TREE_TAB_KEY = 'dsh-data-window:tree-tab'
+
+/** The remembered side-panel tab; unknown or blocked storage means the tree. */
+function dwReadTreeTab() {
+  try {
+    return globalThis.localStorage?.getItem(DW_TREE_TAB_KEY) === 'favorites' ? 'favorites' : 'databases'
+  } catch (error) {
+    void error
+    return 'databases'
+  }
+}
 
 /** Read the display preferences, tolerating a blocked storage. */
 function dwReadPrefs() {
@@ -329,6 +357,9 @@ function dwCreateStore(translate) {
     aiRunning: false,
     // tree
     filter: '',
+    // The resource manager has two tabs, like DataGrip's Database window: the
+    // configured tree and the saved statements. Both read the same filter.
+    treeTab: dwReadTreeTab(),
     expanded: new Set(),
     loadState: new Map(),
     children: new Map(),
@@ -340,6 +371,11 @@ function dwCreateStore(translate) {
     // Table/column maps for the editor's completion, one per database.
     schemas: new Map(),
     limit: DW_DEFAULT_LIMIT,
+    // Saved statements (machine-wide, not per workspace) and the `@` index they
+    // feed; the tree's favorites node is rendered from this list.
+    favorites: [],
+    favoritesLoading: false,
+    favoritesError: '',
     // log
     logOpen: false,
     log: [dwLogEntry('info', t('log.ready'))],
@@ -743,6 +779,108 @@ function dwCreateStore(translate) {
       }
     },
 
+    /**
+     * Read the saved statements.
+     *
+     * The list belongs to the machine, not to one workspace, so it is loaded when
+     * the panel opens; saves and deletes patch it in place. No workspace is needed.
+     */
+    async loadFavorites(options = {}) {
+      if (state.favoritesLoading === true && options.force !== true) return
+      patch({ favoritesLoading: true })
+      try {
+        const value = await dwRpc('favorites')
+        patch({
+          favorites: Array.isArray(value?.favorites) ? value.favorites : [],
+          favoritesLoading: false,
+          favoritesError: '',
+        })
+      } catch (error) {
+        patch({ favoritesLoading: false, favoritesError: dwExplainFailure(t, error) })
+        if (options.quiet !== true) pushLog('warn', t('log.favoriteLoadFailed', { message: dwExplainFailure(t, error) }))
+      }
+    },
+
+    /** Save one statement under its unique name, and open the favorites node. */
+    async saveFavorite(input) {
+      const value = await dwRpc('saveFavorite', { favorite: { ...input } })
+      const favorite = value?.favorite
+      if (favorite !== undefined && favorite !== null) {
+        const favorites = [...state.favorites]
+        const index = favorites.findIndex((entry) => entry.id === favorite.id)
+        if (index >= 0) favorites[index] = favorite
+        else favorites.push(favorite)
+        patch({ favorites })
+        pushLog('info', t('log.favoriteSaved', { name: favorite.name, database: favorite.database }))
+        const tableKey = String(favorite.table ?? '').trim().toLowerCase()
+        // The saved statement lives on the favorites tab now; switching there and
+        // expanding its schema/table is the only visible acknowledgement that the
+        // save landed, since the database tree cannot show it.
+        store.setTreeTab('favorites')
+        store.expand(
+          dwNodeKey('favoriteDatabase', favorite.database),
+          dwNodeKey('favoriteTable', favorite.database, tableKey),
+        )
+        const favoriteKey = dwNodeKey('favorite', favorite.id)
+        store.select({ key: favoriteKey, kind: 'favorite', label: favorite.name, favorite })
+      }
+      return value
+    },
+
+    /** Delete one saved statement. */
+    async removeFavorite(id) {
+      const value = await dwRpc('removeFavorite', { id })
+      if (value?.removed === true) {
+        const favorite = state.favorites.find((entry) => entry.id === id)
+        patch({ favorites: state.favorites.filter((entry) => entry.id !== id) })
+        pushLog('info', t('log.favoriteRemoved', { name: favorite?.name ?? id }))
+      }
+      return value
+    },
+
+    /**
+     * Open a saved statement in the workbench of the schema it was saved from.
+     *
+     * Opening by name is what keeps a favorite useful across workspaces: the
+     * statement was written in `bw_order` in one project and is still a `bw_order`
+     * statement in the next tree. When that schema is not in the tree at all, the
+     * log says which one is missing instead of opening an unrelated console.
+     */
+    openFavorite(favorite) {
+      if (favorite === null || favorite === undefined) return false
+      const target = dwFindDatabaseTarget(state.environments, favorite.database, favorite.env)
+      if (target === undefined) {
+        pushLog('warn', t('log.favoriteNoDatabase', { database: favorite.database }))
+        return false
+      }
+      const opened = store.openDatabase(target.node)
+      const tabId = typeof opened?.id === 'string' ? opened.id : ''
+      if (tabId === '') return false
+      store.appendStatement(tabId, favorite.sql)
+      pushLog('info', t('log.favoriteOpened', { name: favorite.name }))
+      return true
+    },
+
+    /** Append a statement to one console without touching what is already typed. */
+    appendStatement(tabId, sql) {
+      const statement = String(sql ?? '').trim()
+      const tab = state.tabs.find((entry) => entry.id === tabId)
+      if (statement === '' || tab === undefined) return
+      const current = String(tab.sql ?? '').replace(/\s+$/, '')
+      if (current.includes(statement)) {
+        store.setActiveTab(tabId)
+        return
+      }
+      const next = current === '' ? statement : `${current}\n\n${statement}`
+      patch({
+        tabs: state.tabs.map((entry) => (entry.id === tabId
+          ? { ...entry, sql: next, result: undefined, error: '' }
+          : entry)),
+        activeTab: tabId,
+      })
+      scheduleConsoles()
+    },
+
     /** Delete a whole manually added environment, then re-read the tree. */
     async removeManualEnvironment(label) {
       const root = state.root
@@ -923,6 +1061,18 @@ function dwCreateStore(translate) {
     /** Select one row; a table also becomes the target of the DDL shortcut. */
     select(node) {
       patch({ selected: node?.key ?? '', selectedNode: node ?? null })
+    },
+
+    /** Switch the resource manager between the database tree and the favorites. */
+    setTreeTab(tab) {
+      const next = tab === 'favorites' ? 'favorites' : 'databases'
+      if (next === state.treeTab) return
+      try {
+        globalThis.localStorage?.setItem(DW_TREE_TAB_KEY, next)
+      } catch (error) {
+        void error
+      }
+      patch({ treeTab: next })
     },
 
     /**

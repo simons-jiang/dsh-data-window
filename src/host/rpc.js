@@ -12,6 +12,7 @@ import { ConnectionCatalog } from './catalog.js'
 import { DiscoveryCache, fingerprint } from './cache.js'
 import { ConsoleStore } from './consoles.js'
 import { discoverProject } from './discovery.js'
+import { FavoriteStore } from './favorites.js'
 import { ManualStore, manualEnvironments, normalizeManualEntry } from './manual.js'
 import { stableId } from './discovery.js'
 import { RememberedStore } from './remembered.js'
@@ -55,6 +56,9 @@ export class DataController {
     // resource tree is one tree, so its user-owned parts cannot be per workspace.
     this.manual = options.manual ?? new ManualStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'manual'), { shared: true })
     this.remembered = options.remembered ?? new RememberedStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'remembered'), { shared: true })
+    // Saved statements are shared like the tree: a name and a schema/table pair
+    // outlive the workspace that produced them.
+    this.favoriteStore = options.favorites ?? new FavoriteStore(options.cacheDirectory === undefined || options.cacheDirectory === '' ? '' : join(options.cacheDirectory, 'favorites'))
     this.catalog = options.catalog ?? new ConnectionCatalog(options.cacheDirectory ?? '')
     // `llm` is a getter: the Host may provide the LLM service after this plugin
     // activates, and the fallback must not pin a service that is still arriving.
@@ -242,6 +246,29 @@ export class DataController {
     return { forgotten: this.remembered.remove(root, entry) }
   }
 
+  /** Every saved statement; the Client groups them by schema and table. */
+  favorites() {
+    return this.favoriteStore.list()
+  }
+
+  /** Create or update one saved statement under a unique name. */
+  saveFavorite(payload = {}) {
+    try {
+      return this.favoriteStore.upsert(payload.favorite ?? payload)
+    } catch (error) {
+      throw favoriteRouteFailure(error)
+    }
+  }
+
+  /** Forget one saved statement by id. */
+  removeFavorite(payload = {}) {
+    try {
+      return this.favoriteStore.remove(payload.id)
+    } catch (error) {
+      throw favoriteRouteFailure(error)
+    }
+  }
+
   /**
    * Save one manually entered connection after proving it.
    *
@@ -421,6 +448,12 @@ export class DataController {
         return this.rememberDatabase(payload)
       case 'forgetDatabase':
         return this.forgetDatabase(payload)
+      case 'favorites':
+        return this.favorites()
+      case 'saveFavorite':
+        return this.saveFavorite(payload)
+      case 'removeFavorite':
+        return this.removeFavorite(payload)
       case 'selectDatabases':
         return this.selectDatabases(payload)
       case 'ping':
@@ -471,6 +504,24 @@ export class RouteFailure extends Error {
     this.status = status
     this.code = code
   }
+}
+
+/**
+ * Map one saved-SQL failure to the status the route should answer.
+ *
+ * A duplicate name is the one failure the user can fix in the dialog, so it gets
+ * its own code; the Client turns it into a sentence instead of an enum.
+ */
+function favoriteRouteFailure(error) {
+  const code = typeof error?.code === 'string' ? error.code : 'favorite-failed'
+  const status = code === 'duplicate-favorite'
+    ? 409
+    : code === 'unknown-favorite'
+      ? 404
+      : code === 'favorite-unavailable'
+        ? 503
+        : 400
+  return new RouteFailure(status, code, error?.message ?? String(error))
 }
 
 /** Map any thrown value into the shape the route writes. */

@@ -32,6 +32,7 @@ function DwSchemaDialog({ store, tr, instance, onClose }) {
   useEffect(() => {
     const onKey = (event) => {
       if (event.key !== 'Escape' || savingRef.current) return
+      if (dwImeComposing(event)) return
       onClose()
     }
     globalThis.addEventListener('keydown', onKey)

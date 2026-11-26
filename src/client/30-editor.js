@@ -54,7 +54,7 @@ function dwInsertComposerText(text) {
   }
 }
 
-function DwTabs({ store, state, tr }) {
+function DwTabs({ store, state, tr, onFavorite }) {
   const [menu, setMenu] = useState(null)
   if ((state.tabs ?? []).length === 0) return null
 
@@ -116,6 +116,9 @@ function DwTabs({ store, state, tr }) {
     menuItem('close-left', 'arrow-left', tr('tabCloseLeft'), index <= 0, () => store.closeTabsToLeft(menu.tab.id)),
     menuItem('close-right', 'arrow-right', tr('tabCloseRight'), index < 0 || index >= (state.tabs ?? []).length - 1, () => store.closeTabsToRight(menu.tab.id)),
     h('div', { key: 'sep', className: 'dw-tabmenu-sep' }),
+    menuItem('favorite', 'star', tr('favoriteSave'), String(menu.tab.sql ?? '').trim() === '', () => {
+      if (typeof onFavorite === 'function') onFavorite(menu.tab)
+    }),
     menuItem('copy-reference', 'copy', tr('copyReference'), false, () => copyReference(menu.tab)),
     menuItem('copy-reference-chat', 'at', tr('copyReferenceToChat'), false, () => copyReferenceToChat(menu.tab)),
   ]))
@@ -137,7 +140,7 @@ function DwTabs({ store, state, tr }) {
           const left = rect === null || rect === undefined ? 8 : Math.max(8, rect.left + 8)
           const top = rect === null || rect === undefined ? 8 : Math.max(8, rect.top + 8)
           const right = (rect === null || rect === undefined ? (globalThis.innerWidth ?? 1200) : rect.right) - 248
-          const bottom = (rect === null || rect === undefined ? (globalThis.innerHeight ?? 800) : rect.bottom) - 238
+          const bottom = (rect === null || rect === undefined ? (globalThis.innerHeight ?? 800) : rect.bottom) - 268
           setMenu({
             x: Math.max(left, Math.min(event.clientX, Math.max(left, right))),
             y: Math.max(top, Math.min(event.clientY, Math.max(top, bottom))),
@@ -173,24 +176,36 @@ function DwTabs({ store, state, tr }) {
   ])
 }
 
-/** A draggable horizontal divider that resizes the editor. */
-function DwDragHandle({ value, onChange, min, max }) {
+/**
+ * A draggable horizontal divider.
+ *
+ * `invert` is for a handle whose panel grows upward (the run log): dragging up
+ * must make it taller. `onCommit` fires once on release, which is when a caller
+ * should persist the value; writing on every pointermove would hit storage
+ * sixty times a second.
+ */
+function DwDragHandle({ value, onChange, min, max, invert, title, onStart, onCommit, onReset }) {
   return h('div', {
     className: 'dw-drag',
     role: 'separator',
     'aria-orientation': 'horizontal',
-    title: '↕',
+    title: title ?? '↕',
+    onDoubleClick: typeof onReset === 'function' ? onReset : undefined,
     onPointerDown: (event) => {
       event.preventDefault()
+      if (typeof onStart === 'function') onStart()
       const startY = event.clientY
       const startValue = value
+      const direction = invert === true ? -1 : 1
+      let latest = value
       const onMove = (moveEvent) => {
-        const next = Math.min(max, Math.max(min, startValue + (moveEvent.clientY - startY)))
-        onChange(next)
+        latest = Math.min(max, Math.max(min, startValue + (moveEvent.clientY - startY) * direction))
+        onChange(latest)
       }
       const onUp = () => {
         globalThis.removeEventListener('pointermove', onMove)
         globalThis.removeEventListener('pointerup', onUp)
+        if (typeof onCommit === 'function') onCommit(latest)
       }
       globalThis.addEventListener('pointermove', onMove)
       globalThis.addEventListener('pointerup', onUp)
@@ -232,17 +247,21 @@ function dwCaretPoint(area, text, caret) {
 }
 
 /** The SQL editor: highlighted text, completion and one-keystroke formatting. */
-function DwEditor({ store, tab, tr, onRun, height, schema }) {
+function DwEditor({ store, tab, tr, onRun, height, schema, favorites }) {
   const value = tab.sql ?? ''
   const tokens = useMemo(() => dwSqlLex(value), [value])
   const lines = useMemo(() => value.split('\n').length, [value])
+  const favoriteList = Array.isArray(favorites) ? favorites : []
   const gutterRef = useRef(null)
   const areaRef = useRef(null)
   const highlightRef = useRef(null)
   const completionRef = useRef(null)
+  const mentionRef = useRef(null)
   const [completion, setCompletion] = useState(null)
+  const [mention, setMention] = useState(null)
   const [editorMenu, setEditorMenu] = useState(null)
   const [optimize, setOptimize] = useState(null)
+  const [favoriteDraft, setFavoriteDraft] = useState(null)
 
   useEffect(() => {
     const area = areaRef.current
@@ -251,7 +270,14 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     // lands where the user is about to type.
     area.focus()
     area.setSelectionRange(area.value.length, area.value.length)
+    setMention(null)
   }, [tab.id])
+
+  // The `@` index reads the machine-wide saved statements; one round trip the
+  // first time a console opens, cached in the store afterwards.
+  useEffect(() => {
+    void store.loadFavorites()
+  }, [store])
 
   // The completion list needs the schema of this database; one round trip, cached
   // by the store. A failure only degrades the list to keywords.
@@ -290,6 +316,7 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
   // Re-evaluate the caret once the map arrives so the popup appears on its own.
   useEffect(() => {
     if (schema === undefined) return
+    if (mention !== null) return
     const area = areaRef.current
     if (area === null || document.activeElement !== area) return
     refreshCompletion(value, area.selectionStart)
@@ -308,6 +335,18 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     else if (bottom > popup.scrollTop + popup.clientHeight) popup.scrollTop = bottom - popup.clientHeight
   }, [completion])
 
+  // Same keyboard-follows-list behaviour for the `@` index.
+  useEffect(() => {
+    const popup = mentionRef.current
+    if (popup === null || mention === null) return
+    const active = popup.querySelector('.dw-complete-row.active')
+    if (active === null) return
+    const top = active.offsetTop
+    const bottom = top + active.offsetHeight
+    if (top < popup.scrollTop) popup.scrollTop = top
+    else if (bottom > popup.scrollTop + popup.clientHeight) popup.scrollTop = bottom - popup.clientHeight
+  }, [mention])
+
   const applyCompletion = (item) => {
     const current = completion
     if (current === null || item === undefined) return
@@ -322,6 +361,54 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
       area.setSelectionRange(position, position)
     })
   }
+
+  /**
+   * The text a mention is filtering on, or `undefined` when the caret left it.
+   *
+   * A name may contain spaces (and Chinese), so the popup only ends at characters
+   * that cannot appear in a name the user would type.
+   */
+  const mentionQueryAt = (text, from, caret) => {
+    if (from < 0 || text[from] !== '@' || caret <= from) return undefined
+    const query = text.slice(from + 1, caret)
+    if (query.length > 60 || /[\r\n,;()]/.test(query)) return undefined
+    // `@ ` is a sentence, not a mention: keep whitespace only once a name started.
+    if (query !== '' && query.trim() === '') return undefined
+    return query
+  }
+
+  /** Grow the mention popup while its query is typed, or close it. */
+  const refreshMention = (area, text, caret) => {
+    const query = mentionQueryAt(text, mention.from, caret)
+    if (query === undefined) {
+      setMention(null)
+      return false
+    }
+    const point = dwCaretPoint(area, text, caret)
+    setMention({ ...mention, to: caret, query, index: 0, left: point.left, top: point.top + 20 })
+    return true
+  }
+
+  /** Put one saved statement where the `@…` token is, and keep the caret after it. */
+  const insertFavorite = (favorite) => {
+    const current = mention
+    if (current === null || favorite === undefined || favorite === null) return
+    const statement = String(favorite.sql ?? '')
+    if (statement.trim() === '') return
+    const next = `${value.slice(0, current.from)}${statement}${value.slice(current.to)}`
+    const position = current.from + statement.length
+    store.setTabSql(tab.id, next)
+    setMention(null)
+    requestAnimationFrame(() => {
+      const area = areaRef.current
+      if (area === null) return
+      area.focus()
+      area.setSelectionRange(position, position)
+    })
+    store.pushLog('info', tr('log.favoriteInserted', { name: favorite.name }))
+  }
+
+  const mentionItems = mention === null ? [] : dwFavoriteMatches(favoriteList, mention.query)
 
   const runStatement = () => {
     const area = areaRef.current
@@ -420,6 +507,28 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
     setOptimize({ sql: text, database: tab.database })
   }
 
+  // Collect the selection when there is one, the whole console otherwise: that is
+  // exactly the statement the user right-clicked. The schema comes from the console
+  // and the table from its id, falling back to the first table the statement names.
+  const openFavorite = () => {
+    const area = areaRef.current
+    const selected = area !== null && area.selectionEnd > area.selectionStart
+      ? value.slice(area.selectionStart, area.selectionEnd)
+      : ''
+    const text = selected.trim() === '' ? value.trim() : selected.trim()
+    if (text === '') {
+      store.pushLog('warn', tr('log.noStatement'))
+      return
+    }
+    setFavoriteDraft({
+      sql: text,
+      name: '',
+      database: tab.database,
+      table: dwTabTableName(tab) || (dwSqlTableRefs(text)[0]?.table ?? ''),
+      env: tab.env ?? '',
+    })
+  }
+
   const menuItem = (key, label, shortcut, run) => h('button', {
     key,
     type: 'button',
@@ -484,6 +593,7 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
       menuItem('paste', tr('editorPaste'), '⌘V', () => void editorPaste()),
       menuItem('select-all', tr('editorSelectAll'), '⌘A', editorSelectAll),
       h('div', { key: 'sep2', className: 'dw-project-sep' }),
+      menuItem('favorite', tr('favoriteSave'), '', openFavorite),
       menuItem('optimize', tr('sqlOptimize'), '', openOptimize),
     ]),
   ])
@@ -513,13 +623,29 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
             const text = event.target.value
             const caret = event.target.selectionStart
             store.setTabSql(tab.id, text)
+            if (mention !== null) {
+              // Still inside the same `@…` token: filter it instead of letting the
+              // column list fight the favorites list for the same keystrokes.
+              if (refreshMention(event.target, text, caret)) return
+            }
+            if (caret > 0 && text[caret - 1] === '@' && dwFavoriteMentionStart(text, caret - 1)) {
+              const point = dwCaretPoint(event.target, text, caret)
+              setCompletion(null)
+              setMention({ from: caret - 1, to: caret, query: '', index: 0, left: point.left, top: point.top + 20 })
+              return
+            }
             refreshCompletion(text, caret)
           },
-          onClick: (event) => refreshCompletion(event.target.value, event.target.selectionStart),
+          onClick: (event) => {
+            setMention(null)
+            refreshCompletion(event.target.value, event.target.selectionStart)
+          },
           onContextMenu: (event) => {
             event.preventDefault()
+            setMention(null)
+            setCompletion(null)
             const width = 210
-            const height = 268
+            const height = 300
             const maxX = (globalThis.innerWidth ?? 1200) - width
             const maxY = (globalThis.innerHeight ?? 800) - height
             setEditorMenu({
@@ -527,10 +653,42 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
               y: Math.max(8, Math.min(event.clientY, maxY)),
             })
           },
-          onBlur: () => setCompletion(null),
+          onBlur: () => {
+            setCompletion(null)
+            setMention(null)
+          },
           onScroll: (event) => syncScroll(event.target),
           onKeyDown: (event) => {
+            // An IME candidate key (Enter to commit, Escape to cancel, arrows to
+            // move through the list) belongs to the IME: never turn it into a
+            // command, a suggestion pick or a run.
+            if (dwImeComposing(event)) return
             const modifier = event.metaKey || event.ctrlKey
+            if (mention !== null) {
+              const size = mentionItems.length
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                if (size === 0) {
+                  setMention(null)
+                  return
+                }
+                event.preventDefault()
+                const delta = event.key === 'ArrowDown' ? 1 : -1
+                setMention({ ...mention, index: (mention.index + delta + size) % size })
+                return
+              }
+              if ((event.key === 'Enter' && !modifier) || event.key === 'Tab') {
+                if (size > 0) {
+                  event.preventDefault()
+                  insertFavorite(mentionItems[Math.min(mention.index, size - 1)])
+                  return
+                }
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                setMention(null)
+                return
+              }
+            }
             if (completion !== null) {
               if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                 event.preventDefault()
@@ -593,6 +751,32 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
             h('span', { key: 'd', className: 'dw-complete-detail' }, item.detail ?? ''),
             h('span', { key: 'k', className: 'dw-complete-kind' }, item.kind === 'column' ? tr('suggestColumn') : item.kind === 'table' ? tr('suggestTable') : tr('suggestKeyword')),
           ]))),
+        mention === null
+          ? null
+          : h('div', {
+            key: 'mention',
+            ref: mentionRef,
+            className: 'dw-complete dw-mention',
+            style: { left: mention.left, top: mention.top },
+            role: 'listbox',
+            'aria-label': tr('favoriteMentionLabel'),
+          }, mentionItems.length === 0
+            ? h('div', { key: 'none', className: 'dw-complete-empty' },
+              favoriteList.length === 0 ? tr('favoriteMentionNoFavorites') : tr('favoriteMentionEmpty'))
+            : mentionItems.map((favorite, index) => h('div', {
+              key: favorite.id,
+              role: 'option',
+              'aria-selected': index === mention.index,
+              className: index === mention.index ? 'dw-complete-row active' : 'dw-complete-row',
+              onMouseDown: (event) => event.preventDefault(),
+              onClick: () => insertFavorite(favorite),
+            }, [
+              h('span', { key: 'ic', className: 'dw-node-icon' }, h(DwIcon, { name: 'star', size: 11 })),
+              h('span', { key: 'l', className: 'dw-complete-label' }, favorite.name),
+              h('span', { key: 'd', className: 'dw-complete-detail' },
+                [favorite.database, favorite.table].filter((part) => typeof part === 'string' && part !== '').join('.')),
+              h('span', { key: 'k', className: 'dw-complete-kind' }, tr('suggestFavorite')),
+            ]))),
       ]),
     ]),
     editorMenuLayer,
@@ -603,6 +787,13 @@ function DwEditor({ store, tab, tr, onRun, height, schema }) {
       sql: optimize.sql,
       database: optimize.database,
       onClose: () => setOptimize(null),
+    }),
+    favoriteDraft === null ? null : h(DwFavoriteDialog, {
+      key: 'favorite',
+      store,
+      tr,
+      draft: favoriteDraft,
+      onClose: () => setFavoriteDraft(null),
     }),
   ])
 }

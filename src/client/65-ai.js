@@ -95,6 +95,7 @@ function DwAiDialog({ store, tr, onClose, onManual }) {
     const onKey = (event) => {
       if (event.key !== 'Escape') return
       if (modeRef.current === 'running') return
+      if (dwImeComposing(event)) return
       onClose()
     }
     globalThis.addEventListener('keydown', onKey)

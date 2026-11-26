@@ -29,6 +29,7 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
   useEffect(() => {
     const onKey = (event) => {
       if (event.key !== 'Escape' || savingRef.current) return
+      if (dwImeComposing(event)) return
       onClose()
     }
     globalThis.addEventListener('keydown', onKey)
@@ -210,6 +211,7 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
   useEffect(() => {
     const onKey = (event) => {
       if (event.key !== 'Escape' || savingRef.current) return
+      if (dwImeComposing(event)) return
       onClose()
     }
     globalThis.addEventListener('keydown', onKey)
@@ -263,7 +265,9 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
           autoComplete: 'off',
           onChange: (event) => setValue(event.target.value),
           onKeyDown: (event) => {
-            if (event.key === 'Enter') void save()
+            if (event.key !== 'Enter') return
+            if (dwImeComposing(event)) return
+            void save()
           },
         }),
       ]),
@@ -299,6 +303,7 @@ function DwConfirmDialog({ tr, title, message, confirmLabel, onConfirm, onClose 
   useEffect(() => {
     const onKey = (event) => {
       if (event.key !== 'Escape' || busyRef.current) return
+      if (dwImeComposing(event)) return
       onClose()
     }
     globalThis.addEventListener('keydown', onKey)

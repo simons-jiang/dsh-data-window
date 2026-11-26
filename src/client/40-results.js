@@ -91,6 +91,9 @@ const DwGrid = React.memo(function DwGrid({
         props.title = tr('editingCellHint')
         props.onBlur = (event) => onEditCommit(rowIndex, cellIndex, column.name, event.currentTarget.textContent)
         props.onKeyDown = (event) => {
+          // Committing an IME candidate with Enter must not blur the editor: the
+          // cell is still being typed, and blur would write the pre-commit value.
+          if (dwImeComposing(event)) return
           if (event.key === 'Enter') {
             event.preventDefault()
             event.currentTarget.blur()
