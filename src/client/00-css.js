@@ -124,7 +124,9 @@ const DW_CSS = `
   height: 26px;
   padding: 0 9px;
   border: 1px solid var(--dsw-alias-border-l1, #31353d);
-  border-radius: 6px;
+  /* The host's own controls round to 12px (text) and 8px (icon); 6px read as a
+     different family from every other button in the window. */
+  border-radius: 12px;
   background: var(--dsw-alias-bg-layer-2, #262930);
   color: var(--dsw-alias-label-primary, #e6e8ec);
   cursor: pointer;
@@ -138,8 +140,8 @@ const DW_CSS = `
   background: var(--dsw-alias-brand-primary, #4b8bf5);
   /* The brand fill is ink in the light palette and near-white in the dark one, so
      the label has to follow the host's inverted-label token instead of staying white. */
-  color: var(--dsw-alias-label-primary-inverted, #fff);
-  font-weight: 600;
+  color: var(--dsw-alias-label-primary-inverted, #0f1115);
+  font-weight: 500;
 }
 /*
  * The panel and the sidebar-foot action each inject this stylesheet, so the second
@@ -149,7 +151,7 @@ const DW_CSS = `
  */
 .dw-btn.dw-btn-accent { color: var(--dsw-alias-label-primary-inverted, #fff); }
 .dw-btn-accent:hover { filter: brightness(1.08); background: var(--dsw-alias-brand-primary, #4b8bf5); }
-.dw-btn-icon { width: 26px; padding: 0; justify-content: center; }
+.dw-btn-icon { width: 26px; padding: 0; justify-content: center; border-radius: 8px; }
 /*
  * The sidebar-foot action. DSH owns the selected-panel chrome and expects an
  * occupant to bring hover chrome only, so the rest state stays transparent —
@@ -483,14 +485,23 @@ const DW_CSS = `
   line-height: 19px;
   tab-size: 2;
 }
+/*
+ * The SQL palette follows DataGrip's Darcula scheme: system words carry a colour
+ * (keywords orange, types blue, functions light blue, constants purple) while table
+ * and column identifiers stay in the normal label colour, so a statement separates
+ * "the language" from "the user's names" at a glance.
+ */
 .dw-tok-keyword { color: #cf8e6d; font-weight: 600; }
+.dw-tok-type { color: #6d9df1; }
 .dw-tok-function { color: #56a8f5; }
 .dw-tok-string { color: #6aab73; }
 .dw-tok-number { color: #2aacb8; }
 .dw-tok-comment { color: #7a7e85; font-style: italic; }
 .dw-tok-literal { color: #c77dbb; }
+.dw-tok-variable { color: #b58cd9; }
 .dw-tok-operator { color: #b3b8c2; }
 .dw-tok-punct { color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-tok-identifier { color: var(--dsw-alias-label-primary, #e6e8ec); }
 .dw-complete {
   position: absolute;
   z-index: 60;
@@ -887,6 +898,30 @@ const DW_CSS = `
 .dw-settings-warn { color: var(--dsw-alias-state-warning-primary, #d9a13b); font-size: 11px; }
 
 /* --- The AI fallback dialog ------------------------------------------------ */
+/* --- The column-header card --------------------------------------------- */
+/*
+ * Drawn by the grid itself rather than by the browser: a native tooltip waits
+ * about a second before it appears and cannot be coloured, and this one has to
+ * show the column's comment at once, in the window's own palette.
+ */
+.dw-tip {
+  position: fixed;
+  z-index: 70;
+  max-width: 320px;
+  padding: 7px 10px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-overlay, #2f333b);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .38);
+  font-size: 11.5px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+.dw-tip-name { font-weight: 600; }
+.dw-tip-type { color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-tip-comment { margin-top: 3px; word-break: break-word; white-space: pre-wrap; }
+
 .dw-modal {
   position: fixed;
   inset: 0;
@@ -896,7 +931,19 @@ const DW_CSS = `
   justify-content: center;
   padding: 24px;
   background: rgba(10, 12, 16, .42);
+  /*
+   * The sheet lives on document.body so no docked window can cover it, which means
+   * the panel's base typography has to be restated here: inheriting from <body>
+   * would draw every dialog at 16px instead of the panel's 13px.
+   */
+  box-sizing: border-box;
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--dsw-font-family, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif);
+  font-size: 13px;
+  line-height: 1.45;
 }
+.dw-modal *, .dw-modal *::before, .dw-modal *::after { box-sizing: border-box; }
+.dw-modal button { font: inherit; color: inherit; }
 .dw-modal-card {
   display: flex;
   flex-direction: column;
@@ -923,6 +970,33 @@ const DW_CSS = `
   gap: 8px;
   padding: 12px 16px 14px;
   border-top: 1px solid var(--dsw-alias-border-l1, #31353d);
+}
+/*
+ * A dialog's footer button is the host's confirm-dialog button: 36px tall on a
+ * 12px radius, a ghost secondary and a filled primary carrying the inverted ink.
+ * Everything else in the window stays compact, but a dialog is the one place the
+ * user compares against the windows the shell itself opens.
+ */
+.dw-modal-foot .dw-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--dsw-alias-label-primary, #f9fafb);
+  font-size: 14px;
+  font-weight: 400;
+}
+.dw-modal-foot .dw-btn:hover { background: rgba(255, 255, 255, .08); border-color: transparent; }
+.dw-modal-foot .dw-btn:disabled { background: transparent; }
+.dw-modal-foot .dw-btn.dw-btn-accent {
+  padding: 0 16px;
+  background: var(--dsw-alias-brand-primary, #f9fafb);
+  color: var(--dsw-alias-label-primary-inverted, #0f1115);
+  font-weight: 500;
+}
+.dw-modal-foot .dw-btn.dw-btn-accent:hover {
+  background: var(--dsw-alias-brand-primary, #f9fafb);
+  filter: brightness(.94);
 }
 .dw-ai-pick { display: flex; flex-direction: column; gap: 8px; }
 .dw-ai-label { font-size: 12px; color: var(--dsw-alias-label-secondary, #8b919d); }

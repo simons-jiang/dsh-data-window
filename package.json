@@ -1,6 +1,6 @@
 {
   "name": "dsh-data-window",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "DataGrip-style database window for DeepSeek Harness: reads the workspace's own config to find the environment hosts, then browses instances, databases, tables and columns and runs read-only SQL in one workbench per database.",
   "type": "module",
   "icon": "icon.svg",

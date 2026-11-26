@@ -10,11 +10,20 @@
  * exercised from Node.
  */
 
-/** Words the editor colours as keywords. */
-const DW_SQL_KEYWORDS = new Set(`select from where group by order having limit offset union all distinct join inner left right outer full cross natural on using and or not in is null like between exists case when then else end as asc desc insert into values update set delete create drop alter table index view show describe explain with recursive partition over window`.split(' '))
+/**
+ * Words the editor colours as keywords.
+ *
+ * The list deliberately covers DDL as well as queries: a create statement is what
+ * the DDL dialog shows, and a statement whose `NOT NULL`, `DEFAULT`, `COMMENT` and
+ * storage options stay white reads as one flat block.
+ */
+const DW_SQL_KEYWORDS = new Set(`select from where group by order having limit offset union all distinct join inner left right outer full cross natural on using and or not in is null like between exists case when then else end as asc desc insert into values update set delete create drop alter table index view show describe explain with recursive partition over window primary key foreign references constraint unique fulltext spatial btree hash default auto_increment collate collation charset character engine comment unsigned zerofill generated always stored virtual check cascade restrict rename change modify add column after first temporary if replace ignore low_priority high_priority quick delayed row_format checksum delay_key_write max_rows min_rows pack_keys stats_auto_recalc stats_persistent stats_sample_pages connection directory start transaction begin commit rollback savepoint lock unlock read write grant revoke flush analyze optimize repair truncate load infile outfile fields lines terminated enclosed escaped optionally duplicates procedure function trigger event returns deterministic reads modifies contains sql language call declare while repeat loop leave iterate signal resignal condition handler continue exit undo open close fetch cursor prepare execute deallocate delimiter names current_date current_time current_timestamp current_user localtime localtimestamp`.split(' '))
+
+/** Data types, coloured apart from keywords and user identifiers. */
+const DW_SQL_TYPES = new Set(`bit tinyint smallint mediumint int integer bigint decimal numeric dec fixed float double real char varchar nchar nvarchar binary varbinary tinyblob blob mediumblob longblob tinytext text mediumtext longtext enum json jsonb date datetime timestamp time year boolean bool serial geometry point linestring polygon multipoint multilinestring multipolygon geometrycollection`.split(' '))
 
 /** Words coloured as functions; the schema supplies the rest. */
-const DW_SQL_FUNCTIONS = new Set(`count sum avg min max coalesce ifnull nullif concat concat_ws substr substring length lower upper trim ltrim rtrim replace round floor ceil abs cast convert date_format str_to_date now curdate curtime datediff date_add date_sub timestampdiff if group_concat json_extract json_unquote unix_timestamp from_unixtime row_number rank dense_rank lag lead`.split(' '))
+const DW_SQL_FUNCTIONS = new Set(`count sum avg min max coalesce ifnull nullif isnull greatest least concat concat_ws substr substring substring_index length char_length character_length octet_length lower upper lcase ucase trim ltrim rtrim left right mid locate instr position replace round ceil ceiling floor abs mod pow power sqrt exp ln log log2 log10 sign rand truncate pi sin cos tan asin acos atan atan2 radians degrees cast convert date_format str_to_date now curdate curtime datediff date_add date_sub timestampdiff timestampadd adddate subdate addtime subtime period_add period_diff convert_tz get_format extract year month day hour minute second dayofweek dayofmonth dayofyear last_day week weekday monthname quarter makedate maketime sec_to_time time_to_sec utc_date utc_time utc_timestamp from_days to_days if group_concat json_extract json_unquote json_length json_type json_valid json_object json_array json_set json_insert json_replace json_remove json_contains json_contains_path json_keys json_search json_pretty json_quote json_depth unix_timestamp from_unixtime row_number rank dense_rank lag lead`.split(' '))
 
 /** Literals that are keywords in effect. */
 const DW_SQL_LITERALS = new Set(['null', 'true', 'false'])
@@ -90,15 +99,25 @@ export function dwSqlLex(text) {
       tokens.push({ type: 'number', value: source.slice(start, index), start, end: index })
       continue
     }
+    if (char === '@' || char === '?') {
+      index += 1
+      while (index < source.length && /[A-Za-z0-9_$.@]/.test(source[index])) index += 1
+      tokens.push({ type: 'variable', value: source.slice(start, index), start, end: index })
+      continue
+    }
     if (/[A-Za-z_$]/.test(char)) {
       while (index < source.length && /[A-Za-z0-9_$]/.test(source[index])) index += 1
       const value = source.slice(start, index)
       const lower = value.toLowerCase()
+      // Keywords win over types because a few words are both (`SET` in an UPDATE
+      // and `SET(...)` in DDL); the statement form is the common one.
       const type = DW_SQL_LITERALS.has(lower)
         ? 'literal'
         : DW_SQL_KEYWORDS.has(lower)
           ? 'keyword'
-          : DW_SQL_FUNCTIONS.has(lower) ? 'function' : 'identifier'
+          : DW_SQL_TYPES.has(lower)
+            ? 'type'
+            : DW_SQL_FUNCTIONS.has(lower) ? 'function' : 'identifier'
       tokens.push({ type, value, start, end: index })
       continue
     }
@@ -628,4 +647,4 @@ export function dwFormatSql(text) {
     .trim()
 }
 
-export { DW_SQL_KEYWORDS, DW_SQL_FUNCTIONS }
+export { DW_SQL_KEYWORDS, DW_SQL_TYPES, DW_SQL_FUNCTIONS }

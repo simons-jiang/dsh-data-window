@@ -7,6 +7,9 @@
  * statement gets its own id from the store, never a rewrite of the first.
  */
 
+/** A DDL script larger than this is painted as plain text instead of token spans. */
+const DW_DDL_HIGHLIGHT_MAX = 200 * 1024
+
 /** The reference a tab copies: `schema.table`, or the schema alone. */
 function dwTabReference(tab) {
   const database = String(tab?.database ?? '').trim()
@@ -213,6 +216,19 @@ function DwDragHandle({ value, onChange, min, max, invert, title, onStart, onCom
   })
 }
 
+/**
+ * Paint SQL tokens as coloured spans.
+ *
+ * Shared by the editor overlay and the DDL dialog so both read the same palette;
+ * whitespace tokens stay raw strings because the surrounding element keeps `pre`
+ * whitespace.
+ */
+function dwSqlHighlight(text, keyPrefix = 'sql') {
+  return dwSqlLex(text).map((token, index) => (token.type === 'space'
+    ? token.value
+    : h('span', { key: `${keyPrefix}-${index}`, className: `dw-tok-${token.type}` }, token.value)))
+}
+
 /** Caret position inside the textarea, measured with an in-place mirror. */
 function dwCaretPoint(area, text, caret) {
   const wrap = area?.parentElement
@@ -249,7 +265,6 @@ function dwCaretPoint(area, text, caret) {
 /** The SQL editor: highlighted text, completion and one-keystroke formatting. */
 function DwEditor({ store, tab, tr, onRun, height, schema, favorites }) {
   const value = tab.sql ?? ''
-  const tokens = useMemo(() => dwSqlLex(value), [value])
   const lines = useMemo(() => value.split('\n').length, [value])
   const favoriteList = Array.isArray(favorites) ? favorites : []
   const gutterRef = useRef(null)
@@ -609,9 +624,7 @@ function DwEditor({ store, tab, tr, onRun, height, schema, favorites }) {
       }, gutter.join('')),
       h('div', { key: 'wrap', className: 'dw-code-wrap' }, [
         h('pre', { key: 'hl', className: 'dw-code-highlight', ref: highlightRef, 'aria-hidden': true },
-          tokens.map((token, index) => (token.type === 'space'
-            ? token.value
-            : h('span', { key: index, className: `dw-tok-${token.type}` }, token.value)))),
+          dwSqlHighlight(value, 'hl')),
         h('textarea', {
           key: 'area',
           ref: areaRef,
@@ -808,6 +821,14 @@ function DwDdlDialog({ node, tr, store, onClose }) {
   const [failureCount, setFailureCount] = useState(0)
   const [count, setCount] = useState(0)
 
+  // Tokenise once, not on every re-render (the copy button and progress updates
+  // re-render this dialog). Past the cap a plain string beats tens of thousands
+  // of spans.
+  const highlightedDdl = useMemo(() => {
+    if (ddl === '') return ''
+    return ddl.length > DW_DDL_HIGHLIGHT_MAX ? ddl : dwSqlHighlight(ddl, 'ddl')
+  }, [ddl])
+
   useEffect(() => {
     let alive = true
     const fail = (failure, name) => {
@@ -890,13 +911,13 @@ function DwDdlDialog({ node, tr, store, onClose }) {
           ? h('div', { key: 'warn', className: 'dw-log-warn' }, tr('ddlAllPartial', { count: failureCount }))
           : null,
         h('pre', { key: 'ddl', className: 'dw-cell-view dw-ddl-code' },
-          ddl === '' ? tr(allTables ? 'ddlAllEmpty' : 'ddlEmpty') : ddl),
+          ddl === '' ? tr(allTables ? 'ddlAllEmpty' : 'ddlEmpty') : highlightedDdl),
       ])
 
-  return h('div', { className: 'dw-modal', onClick: onClose }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card dw-ddl-dialog',
-    onClick: (event) => event.stopPropagation(),
+  return h(DwModal, {
+    onClose,
+    className: 'dw-ddl-dialog',
+    label: tr(allTables ? 'menuDdlAll' : 'menuDdl'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'ddl', size: 13 }),
@@ -927,7 +948,7 @@ function DwDdlDialog({ node, tr, store, onClose }) {
         : null,
       h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: onClose }, tr('close')),
     ]),
-  ]))
+  ])
 }
 
 export { DwTabs, DwEditor, DwDdlDialog, DwDragHandle }

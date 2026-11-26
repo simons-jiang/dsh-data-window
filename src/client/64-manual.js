@@ -23,19 +23,6 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
   const [sourceId, setSourceId] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const savingRef = useRef(false)
-  savingRef.current = saving
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape' || savingRef.current) return
-      if (dwImeComposing(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   // Other workspaces usually point at the same hosts and accounts, so the form
   // offers what this machine already resolved instead of asking for it again.
   useEffect(() => {
@@ -124,17 +111,10 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
     hint === undefined ? null : h('span', { key: 'h', className: 'dw-form-hint' }, hint),
   ])
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget && saving !== true) onClose()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': tr('manualTitle'),
+  return h(DwModal, {
+    onClose,
+    busy: saving === true,
+    label: tr('manualTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'link', size: 15 }),
@@ -191,7 +171,7 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
         onClick: () => void save(),
       }, saving === true ? tr('manualSaving') : tr('manualSave')),
     ]),
-  ]))
+  ])
 }
 
 /**
@@ -205,19 +185,6 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
   const [value, setValue] = useState(label)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const savingRef = useRef(false)
-  savingRef.current = saving
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape' || savingRef.current) return
-      if (dwImeComposing(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   const save = async () => {
     if (saving === true) return
     const root = String(store.getState?.()?.root ?? '')
@@ -238,17 +205,10 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
     }
   }
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget && saving !== true) onClose()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': tr('renameTitle'),
+  return h(DwModal, {
+    onClose,
+    busy: saving === true,
+    label: tr('renameTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'link', size: 15 }),
@@ -286,7 +246,7 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
         onClick: () => void save(),
       }, saving === true ? tr('schemaApplying') : tr('renameApply')),
     ]),
-  ]))
+  ])
 }
 
 /**
@@ -297,19 +257,6 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
  */
 function DwConfirmDialog({ tr, title, message, confirmLabel, onConfirm, onClose }) {
   const [busy, setBusy] = useState(false)
-  const busyRef = useRef(false)
-  busyRef.current = busy
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape' || busyRef.current) return
-      if (dwImeComposing(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   const confirm = async () => {
     if (busy === true) return
     setBusy(true)
@@ -320,17 +267,10 @@ function DwConfirmDialog({ tr, title, message, confirmLabel, onConfirm, onClose 
     }
   }
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget && busy !== true) onClose()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': title,
+  return h(DwModal, {
+    onClose,
+    busy: busy === true,
+    label: title,
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, title),
     h('div', { key: 'body', className: 'dw-modal-body' }, [
@@ -346,7 +286,7 @@ function DwConfirmDialog({ tr, title, message, confirmLabel, onConfirm, onClose 
         onClick: () => void confirm(),
       }, confirmLabel),
     ]),
-  ]))
+  ])
 }
 
 /** The tree's badge for a manually added connection. */

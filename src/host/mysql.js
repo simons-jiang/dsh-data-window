@@ -25,6 +25,9 @@ const MAX_LIMIT = 5000
 /** Reject anything this large before it reaches the driver. */
 const MAX_SQL_BYTES = 512 * 1024
 
+/** How long one table's declared column types stay usable for a header label. */
+const DECLARED_TYPE_TTL_MS = 5 * 60 * 1000
+
 export class ReadOnlyViolation extends Error {
   constructor(message) {
     super(message)
@@ -282,6 +285,11 @@ export class DataGateway {
     this.config = config
     this.targets = new Map()
     this.pools = new Map()
+    /**
+     * Declared `COLUMN_TYPE` per `${schema}\0${table}`, so a result header can
+     * spell `varchar(32)` rather than the bare type code the wire carries.
+     */
+    this.declaredTypes = new Map()
     /** Round-trip counters, surfaced in the panel's log line. */
     this.statementCount = 0
   }
@@ -365,6 +373,15 @@ export class DataGateway {
       connectTimeout: Math.max(2000, Number(this.config.connectTimeoutMs ?? 8000)),
       connectionLimit: Math.max(1, Number(this.config.connectionLimit ?? 4)),
       charset: 'utf8mb4',
+      // A BIGINT is 64 bits wide and a double is not: letting the driver hand one
+      // back as a number rounds the last digits away (`…595501` becomes `…595500`),
+      // and an id that reads wrong is worse than one that reads as text.
+      supportBigNumbers: true,
+      bigNumberStrings: true,
+      // DATE, DATETIME, TIME and TIMESTAMP travel as the server's own wall-clock
+      // text: a DATE then reads `2026-10-26` instead of `2026-10-26 00:00:00`, and
+      // nothing is shifted by the Host's timezone on the way to the grid.
+      dateStrings: true,
       // Every new socket starts read-only, before any statement the viewer sends.
       connectAttributes: { program_name: 'dsh-data-window' },
     })
@@ -407,6 +424,9 @@ export class DataGateway {
         // is what separates them (63 is the binary collation).
         charset: Number(field.characterSet ?? 0),
       }))
+      // A header label needs the length and the scale, which the wire does not
+      // carry; failing to look them up must never fail the query itself.
+      const declared = await this.describeColumns(id, fields ?? []).catch(() => new Map())
       const names = columns.length > 0 ? columns.map((column) => column.name) : Object.keys(rows[0] ?? {})
       const allValues = rows.map((row) => rowValues(row, names))
       const truncated = allValues.length > limit
@@ -420,6 +440,10 @@ export class DataGateway {
           type: columns[index]?.type ?? '',
           flags: columns[index]?.flags ?? 0,
           charset: columns[index]?.charset ?? 0,
+          declaredType: declared.get(index)?.type ?? '',
+          // The column comment readers label the header with; a computed column
+          // has none.
+          declaredComment: declared.get(index)?.comment ?? '',
         })),
         rows: values,
         rowCount: values.length,
@@ -433,6 +457,77 @@ export class DataGateway {
       wrapped.sql = prepared
       throw wrapped
     }
+  }
+
+  /**
+   * What the table declares about every result column that came straight from it.
+   *
+   * The wire carries a type code, a byte length and a scale, which cannot be read
+   * back as `varchar(32)` or `decimal(10,4)`: the byte length counts the widest
+   * character of the column's charset, and the scale says nothing about the
+   * precision. The column comment is not on the wire at all. information_schema is
+   * the one place both are spelled out, so one query covers every table the
+   * statement read, and each table's answer is kept for a few minutes after that.
+   *
+   * A computed column has no origin table and a system schema is never worth a
+   * lookup — the second rule also keeps this query from describing itself.
+   *
+   * @returns Map of field index → `{ type, comment }`, for the fields that have one.
+   */
+  async describeColumns(id, fields) {
+    const wanted = []
+    fields.forEach((field, index) => {
+      const schema = String(field?.db ?? '')
+      // `table` is the alias the statement used; `orgTable` is the table it names.
+      const table = String(field?.orgTable ?? '')
+      const column = String(field?.orgName ?? '')
+      if (schema === '' || table === '' || column === '') return
+      if (SYSTEM_SCHEMAS.has(schema.toLowerCase())) return
+      wanted.push({ index, key: `${schema}\u0000${table}`, schema, table, column })
+    })
+    if (wanted.length === 0) return new Map()
+    const now = Date.now()
+    const stale = new Map()
+    wanted.forEach(({ key, schema, table }) => {
+      const cached = this.declaredTypes.get(key)
+      if (cached !== undefined && now - cached.at < DECLARED_TYPE_TTL_MS) return
+      stale.set(key, { schema, table })
+    })
+    if (stale.size > 0) {
+      const where = [...stale.values()]
+        .map(({ schema, table }) => `(TABLE_SCHEMA = ${sqlString(schema)} AND TABLE_NAME = ${sqlString(table)})`)
+        .join(' OR ')
+      const result = await this.run(
+        id,
+        `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, COALESCE(COLUMN_COMMENT, '')
+           FROM information_schema.COLUMNS
+          WHERE ${where}
+          ORDER BY TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION`,
+        { limit: MAX_LIMIT },
+      )
+      const fresh = new Map()
+      stale.forEach(({ schema, table }) => {
+        fresh.set(`${schema}\u0000${table}`, { at: now, columns: new Map() })
+      })
+      result.rows.forEach((row) => {
+        const entry = fresh.get(`${String(row[0] ?? '')}\u0000${String(row[1] ?? '')}`)
+        if (entry === undefined) return
+        entry.columns.set(String(row[2] ?? ''), { type: String(row[3] ?? ''), comment: String(row[4] ?? '') })
+      })
+      // A table the schema no longer holds is remembered as empty, so a stale name
+      // costs one lookup rather than one per statement.
+      fresh.forEach((entry, key) => {
+        this.declaredTypes.set(key, entry)
+      })
+    }
+    const described = new Map()
+    wanted.forEach(({ index, key, column }) => {
+      const declared = this.declaredTypes.get(key)?.columns.get(column)
+      if (declared === undefined) return
+      if (declared.type === '' && declared.comment === '') return
+      described.set(index, declared)
+    })
+    return described
   }
 
   /**

@@ -265,7 +265,6 @@
   "log.exported": "Exported {name} ({rows} rows)",
   "log.exportCancelled": "Export cancelled",
   "log.exportDownloaded": "This host cannot choose a save location; downloaded {name} to the default downloads folder",
-  "cellDetailTitle": "{column} · row {row}",
   "editCell": "Edit cell",
   "insertNeedsTitle": "Cannot export an INSERT script",
   "refreshStructure": "Refresh structure",

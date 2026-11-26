@@ -270,7 +270,6 @@ window.__ModuleLoader__.load({
     "log.exported": "Exported {name} ({rows} rows)",
     "log.exportCancelled": "Export cancelled",
     "log.exportDownloaded": "This host cannot choose a save location; downloaded {name} to the default downloads folder",
-    "cellDetailTitle": "{column} · row {row}",
     "editCell": "Edit cell",
     "insertNeedsTitle": "Cannot export an INSERT script",
     "refreshStructure": "Refresh structure",
@@ -614,7 +613,6 @@ window.__ModuleLoader__.load({
     "log.exported": "已导出 {name}（{rows} 行）",
     "log.exportCancelled": "已取消导出",
     "log.exportDownloaded": "当前环境不支持选择保存位置，已下载到默认下载目录：{name}",
-    "cellDetailTitle": "{column} · 第 {row} 行",
     "editCell": "编辑单元格",
     "insertNeedsTitle": "无法导出 INSERT 脚本",
     "refreshStructure": "刷新结构",
@@ -824,7 +822,9 @@ const DW_CSS = `
   height: 26px;
   padding: 0 9px;
   border: 1px solid var(--dsw-alias-border-l1, #31353d);
-  border-radius: 6px;
+  /* The host's own controls round to 12px (text) and 8px (icon); 6px read as a
+     different family from every other button in the window. */
+  border-radius: 12px;
   background: var(--dsw-alias-bg-layer-2, #262930);
   color: var(--dsw-alias-label-primary, #e6e8ec);
   cursor: pointer;
@@ -838,8 +838,8 @@ const DW_CSS = `
   background: var(--dsw-alias-brand-primary, #4b8bf5);
   /* The brand fill is ink in the light palette and near-white in the dark one, so
      the label has to follow the host's inverted-label token instead of staying white. */
-  color: var(--dsw-alias-label-primary-inverted, #fff);
-  font-weight: 600;
+  color: var(--dsw-alias-label-primary-inverted, #0f1115);
+  font-weight: 500;
 }
 /*
  * The panel and the sidebar-foot action each inject this stylesheet, so the second
@@ -849,7 +849,7 @@ const DW_CSS = `
  */
 .dw-btn.dw-btn-accent { color: var(--dsw-alias-label-primary-inverted, #fff); }
 .dw-btn-accent:hover { filter: brightness(1.08); background: var(--dsw-alias-brand-primary, #4b8bf5); }
-.dw-btn-icon { width: 26px; padding: 0; justify-content: center; }
+.dw-btn-icon { width: 26px; padding: 0; justify-content: center; border-radius: 8px; }
 /*
  * The sidebar-foot action. DSH owns the selected-panel chrome and expects an
  * occupant to bring hover chrome only, so the rest state stays transparent —
@@ -1183,14 +1183,23 @@ const DW_CSS = `
   line-height: 19px;
   tab-size: 2;
 }
+/*
+ * The SQL palette follows DataGrip's Darcula scheme: system words carry a colour
+ * (keywords orange, types blue, functions light blue, constants purple) while table
+ * and column identifiers stay in the normal label colour, so a statement separates
+ * "the language" from "the user's names" at a glance.
+ */
 .dw-tok-keyword { color: #cf8e6d; font-weight: 600; }
+.dw-tok-type { color: #6d9df1; }
 .dw-tok-function { color: #56a8f5; }
 .dw-tok-string { color: #6aab73; }
 .dw-tok-number { color: #2aacb8; }
 .dw-tok-comment { color: #7a7e85; font-style: italic; }
 .dw-tok-literal { color: #c77dbb; }
+.dw-tok-variable { color: #b58cd9; }
 .dw-tok-operator { color: #b3b8c2; }
 .dw-tok-punct { color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-tok-identifier { color: var(--dsw-alias-label-primary, #e6e8ec); }
 .dw-complete {
   position: absolute;
   z-index: 60;
@@ -1587,6 +1596,30 @@ const DW_CSS = `
 .dw-settings-warn { color: var(--dsw-alias-state-warning-primary, #d9a13b); font-size: 11px; }
 
 /* --- The AI fallback dialog ------------------------------------------------ */
+/* --- The column-header card --------------------------------------------- */
+/*
+ * Drawn by the grid itself rather than by the browser: a native tooltip waits
+ * about a second before it appears and cannot be coloured, and this one has to
+ * show the column's comment at once, in the window's own palette.
+ */
+.dw-tip {
+  position: fixed;
+  z-index: 70;
+  max-width: 320px;
+  padding: 7px 10px;
+  border: 1px solid var(--dsw-alias-border-l1, #31353d);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-overlay, #2f333b);
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .38);
+  font-size: 11.5px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+.dw-tip-name { font-weight: 600; }
+.dw-tip-type { color: var(--dsw-alias-label-secondary, #8b919d); }
+.dw-tip-comment { margin-top: 3px; word-break: break-word; white-space: pre-wrap; }
+
 .dw-modal {
   position: fixed;
   inset: 0;
@@ -1596,7 +1629,19 @@ const DW_CSS = `
   justify-content: center;
   padding: 24px;
   background: rgba(10, 12, 16, .42);
+  /*
+   * The sheet lives on document.body so no docked window can cover it, which means
+   * the panel's base typography has to be restated here: inheriting from <body>
+   * would draw every dialog at 16px instead of the panel's 13px.
+   */
+  box-sizing: border-box;
+  color: var(--dsw-alias-label-primary, #e6e8ec);
+  font-family: var(--dsw-font-family, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif);
+  font-size: 13px;
+  line-height: 1.45;
 }
+.dw-modal *, .dw-modal *::before, .dw-modal *::after { box-sizing: border-box; }
+.dw-modal button { font: inherit; color: inherit; }
 .dw-modal-card {
   display: flex;
   flex-direction: column;
@@ -1623,6 +1668,33 @@ const DW_CSS = `
   gap: 8px;
   padding: 12px 16px 14px;
   border-top: 1px solid var(--dsw-alias-border-l1, #31353d);
+}
+/*
+ * A dialog's footer button is the host's confirm-dialog button: 36px tall on a
+ * 12px radius, a ghost secondary and a filled primary carrying the inverted ink.
+ * Everything else in the window stays compact, but a dialog is the one place the
+ * user compares against the windows the shell itself opens.
+ */
+.dw-modal-foot .dw-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--dsw-alias-label-primary, #f9fafb);
+  font-size: 14px;
+  font-weight: 400;
+}
+.dw-modal-foot .dw-btn:hover { background: rgba(255, 255, 255, .08); border-color: transparent; }
+.dw-modal-foot .dw-btn:disabled { background: transparent; }
+.dw-modal-foot .dw-btn.dw-btn-accent {
+  padding: 0 16px;
+  background: var(--dsw-alias-brand-primary, #f9fafb);
+  color: var(--dsw-alias-label-primary-inverted, #0f1115);
+  font-weight: 500;
+}
+.dw-modal-foot .dw-btn.dw-btn-accent:hover {
+  background: var(--dsw-alias-brand-primary, #f9fafb);
+  filter: brightness(.94);
 }
 .dw-ai-pick { display: flex; flex-direction: column; gap: 8px; }
 .dw-ai-label { font-size: 12px; color: var(--dsw-alias-label-secondary, #8b919d); }
@@ -2458,6 +2530,115 @@ function dwInstallBridge(deps) {
     if (globalThis[DW_BRIDGE_CAPABILITY] === capability) delete globalThis[DW_BRIDGE_CAPABILITY]
   }
 }
+
+// ---- 08-modal.js ---------------------------------------------------------
+/**
+ * The one dialog shell.
+ *
+ * Every dialog in this window — the DDL viewer, the AI optimizer, a cell's full
+ * value, the manual-connection forms — is built on `DwModal`, because two things a
+ * dialog cannot do on its own must not be re-decided per dialog:
+ *
+ *  1. **Out-paint the docks.** The workbench is a containing block and a stacking
+ *     context of its own, so `position: fixed` inside it still stops at the panel
+ *     edge and is buried by any window another plugin docks below the editor. The
+ *     card is therefore portalled to `document.body`, where it paints in the page's
+ *     own stacking context and its footer buttons stay reachable. Leaving the panel
+ *     also leaves the palette the panel carries (`[data-dsh-theme]` from the code
+ *     workspace), so the sheet re-applies that attribute on itself — otherwise a
+ *     theming plugin's dialog is the one white card in a coloured window.
+ *  2. **Close on Escape.** One window-level listener, in the capture phase, closes
+ *     only the dialog on top of the stack, so a dialog opened from another one
+ *     unwinds one level at a time; an IME candidate window keeps its own Escape,
+ *     and a dialog that is mid-save refuses to close at all.
+ */
+
+/** Dialog ids in opening order; only the last one answers Escape. */
+const dwModalStack = []
+
+/**
+ * Render a node in the page body instead of inside the panel.
+ *
+ * Falls back to in-place rendering when the page offers no portal (an embedded
+ * host, or a probe running the fragments outside a browser).
+ */
+function dwPortal(node) {
+  try {
+    const reactDom = require('react-dom')
+    if (typeof reactDom?.createPortal !== 'function') return node
+    if (typeof document === 'undefined' || document.body === null) return node
+    return reactDom.createPortal(node, document.body)
+  } catch (error) {
+    void error
+    return node
+  }
+}
+
+/**
+ * A dialog card over a dimmed page.
+ *
+ * @param {object} props
+ * @param {() => void} props.onClose called by Escape, the backdrop, or a footer button.
+ * @param {boolean} [props.busy] while true, Escape and the backdrop do nothing.
+ * @param {string} [props.className] extra class on the card, such as `dw-ddl-dialog`.
+ * @param {string} [props.label] accessible name of the dialog.
+ */
+function DwModal({ onClose, busy = false, className = undefined, label = undefined, children }) {
+  // The palette comes from the code workspace (05-theme.js); the sheet lives
+  // outside the panel, so it has to carry the same attribute itself.
+  const themeId = useSyncExternalStore(dwSubscribeTheme, dwSharedTheme, dwSharedTheme)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  const busyRef = useRef(busy)
+  busyRef.current = busy
+
+  useEffect(() => {
+    const token = {}
+    dwModalStack.push(token)
+    const onKey = (event) => {
+      if (event.key !== 'Escape') return
+      // A dialog that opened another one must not close together with it.
+      if (dwModalStack[dwModalStack.length - 1] !== token) return
+      if (busyRef.current === true) return
+      // The Escape that dismisses an IME candidate list belongs to the IME.
+      if (dwImeComposing(event)) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (typeof closeRef.current === 'function') closeRef.current()
+    }
+    globalThis.addEventListener('keydown', onKey, true)
+    return () => {
+      globalThis.removeEventListener('keydown', onKey, true)
+      const index = dwModalStack.indexOf(token)
+      if (index >= 0) dwModalStack.splice(index, 1)
+    }
+  }, [])
+
+  const cardClass = className === undefined ? 'dw-modal-card' : `dw-modal-card ${className}`
+  const card = h('div', {
+    key: 'card',
+    className: cardClass,
+    role: 'dialog',
+    'aria-modal': 'true',
+    ...(label === undefined ? {} : { 'aria-label': label }),
+    onClick: (event) => event.stopPropagation(),
+  }, children)
+
+  const sheet = h('div', {
+    className: 'dw-modal',
+    'data-dsh-theme': themeId === '' ? undefined : themeId,
+    onClick: (event) => {
+      // Only the backdrop closes: a click that bubbled out of the card is stopped
+      // above, and a save in flight owns the dialog until it settles.
+      if (event.target !== event.currentTarget) return
+      if (busy === true) return
+      if (typeof onClose === 'function') onClose()
+    },
+  }, card)
+
+  return dwPortal(sheet)
+}
+
 
 // ---- 10-core.js ----------------------------------------------------------
 /**
@@ -4259,11 +4440,20 @@ function DwTree({ store, state, tr, onContextMenu, onChooseDatabases }) {
  * exercised from Node.
  */
 
-/** Words the editor colours as keywords. */
-const DW_SQL_KEYWORDS = new Set(`select from where group by order having limit offset union all distinct join inner left right outer full cross natural on using and or not in is null like between exists case when then else end as asc desc insert into values update set delete create drop alter table index view show describe explain with recursive partition over window`.split(' '))
+/**
+ * Words the editor colours as keywords.
+ *
+ * The list deliberately covers DDL as well as queries: a create statement is what
+ * the DDL dialog shows, and a statement whose `NOT NULL`, `DEFAULT`, `COMMENT` and
+ * storage options stay white reads as one flat block.
+ */
+const DW_SQL_KEYWORDS = new Set(`select from where group by order having limit offset union all distinct join inner left right outer full cross natural on using and or not in is null like between exists case when then else end as asc desc insert into values update set delete create drop alter table index view show describe explain with recursive partition over window primary key foreign references constraint unique fulltext spatial btree hash default auto_increment collate collation charset character engine comment unsigned zerofill generated always stored virtual check cascade restrict rename change modify add column after first temporary if replace ignore low_priority high_priority quick delayed row_format checksum delay_key_write max_rows min_rows pack_keys stats_auto_recalc stats_persistent stats_sample_pages connection directory start transaction begin commit rollback savepoint lock unlock read write grant revoke flush analyze optimize repair truncate load infile outfile fields lines terminated enclosed escaped optionally duplicates procedure function trigger event returns deterministic reads modifies contains sql language call declare while repeat loop leave iterate signal resignal condition handler continue exit undo open close fetch cursor prepare execute deallocate delimiter names current_date current_time current_timestamp current_user localtime localtimestamp`.split(' '))
+
+/** Data types, coloured apart from keywords and user identifiers. */
+const DW_SQL_TYPES = new Set(`bit tinyint smallint mediumint int integer bigint decimal numeric dec fixed float double real char varchar nchar nvarchar binary varbinary tinyblob blob mediumblob longblob tinytext text mediumtext longtext enum json jsonb date datetime timestamp time year boolean bool serial geometry point linestring polygon multipoint multilinestring multipolygon geometrycollection`.split(' '))
 
 /** Words coloured as functions; the schema supplies the rest. */
-const DW_SQL_FUNCTIONS = new Set(`count sum avg min max coalesce ifnull nullif concat concat_ws substr substring length lower upper trim ltrim rtrim replace round floor ceil abs cast convert date_format str_to_date now curdate curtime datediff date_add date_sub timestampdiff if group_concat json_extract json_unquote unix_timestamp from_unixtime row_number rank dense_rank lag lead`.split(' '))
+const DW_SQL_FUNCTIONS = new Set(`count sum avg min max coalesce ifnull nullif isnull greatest least concat concat_ws substr substring substring_index length char_length character_length octet_length lower upper lcase ucase trim ltrim rtrim left right mid locate instr position replace round ceil ceiling floor abs mod pow power sqrt exp ln log log2 log10 sign rand truncate pi sin cos tan asin acos atan atan2 radians degrees cast convert date_format str_to_date now curdate curtime datediff date_add date_sub timestampdiff timestampadd adddate subdate addtime subtime period_add period_diff convert_tz get_format extract year month day hour minute second dayofweek dayofmonth dayofyear last_day week weekday monthname quarter makedate maketime sec_to_time time_to_sec utc_date utc_time utc_timestamp from_days to_days if group_concat json_extract json_unquote json_length json_type json_valid json_object json_array json_set json_insert json_replace json_remove json_contains json_contains_path json_keys json_search json_pretty json_quote json_depth unix_timestamp from_unixtime row_number rank dense_rank lag lead`.split(' '))
 
 /** Literals that are keywords in effect. */
 const DW_SQL_LITERALS = new Set(['null', 'true', 'false'])
@@ -4339,15 +4529,25 @@ function dwSqlLex(text) {
       tokens.push({ type: 'number', value: source.slice(start, index), start, end: index })
       continue
     }
+    if (char === '@' || char === '?') {
+      index += 1
+      while (index < source.length && /[A-Za-z0-9_$.@]/.test(source[index])) index += 1
+      tokens.push({ type: 'variable', value: source.slice(start, index), start, end: index })
+      continue
+    }
     if (/[A-Za-z_$]/.test(char)) {
       while (index < source.length && /[A-Za-z0-9_$]/.test(source[index])) index += 1
       const value = source.slice(start, index)
       const lower = value.toLowerCase()
+      // Keywords win over types because a few words are both (`SET` in an UPDATE
+      // and `SET(...)` in DDL); the statement form is the common one.
       const type = DW_SQL_LITERALS.has(lower)
         ? 'literal'
         : DW_SQL_KEYWORDS.has(lower)
           ? 'keyword'
-          : DW_SQL_FUNCTIONS.has(lower) ? 'function' : 'identifier'
+          : DW_SQL_TYPES.has(lower)
+            ? 'type'
+            : DW_SQL_FUNCTIONS.has(lower) ? 'function' : 'identifier'
       tokens.push({ type, value, start, end: index })
       continue
     }
@@ -5076,8 +5276,6 @@ function DwFavoriteDialog({ store, tr, draft, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const sql = String(draft?.sql ?? '')
-  const savingRef = useRef(false)
-  savingRef.current = saving
   // A Chinese/Japanese name is typed through the IME: its Enter belongs to the
   // candidate list, not to the dialog. Chromium already flags the composition
   // keystroke, and the short grace period covers a browser that ends the
@@ -5088,16 +5286,6 @@ function DwFavoriteDialog({ store, tr, draft, onClose, onSaved }) {
     || composingRef.current === true
     || Date.now() - compositionEndedAtRef.current < 100
   const databaseNames = dwDatabaseNames(store.getState?.()?.environments)
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape' || savingRef.current) return
-      if (imeBusy(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   const submit = async () => {
     if (saving === true) return
@@ -5166,17 +5354,11 @@ function DwFavoriteDialog({ store, tr, draft, onClose, onSaved }) {
     hint === undefined ? null : h('span', { key: 'h', className: 'dw-form-hint' }, hint),
   ])
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget && saving !== true) onClose()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card dw-favorite-dialog',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': tr(editing ? 'favoriteEditTitle' : 'favoriteSaveTitle'),
+  return h(DwModal, {
+    onClose,
+    busy: saving === true,
+    className: 'dw-favorite-dialog',
+    label: tr(editing ? 'favoriteEditTitle' : 'favoriteSaveTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'star', size: 15 }),
@@ -5206,7 +5388,7 @@ function DwFavoriteDialog({ store, tr, draft, onClose, onSaved }) {
         onClick: () => void submit(),
       }, saving === true ? tr('schemaApplying') : tr(editing ? 'favoriteUpdateAction' : 'favoriteSaveAction')),
     ]),
-  ]))
+  ])
 }
 
 
@@ -5219,6 +5401,9 @@ function DwFavoriteDialog({ store, tr, draft, onClose, onSaved }) {
  * already exists instead of opening a second one. A tab that needs a second
  * statement gets its own id from the store, never a rewrite of the first.
  */
+
+/** A DDL script larger than this is painted as plain text instead of token spans. */
+const DW_DDL_HIGHLIGHT_MAX = 200 * 1024
 
 /** The reference a tab copies: `schema.table`, or the schema alone. */
 function dwTabReference(tab) {
@@ -5426,6 +5611,19 @@ function DwDragHandle({ value, onChange, min, max, invert, title, onStart, onCom
   })
 }
 
+/**
+ * Paint SQL tokens as coloured spans.
+ *
+ * Shared by the editor overlay and the DDL dialog so both read the same palette;
+ * whitespace tokens stay raw strings because the surrounding element keeps `pre`
+ * whitespace.
+ */
+function dwSqlHighlight(text, keyPrefix = 'sql') {
+  return dwSqlLex(text).map((token, index) => (token.type === 'space'
+    ? token.value
+    : h('span', { key: `${keyPrefix}-${index}`, className: `dw-tok-${token.type}` }, token.value)))
+}
+
 /** Caret position inside the textarea, measured with an in-place mirror. */
 function dwCaretPoint(area, text, caret) {
   const wrap = area?.parentElement
@@ -5462,7 +5660,6 @@ function dwCaretPoint(area, text, caret) {
 /** The SQL editor: highlighted text, completion and one-keystroke formatting. */
 function DwEditor({ store, tab, tr, onRun, height, schema, favorites }) {
   const value = tab.sql ?? ''
-  const tokens = useMemo(() => dwSqlLex(value), [value])
   const lines = useMemo(() => value.split('\n').length, [value])
   const favoriteList = Array.isArray(favorites) ? favorites : []
   const gutterRef = useRef(null)
@@ -5822,9 +6019,7 @@ function DwEditor({ store, tab, tr, onRun, height, schema, favorites }) {
       }, gutter.join('')),
       h('div', { key: 'wrap', className: 'dw-code-wrap' }, [
         h('pre', { key: 'hl', className: 'dw-code-highlight', ref: highlightRef, 'aria-hidden': true },
-          tokens.map((token, index) => (token.type === 'space'
-            ? token.value
-            : h('span', { key: index, className: `dw-tok-${token.type}` }, token.value)))),
+          dwSqlHighlight(value, 'hl')),
         h('textarea', {
           key: 'area',
           ref: areaRef,
@@ -6021,6 +6216,14 @@ function DwDdlDialog({ node, tr, store, onClose }) {
   const [failureCount, setFailureCount] = useState(0)
   const [count, setCount] = useState(0)
 
+  // Tokenise once, not on every re-render (the copy button and progress updates
+  // re-render this dialog). Past the cap a plain string beats tens of thousands
+  // of spans.
+  const highlightedDdl = useMemo(() => {
+    if (ddl === '') return ''
+    return ddl.length > DW_DDL_HIGHLIGHT_MAX ? ddl : dwSqlHighlight(ddl, 'ddl')
+  }, [ddl])
+
   useEffect(() => {
     let alive = true
     const fail = (failure, name) => {
@@ -6103,13 +6306,13 @@ function DwDdlDialog({ node, tr, store, onClose }) {
           ? h('div', { key: 'warn', className: 'dw-log-warn' }, tr('ddlAllPartial', { count: failureCount }))
           : null,
         h('pre', { key: 'ddl', className: 'dw-cell-view dw-ddl-code' },
-          ddl === '' ? tr(allTables ? 'ddlAllEmpty' : 'ddlEmpty') : ddl),
+          ddl === '' ? tr(allTables ? 'ddlAllEmpty' : 'ddlEmpty') : highlightedDdl),
       ])
 
-  return h('div', { className: 'dw-modal', onClick: onClose }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card dw-ddl-dialog',
-    onClick: (event) => event.stopPropagation(),
+  return h(DwModal, {
+    onClose,
+    className: 'dw-ddl-dialog',
+    label: tr(allTables ? 'menuDdlAll' : 'menuDdl'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'ddl', size: 13 }),
@@ -6140,7 +6343,7 @@ function DwDdlDialog({ node, tr, store, onClose }) {
         : null,
       h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: onClose }, tr('close')),
     ]),
-  ]))
+  ])
 }
 
 
@@ -6180,9 +6383,89 @@ function dwColumnTypeName(type, charset) {
   return DW_COLUMN_TYPES[code] ?? String(type)
 }
 
+/**
+ * The type label under one column name.
+ *
+ * A column that came straight from a table shows the type that table declares —
+ * `varchar(32)`, `decimal(10,4)` — because the length and the scale are what tell
+ * one column apart from another at a glance. A computed column has no declaration
+ * to read, so it falls back to the bare type the wire reported.
+ */
+function dwColumnTypeLabel(column) {
+  const declared = String(column?.declaredType ?? '').trim()
+  if (declared !== '') return declared
+  return dwColumnTypeName(column?.type, column?.charset).toLowerCase()
+}
+
+/**
+ * The tooltip of one column header.
+ *
+ * It repeats the label an eye already reads (name, type) and then adds the one
+ * thing the grid cannot show: the comment the table declares for the column, which
+ * is usually the only explanation of what a terse column name means.
+ */
+function dwColumnTitle(column) {
+  const parts = [String(column?.name ?? '')]
+  const type = dwColumnTypeLabel(column)
+  if (type !== '') parts.push(type)
+  const comment = String(column?.declaredComment ?? '').trim()
+  if (comment !== '') parts.push(comment)
+  return parts.filter((part) => part !== '').join(' · ')
+}
+
 function dwIsNumericColumn(column) {
   const code = Number(column?.type)
   return Number.isFinite(code) && DW_NUMERIC_TYPES.has(code)
+}
+
+/**
+ * The card a column header shows while the pointer rests on it.
+ *
+ * A native `title` is delayed by the browser, cannot be styled and is clipped by
+ * the grid's own scroll container, so the header draws its own: the name, the
+ * declared type, and the comment that explains what a terse column name means.
+ * It is portalled to the page body for the same reason the dialogs are — the
+ * workbench is a clipping context, and a card inside it would disappear under the
+ * header row.
+ */
+function DwHeaderTip({ column, left, top, onHide }) {
+  const themeId = useSyncExternalStore(dwSubscribeTheme, dwSharedTheme, dwSharedTheme)
+  const hideRef = useRef(onHide)
+  hideRef.current = onHide
+  useEffect(() => {
+    // The header row is sticky: scrolling leaves the pointer on the header while
+    // the cells move, so the card has to go with the scroll.
+    const doc = globalThis.document
+    if (doc === undefined) return undefined
+    const hide = () => hideRef.current?.()
+    doc.addEventListener('scroll', hide, true)
+    globalThis.addEventListener?.('resize', hide)
+    return () => {
+      doc.removeEventListener('scroll', hide, true)
+      globalThis.removeEventListener?.('resize', hide)
+    }
+  }, [])
+  const type = dwColumnTypeLabel(column)
+  const comment = String(column?.declaredComment ?? '').trim()
+  return dwPortal(h('div', {
+    className: 'dw-tip',
+    'data-dsh-theme': themeId === '' ? undefined : themeId,
+    style: { left: `${left}px`, top: `${top}px` },
+  }, [
+    h('div', { key: 'n', className: 'dw-tip-name' }, String(column?.name ?? '')),
+    type === '' ? null : h('div', { key: 't', className: 'dw-tip-type' }, type),
+    comment === '' ? null : h('div', { key: 'c', className: 'dw-tip-comment' }, comment),
+  ]))
+}
+
+/** Where the card goes for one header cell: below it, kept inside the window. */
+function dwHeaderTipPoint(element) {
+  if (element === null || element === undefined || typeof element.getBoundingClientRect !== 'function') return null
+  const rect = element.getBoundingClientRect()
+  const width = 320
+  const viewport = Number(globalThis.innerWidth ?? 0)
+  const maxLeft = viewport > width + 16 ? viewport - width - 8 : 8
+  return { left: Math.max(8, Math.min(rect.left, maxLeft)), top: rect.bottom + 6 }
 }
 
 /** Render one cell. */
@@ -6204,12 +6487,23 @@ function dwCell(value) {
 const DwGrid = React.memo(function DwGrid({
   columns, rows, tr, edits, editing, selected, skipBlur, onSelect, onCellDoubleClick, onEditCommit, onEditCancel, onCellMenu,
 }) {
+  const [tip, setTip] = useState(null)
   const head = h('thead', { key: 'head' }, h('tr', { key: 'row' }, [
     h('th', { key: '#', className: 'dw-rownum' }, '#'),
-    ...columns.map((column, index) => h('th', { key: `${column.name}-${index}`, title: `${column.name}${column.type !== '' ? ` · ${dwColumnTypeName(column.type, column.charset)}` : ''}` }, [
-      h('span', { key: 'n' }, column.name),
-      column.type !== '' ? h('span', { key: 't', className: 'dw-th-type' }, dwColumnTypeName(column.type, column.charset)) : null,
-    ])),
+    ...columns.map((column, index) => {
+      const type = dwColumnTypeLabel(column)
+      return h('th', {
+        key: `${column.name}-${index}`,
+        onMouseEnter: (event) => {
+          const point = dwHeaderTipPoint(event.currentTarget)
+          setTip(point === null ? null : { column, left: point.left, top: point.top })
+        },
+        onMouseLeave: () => setTip(null),
+      }, [
+        h('span', { key: 'n' }, column.name),
+        type !== '' ? h('span', { key: 't', className: 'dw-th-type' }, type) : null,
+      ])
+    }),
   ]))
   const body = h('tbody', { key: 'body' }, rows.map((row, rowIndex) => h('tr', { key: rowIndex }, [
     h('td', { key: '#', className: 'dw-rownum' }, String(rowIndex + 1)),
@@ -6258,7 +6552,18 @@ const DwGrid = React.memo(function DwGrid({
     }),
   ])))
   void tr
-  return h('div', { className: 'dw-result-body' }, h('table', { className: 'dw-grid' }, [head, body]))
+  return h('div', { className: 'dw-result-body' }, [
+    h('table', { key: 'grid', className: 'dw-grid' }, [head, body]),
+    tip === null
+      ? null
+      : h(DwHeaderTip, {
+        key: 'tip',
+        column: tip.column,
+        left: tip.left,
+        top: tip.top,
+        onHide: () => setTip(null),
+      }),
+  ])
 })
 
 function DwResults({ store, state, tab, tr }) {
@@ -6268,7 +6573,6 @@ function DwResults({ store, state, tab, tr }) {
   const [cellMenu, setCellMenu] = useState(null)
   const [exportMenu, setExportMenu] = useState(null)
   const [selected, setSelected] = useState(null)
-  const [detail, setDetail] = useState(null)
   const [notice, setNotice] = useState(null)
   const skipBlur = useRef(false)
   const edits = tab.edits ?? {}
@@ -6289,7 +6593,6 @@ function DwResults({ store, state, tab, tr }) {
     setEditing(null)
     setCellMenu(null)
     setSelected(null)
-    setDetail(null)
     setNotice(null)
   }, [tab.id, result, tab.page?.offset])
 
@@ -6311,21 +6614,6 @@ function DwResults({ store, state, tab, tr }) {
   }, [editing])
 
   const columnIndexOf = (name) => (result?.columns ?? []).findIndex((column) => column.name === name)
-
-  // Full value of one cell, edits included: what the detail dialog shows.
-  const openDetail = (rowIndex, cellIndex) => {
-    const column = (result?.columns ?? [])[cellIndex] ?? {}
-    const rowEdits = edits[rowIndex] ?? {}
-    const raw = Object.prototype.hasOwnProperty.call(rowEdits, column.name)
-      ? rowEdits[column.name]
-      : (result?.rows ?? [])[rowIndex]?.[cellIndex]
-    setDetail({
-      row: rowIndex,
-      index: cellIndex,
-      name: column.name ?? '',
-      text: raw === null || raw === undefined ? 'NULL' : String(raw),
-    })
-  }
 
   // One UPDATE for one edited row: edited columns in SET, the original primary
   // key in WHERE. `reason` is what the UI shows when no statement can be built.
@@ -6573,7 +6861,12 @@ function DwResults({ store, state, tab, tr }) {
       selected,
       skipBlur,
       onSelect: (row, index) => setSelected({ row, index }),
-      onCellDoubleClick: (row, index) => openDetail(row, index),
+      // Double-click edits in place: the cell is already the right size for the
+      // value a user came to change, and a dialog only put a click between the two.
+      onCellDoubleClick: (row, index) => {
+        setSelected({ row, index })
+        setEditing({ row, index })
+      },
       onEditCommit: (row, index, name, text) => {
         if (skipBlur.current) {
           skipBlur.current = false
@@ -6652,55 +6945,19 @@ function DwResults({ store, state, tab, tr }) {
     ]),
   ])
 
-  const detailLayer = detail === null ? null : h('div', {
-    key: 'detail',
-    className: 'dw-modal',
-    onClick: () => setDetail(null),
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card dw-cell-dialog',
-    onClick: (event) => event.stopPropagation(),
-  }, [
-    h('div', { key: 'title', className: 'dw-modal-title' }, tr('cellDetailTitle', { column: detail.name, row: detail.row + 1 })),
-    h('div', { key: 'body', className: 'dw-modal-body' }, h('pre', { key: 'v', className: 'dw-cell-view' }, detail.text)),
-    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
-      h('button', {
-        key: 'copy',
-        type: 'button',
-        className: 'dw-btn',
-        onClick: () => copyText(detail.text, () => store.pushLog('info', tr('log.copiedCell'))),
-      }, tr('menuCopyCell')),
-      h('button', {
-        key: 'edit',
-        type: 'button',
-        className: 'dw-btn',
-        onClick: () => {
-          setSelected({ row: detail.row, index: detail.index })
-          setEditing({ row: detail.row, index: detail.index })
-          setDetail(null)
-        },
-      }, tr('editCell')),
-      h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: () => setDetail(null) }, tr('close')),
-    ]),
-  ]))
-
-  const noticeLayer = notice === null ? null : h('div', {
+  const noticeLayer = notice === null ? null : h(DwModal, {
     key: 'notice',
-    className: 'dw-modal',
-    onClick: () => setNotice(null),
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    onClick: (event) => event.stopPropagation(),
+    onClose: () => setNotice(null),
+    label: notice.title,
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, notice.title),
     h('div', { key: 'body', className: 'dw-modal-body' }, h('div', { key: 'm', className: 'dw-error-text' }, notice.message)),
     h('div', { key: 'foot', className: 'dw-modal-foot' }, [
       h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: () => setNotice(null) }, tr('close')),
     ]),
-  ]))
+  ])
 
-  return h('div', { className: 'dw-result' }, [bar, body, cellMenuLayer, exportLayer, detailLayer, noticeLayer])
+  return h('div', { className: 'dw-result' }, [bar, body, cellMenuLayer, exportLayer, noticeLayer])
 }
 
 
@@ -8076,18 +8333,6 @@ function DwSchemaDialog({ store, tr, instance, onClose }) {
   const [query, setQuery] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const savingRef = useRef(false)
-  savingRef.current = saving
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape' || savingRef.current) return
-      if (dwImeComposing(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   useEffect(() => {
     let alive = true
@@ -8197,17 +8442,10 @@ function DwSchemaDialog({ store, tr, instance, onClose }) {
     body.push(h('div', { key: 'note', className: 'dw-ai-note' }, tr('schemaHint')))
   }
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget && saving !== true) onClose()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': tr('schemaTitle'),
+  return h(DwModal, {
+    onClose,
+    busy: saving === true,
+    label: tr('schemaTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'database', size: 15 }),
@@ -8233,7 +8471,7 @@ function DwSchemaDialog({ store, tr, instance, onClose }) {
         onClick: () => void apply(),
       }, saving === true ? tr('schemaApplying') : tr('schemaApply')),
     ]),
-  ]))
+  ])
 }
 
 // ---- 64-manual.js --------------------------------------------------------
@@ -8262,19 +8500,6 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
   const [sourceId, setSourceId] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const savingRef = useRef(false)
-  savingRef.current = saving
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape' || savingRef.current) return
-      if (dwImeComposing(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   // Other workspaces usually point at the same hosts and accounts, so the form
   // offers what this machine already resolved instead of asking for it again.
   useEffect(() => {
@@ -8363,17 +8588,10 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
     hint === undefined ? null : h('span', { key: 'h', className: 'dw-form-hint' }, hint),
   ])
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget && saving !== true) onClose()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': tr('manualTitle'),
+  return h(DwModal, {
+    onClose,
+    busy: saving === true,
+    label: tr('manualTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'link', size: 15 }),
@@ -8430,7 +8648,7 @@ function DwManualDialog({ store, tr, onClose, onSaved }) {
         onClick: () => void save(),
       }, saving === true ? tr('manualSaving') : tr('manualSave')),
     ]),
-  ]))
+  ])
 }
 
 /**
@@ -8444,19 +8662,6 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
   const [value, setValue] = useState(label)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const savingRef = useRef(false)
-  savingRef.current = saving
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape' || savingRef.current) return
-      if (dwImeComposing(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   const save = async () => {
     if (saving === true) return
     const root = String(store.getState?.()?.root ?? '')
@@ -8477,17 +8682,10 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
     }
   }
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget && saving !== true) onClose()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': tr('renameTitle'),
+  return h(DwModal, {
+    onClose,
+    busy: saving === true,
+    label: tr('renameTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'link', size: 15 }),
@@ -8525,7 +8723,7 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
         onClick: () => void save(),
       }, saving === true ? tr('schemaApplying') : tr('renameApply')),
     ]),
-  ]))
+  ])
 }
 
 /**
@@ -8536,19 +8734,6 @@ function DwRenameEnvDialog({ store, tr, label, onClose, onRenamed }) {
  */
 function DwConfirmDialog({ tr, title, message, confirmLabel, onConfirm, onClose }) {
   const [busy, setBusy] = useState(false)
-  const busyRef = useRef(false)
-  busyRef.current = busy
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape' || busyRef.current) return
-      if (dwImeComposing(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   const confirm = async () => {
     if (busy === true) return
     setBusy(true)
@@ -8559,17 +8744,10 @@ function DwConfirmDialog({ tr, title, message, confirmLabel, onConfirm, onClose 
     }
   }
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget && busy !== true) onClose()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': title,
+  return h(DwModal, {
+    onClose,
+    busy: busy === true,
+    label: title,
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, title),
     h('div', { key: 'body', className: 'dw-modal-body' }, [
@@ -8585,7 +8763,7 @@ function DwConfirmDialog({ tr, title, message, confirmLabel, onConfirm, onClose 
         onClick: () => void confirm(),
       }, confirmLabel),
     ]),
-  ]))
+  ])
 }
 
 /** The tree's badge for a manually added connection. */
@@ -8686,17 +8864,6 @@ function DwAiDialog({ store, tr, onClose, onManual }) {
     if (modeRef.current === 'running') return
     onClose()
   }
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape') return
-      if (modeRef.current === 'running') return
-      if (dwImeComposing(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   // The catalog is DSH's, not this plugin's: ask the Host once per attempt and let
   // the user retry a provider whose discovery failed.
@@ -8874,17 +9041,10 @@ function DwAiDialog({ store, tr, onClose, onManual }) {
     footer.push(h('button', { key: 'close', type: 'button', className: 'dw-btn', onClick: close }, tr('close')))
   }
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget) close()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': tr('aiTitle'),
+  return h(DwModal, {
+    onClose: close,
+    busy: mode === 'running',
+    label: tr('aiTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'ai', size: 15 }),
@@ -8892,7 +9052,7 @@ function DwAiDialog({ store, tr, onClose, onManual }) {
     ]),
     h('div', { key: 'body', className: 'dw-modal-body' }, body),
     h('div', { key: 'foot', className: 'dw-modal-foot' }, footer),
-  ]))
+  ])
 }
 
 /** The settings row that shows (and changes) the chosen model. */
@@ -9105,13 +9265,10 @@ function DwSqlOptimizeDialog({ store, tr, sql, database, onClose }) {
           ]),
       ])
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: onClose,
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card dw-optimize-dialog',
-    onClick: (event) => event.stopPropagation(),
+  return h(DwModal, {
+    onClose,
+    className: 'dw-optimize-dialog',
+    label: tr('optimizeTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'ai', size: 13 }),
@@ -9132,7 +9289,7 @@ function DwSqlOptimizeDialog({ store, tr, sql, database, onClose }) {
         : null,
       h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: onClose }, tr('close')),
     ]),
-  ]))
+  ])
 }
 
 // ---- 90-apply.js ---------------------------------------------------------

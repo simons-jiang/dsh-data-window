@@ -91,17 +91,6 @@ function DwAiDialog({ store, tr, onClose, onManual }) {
     onClose()
   }
 
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape') return
-      if (modeRef.current === 'running') return
-      if (dwImeComposing(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   // The catalog is DSH's, not this plugin's: ask the Host once per attempt and let
   // the user retry a provider whose discovery failed.
   useEffect(() => {
@@ -278,17 +267,10 @@ function DwAiDialog({ store, tr, onClose, onManual }) {
     footer.push(h('button', { key: 'close', type: 'button', className: 'dw-btn', onClick: close }, tr('close')))
   }
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget) close()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': tr('aiTitle'),
+  return h(DwModal, {
+    onClose: close,
+    busy: mode === 'running',
+    label: tr('aiTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'ai', size: 15 }),
@@ -296,7 +278,7 @@ function DwAiDialog({ store, tr, onClose, onManual }) {
     ]),
     h('div', { key: 'body', className: 'dw-modal-body' }, body),
     h('div', { key: 'foot', className: 'dw-modal-foot' }, footer),
-  ]))
+  ])
 }
 
 /** The settings row that shows (and changes) the chosen model. */

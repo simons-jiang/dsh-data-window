@@ -1,5 +1,58 @@
 # Changelog
 
+## [0.1.4] — 2026-11-26
+
+### Added
+
+- The create-statement dialog now highlights the DDL with the same palette as the
+  SQL console: a whole-database script keeps its `-- table` blocks and each
+  statement reads the same as it does in the editor.
+- A result column header answers a hover with a small card: the name, the declared
+  type and the comment the table declares for the column — the one line that
+  explains what a terse column name means. The card is drawn by the window (a
+  native tooltip is delayed, unstyled and clipped by the grid) and is portalled, so
+  it is readable over the header row.
+
+### Changed
+
+- The SQL palette separates system vocabulary from user names the way DataGrip's
+  Darcula scheme does: keywords orange, data types blue, built-in functions light
+  blue, constants purple, strings green, numbers cyan, comments italic grey,
+  variables muted purple; table and column identifiers keep the normal label
+  colour. The word lists now cover DDL too (`PRIMARY KEY`, `DEFAULT`, `COLLATE`,
+  `ENGINE`, `COMMENT`, data types, …), so a create statement no longer shows as
+  mostly white.
+- Buttons follow the host's own controls: text buttons round to 12px and icon
+  buttons to 8px instead of 6px, and a dialog's footer is the shell's confirm
+  dialog — a 36px ghost secondary beside a 36px filled primary carrying the
+  inverted ink, so a dialog no longer looks like a different design system.
+- Double-clicking a result cell edits it in place instead of opening a detail
+  dialog: the cell already sits where the value came from, so the dialog only put
+  a click between the user and the field. The full value stays one hover away, and
+  the context menu still copies it and still starts an edit.
+
+### Fixed
+
+- A dialog wears the palette chosen in the code workspace. The shell is portalled
+  outside the panel, which is also outside the element carrying
+  `[data-dsh-theme]`, so the sheet now applies that attribute itself and follows a
+  live theme change — otherwise the one dialog in a theming window was drawn white.
+- Every dialog — the DDL viewer, the AI optimizer, the manual connection forms, the
+  schema chooser, a confirmation — is portalled to the page body, so a window
+  another plugin docks below the editor can no longer cover its footer buttons, and
+  Escape closes all of them (the dialog on top only, and never while a save is in
+  flight).
+- A `BIGINT` value reaches the grid as text, so its 19th digit is the one the table
+  holds: the driver used to hand a 64-bit integer back as a double, which turned
+  `…595501` into `…595500` on an id nobody can then match.
+- Date and time columns travel as the server's own wall-clock text: a `DATE` reads
+  `2026-10-26` instead of `2026-10-26 00:00:00`, a `TIME` no longer picks up an
+  invented 1970 date, and `TIMESTAMP` is no longer shifted by the Host's timezone.
+- A result header shows the type its table declares — `varchar(32)`,
+  `decimal(13,2)`, `bigint` — instead of the bare wire type code. The length and the
+  scale are read once per table from `information_schema` and kept for five minutes;
+  a computed column has no declaration and keeps the type the wire reported.
+
 ## [0.1.3] — 2026-11-26
 
 ### Added

@@ -42,9 +42,11 @@ connection before it enters the tree.
   primary key, nullability and comment. One button reveals every schema on an
   instance, not only the configured ones. The column is draggable, and a
 double-click on the divider restores its default width.
-- **Editor with JetBrains-style colouring** — keywords, functions, strings, numbers and
-  comments are highlighted; typing suggests tables, columns and keywords, `alias.`
-  narrows to that table's columns; one click reindents the statement.
+- **Editor with DataGrip-style colouring** — keywords, data types, functions,
+  strings, numbers, constants, variables and comments each get their own colour, so
+  the language stands apart from the table and column names you wrote; typing
+  suggests tables, columns and keywords, `alias.` narrows to that table's columns;
+  one click reindents the statement.
 - **AI SQL optimization from the editor** — the editor's own context menu keeps
   undo/redo/cut/copy/paste/select-all and adds “AI optimize SQL”: the selection (or
   the whole statement) goes to the model configured in settings, and the suggestion
@@ -68,21 +70,29 @@ double-click on the divider restores its default width.
   `… LIMIT n OFFSET m` and run without touching the editor. An empty next page ends
   the paging in place, leaving only “previous” available.
 - **Create statement in one keystroke** — `F4` or `⌘/Ctrl + Shift + D` on a table
-  opens it in a dialog with a copy button (no extra work tab); on a database the same
-  key (or the context menu) reads the create statement of every table in it.
+  opens it in a dialog with a copy button (no extra work tab) and the same SQL
+  highlighting as the console; on a database the same key (or the context menu)
+  reads the create statement of every table in it.
 - **One workbench per database**, kept as tabs, with a result grid, copy-as-TSV,
   a row limit, a draggable editor/result split and a collapsible run log whose
   height is dragged from its top edge (double-click resets it). Opening a
   table's rows never overwrites SQL you already typed: a second console is added
-  instead.
+  instead. Values arrive as the server holds them — a `BIGINT` id keeps all 19
+  digits, a `DATE` reads `2026-10-26` — each header names the type its table
+  declares, `varchar(32)` and `decimal(13,2)` included, and hovering it opens a card
+  with the column's own comment.
+- **Dialogs that stay on top and close with Escape** — every dialog (DDL, AI
+  optimizer, cell detail, connection forms) is portalled to the page body, so a
+  window another plugin docks below the editor cannot cover its buttons; Escape
+  closes the top-most one, and never while a save is in flight.
 - **Export the page** — the result bar exports the current page (with any local cell
   edits) as an `.xlsx` workbook, a UTF-8 CSV, or an INSERT script. The save dialog
   lets you choose the path through the File System Access API, with a download
   fallback on hosts that do not expose it.
 - **Editable cells, generated UPDATE** — result rows are one fixed line high with
-  clipped cells; double-click opens the full value, and “Edit cell” in its context
-  menu (or the detail dialog) turns a cell into a local draft (edited cells turn
-  blue); right-click copies a single-row `UPDATE` built
+  clipped cells; double-click edits a cell in place (Enter commits, Esc cancels),
+  and the context menu starts the same edit or copies the whole value (edited cells
+  turn blue); right-click copies a single-row `UPDATE` built
   from the edited columns and the original primary key. The statement is only copied,
   never executed, and it is refused for joins, subqueries or results without a
   primary key.

@@ -195,8 +195,6 @@ function DwFavoriteDialog({ store, tr, draft, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const sql = String(draft?.sql ?? '')
-  const savingRef = useRef(false)
-  savingRef.current = saving
   // A Chinese/Japanese name is typed through the IME: its Enter belongs to the
   // candidate list, not to the dialog. Chromium already flags the composition
   // keystroke, and the short grace period covers a browser that ends the
@@ -207,16 +205,6 @@ function DwFavoriteDialog({ store, tr, draft, onClose, onSaved }) {
     || composingRef.current === true
     || Date.now() - compositionEndedAtRef.current < 100
   const databaseNames = dwDatabaseNames(store.getState?.()?.environments)
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape' || savingRef.current) return
-      if (imeBusy(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   const submit = async () => {
     if (saving === true) return
@@ -285,17 +273,11 @@ function DwFavoriteDialog({ store, tr, draft, onClose, onSaved }) {
     hint === undefined ? null : h('span', { key: 'h', className: 'dw-form-hint' }, hint),
   ])
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget && saving !== true) onClose()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card dw-favorite-dialog',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': tr(editing ? 'favoriteEditTitle' : 'favoriteSaveTitle'),
+  return h(DwModal, {
+    onClose,
+    busy: saving === true,
+    className: 'dw-favorite-dialog',
+    label: tr(editing ? 'favoriteEditTitle' : 'favoriteSaveTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'star', size: 15 }),
@@ -325,7 +307,7 @@ function DwFavoriteDialog({ store, tr, draft, onClose, onSaved }) {
         onClick: () => void submit(),
       }, saving === true ? tr('schemaApplying') : tr(editing ? 'favoriteUpdateAction' : 'favoriteSaveAction')),
     ]),
-  ]))
+  ])
 }
 
 export { dwTabTableName, dwDatabaseNames, dwFindDatabaseTarget, dwBuildFavoriteRows, dwFavoriteMentionStart, dwFavoriteMatches, DwFavoriteDialog }

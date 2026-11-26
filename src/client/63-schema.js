@@ -26,18 +26,6 @@ function DwSchemaDialog({ store, tr, instance, onClose }) {
   const [query, setQuery] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const savingRef = useRef(false)
-  savingRef.current = saving
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'Escape' || savingRef.current) return
-      if (dwImeComposing(event)) return
-      onClose()
-    }
-    globalThis.addEventListener('keydown', onKey)
-    return () => globalThis.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   useEffect(() => {
     let alive = true
@@ -147,17 +135,10 @@ function DwSchemaDialog({ store, tr, instance, onClose }) {
     body.push(h('div', { key: 'note', className: 'dw-ai-note' }, tr('schemaHint')))
   }
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: (event) => {
-      if (event.target === event.currentTarget && saving !== true) onClose()
-    },
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': tr('schemaTitle'),
+  return h(DwModal, {
+    onClose,
+    busy: saving === true,
+    label: tr('schemaTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'database', size: 15 }),
@@ -183,5 +164,5 @@ function DwSchemaDialog({ store, tr, instance, onClose }) {
         onClick: () => void apply(),
       }, saving === true ? tr('schemaApplying') : tr('schemaApply')),
     ]),
-  ]))
+  ])
 }

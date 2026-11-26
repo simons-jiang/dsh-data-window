@@ -265,7 +265,6 @@
   "log.exported": "已导出 {name}（{rows} 行）",
   "log.exportCancelled": "已取消导出",
   "log.exportDownloaded": "当前环境不支持选择保存位置，已下载到默认下载目录：{name}",
-  "cellDetailTitle": "{column} · 第 {row} 行",
   "editCell": "编辑单元格",
   "insertNeedsTitle": "无法导出 INSERT 脚本",
   "refreshStructure": "刷新结构",

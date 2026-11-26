@@ -186,13 +186,10 @@ function DwSqlOptimizeDialog({ store, tr, sql, database, onClose }) {
           ]),
       ])
 
-  return h('div', {
-    className: 'dw-modal',
-    onClick: onClose,
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card dw-optimize-dialog',
-    onClick: (event) => event.stopPropagation(),
+  return h(DwModal, {
+    onClose,
+    className: 'dw-optimize-dialog',
+    label: tr('optimizeTitle'),
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, [
       h(DwIcon, { key: 'i', name: 'ai', size: 13 }),
@@ -213,5 +210,5 @@ function DwSqlOptimizeDialog({ store, tr, sql, database, onClose }) {
         : null,
       h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: onClose }, tr('close')),
     ]),
-  ]))
+  ])
 }

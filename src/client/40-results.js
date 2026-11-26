@@ -33,9 +33,89 @@ function dwColumnTypeName(type, charset) {
   return DW_COLUMN_TYPES[code] ?? String(type)
 }
 
+/**
+ * The type label under one column name.
+ *
+ * A column that came straight from a table shows the type that table declares —
+ * `varchar(32)`, `decimal(10,4)` — because the length and the scale are what tell
+ * one column apart from another at a glance. A computed column has no declaration
+ * to read, so it falls back to the bare type the wire reported.
+ */
+function dwColumnTypeLabel(column) {
+  const declared = String(column?.declaredType ?? '').trim()
+  if (declared !== '') return declared
+  return dwColumnTypeName(column?.type, column?.charset).toLowerCase()
+}
+
+/**
+ * The tooltip of one column header.
+ *
+ * It repeats the label an eye already reads (name, type) and then adds the one
+ * thing the grid cannot show: the comment the table declares for the column, which
+ * is usually the only explanation of what a terse column name means.
+ */
+function dwColumnTitle(column) {
+  const parts = [String(column?.name ?? '')]
+  const type = dwColumnTypeLabel(column)
+  if (type !== '') parts.push(type)
+  const comment = String(column?.declaredComment ?? '').trim()
+  if (comment !== '') parts.push(comment)
+  return parts.filter((part) => part !== '').join(' · ')
+}
+
 function dwIsNumericColumn(column) {
   const code = Number(column?.type)
   return Number.isFinite(code) && DW_NUMERIC_TYPES.has(code)
+}
+
+/**
+ * The card a column header shows while the pointer rests on it.
+ *
+ * A native `title` is delayed by the browser, cannot be styled and is clipped by
+ * the grid's own scroll container, so the header draws its own: the name, the
+ * declared type, and the comment that explains what a terse column name means.
+ * It is portalled to the page body for the same reason the dialogs are — the
+ * workbench is a clipping context, and a card inside it would disappear under the
+ * header row.
+ */
+function DwHeaderTip({ column, left, top, onHide }) {
+  const themeId = useSyncExternalStore(dwSubscribeTheme, dwSharedTheme, dwSharedTheme)
+  const hideRef = useRef(onHide)
+  hideRef.current = onHide
+  useEffect(() => {
+    // The header row is sticky: scrolling leaves the pointer on the header while
+    // the cells move, so the card has to go with the scroll.
+    const doc = globalThis.document
+    if (doc === undefined) return undefined
+    const hide = () => hideRef.current?.()
+    doc.addEventListener('scroll', hide, true)
+    globalThis.addEventListener?.('resize', hide)
+    return () => {
+      doc.removeEventListener('scroll', hide, true)
+      globalThis.removeEventListener?.('resize', hide)
+    }
+  }, [])
+  const type = dwColumnTypeLabel(column)
+  const comment = String(column?.declaredComment ?? '').trim()
+  return dwPortal(h('div', {
+    className: 'dw-tip',
+    'data-dsh-theme': themeId === '' ? undefined : themeId,
+    style: { left: `${left}px`, top: `${top}px` },
+  }, [
+    h('div', { key: 'n', className: 'dw-tip-name' }, String(column?.name ?? '')),
+    type === '' ? null : h('div', { key: 't', className: 'dw-tip-type' }, type),
+    comment === '' ? null : h('div', { key: 'c', className: 'dw-tip-comment' }, comment),
+  ]))
+}
+
+/** Where the card goes for one header cell: below it, kept inside the window. */
+function dwHeaderTipPoint(element) {
+  if (element === null || element === undefined || typeof element.getBoundingClientRect !== 'function') return null
+  const rect = element.getBoundingClientRect()
+  const width = 320
+  const viewport = Number(globalThis.innerWidth ?? 0)
+  const maxLeft = viewport > width + 16 ? viewport - width - 8 : 8
+  return { left: Math.max(8, Math.min(rect.left, maxLeft)), top: rect.bottom + 6 }
 }
 
 /** Render one cell. */
@@ -57,12 +137,23 @@ function dwCell(value) {
 const DwGrid = React.memo(function DwGrid({
   columns, rows, tr, edits, editing, selected, skipBlur, onSelect, onCellDoubleClick, onEditCommit, onEditCancel, onCellMenu,
 }) {
+  const [tip, setTip] = useState(null)
   const head = h('thead', { key: 'head' }, h('tr', { key: 'row' }, [
     h('th', { key: '#', className: 'dw-rownum' }, '#'),
-    ...columns.map((column, index) => h('th', { key: `${column.name}-${index}`, title: `${column.name}${column.type !== '' ? ` · ${dwColumnTypeName(column.type, column.charset)}` : ''}` }, [
-      h('span', { key: 'n' }, column.name),
-      column.type !== '' ? h('span', { key: 't', className: 'dw-th-type' }, dwColumnTypeName(column.type, column.charset)) : null,
-    ])),
+    ...columns.map((column, index) => {
+      const type = dwColumnTypeLabel(column)
+      return h('th', {
+        key: `${column.name}-${index}`,
+        onMouseEnter: (event) => {
+          const point = dwHeaderTipPoint(event.currentTarget)
+          setTip(point === null ? null : { column, left: point.left, top: point.top })
+        },
+        onMouseLeave: () => setTip(null),
+      }, [
+        h('span', { key: 'n' }, column.name),
+        type !== '' ? h('span', { key: 't', className: 'dw-th-type' }, type) : null,
+      ])
+    }),
   ]))
   const body = h('tbody', { key: 'body' }, rows.map((row, rowIndex) => h('tr', { key: rowIndex }, [
     h('td', { key: '#', className: 'dw-rownum' }, String(rowIndex + 1)),
@@ -111,7 +202,18 @@ const DwGrid = React.memo(function DwGrid({
     }),
   ])))
   void tr
-  return h('div', { className: 'dw-result-body' }, h('table', { className: 'dw-grid' }, [head, body]))
+  return h('div', { className: 'dw-result-body' }, [
+    h('table', { key: 'grid', className: 'dw-grid' }, [head, body]),
+    tip === null
+      ? null
+      : h(DwHeaderTip, {
+        key: 'tip',
+        column: tip.column,
+        left: tip.left,
+        top: tip.top,
+        onHide: () => setTip(null),
+      }),
+  ])
 })
 
 function DwResults({ store, state, tab, tr }) {
@@ -121,7 +223,6 @@ function DwResults({ store, state, tab, tr }) {
   const [cellMenu, setCellMenu] = useState(null)
   const [exportMenu, setExportMenu] = useState(null)
   const [selected, setSelected] = useState(null)
-  const [detail, setDetail] = useState(null)
   const [notice, setNotice] = useState(null)
   const skipBlur = useRef(false)
   const edits = tab.edits ?? {}
@@ -142,7 +243,6 @@ function DwResults({ store, state, tab, tr }) {
     setEditing(null)
     setCellMenu(null)
     setSelected(null)
-    setDetail(null)
     setNotice(null)
   }, [tab.id, result, tab.page?.offset])
 
@@ -164,21 +264,6 @@ function DwResults({ store, state, tab, tr }) {
   }, [editing])
 
   const columnIndexOf = (name) => (result?.columns ?? []).findIndex((column) => column.name === name)
-
-  // Full value of one cell, edits included: what the detail dialog shows.
-  const openDetail = (rowIndex, cellIndex) => {
-    const column = (result?.columns ?? [])[cellIndex] ?? {}
-    const rowEdits = edits[rowIndex] ?? {}
-    const raw = Object.prototype.hasOwnProperty.call(rowEdits, column.name)
-      ? rowEdits[column.name]
-      : (result?.rows ?? [])[rowIndex]?.[cellIndex]
-    setDetail({
-      row: rowIndex,
-      index: cellIndex,
-      name: column.name ?? '',
-      text: raw === null || raw === undefined ? 'NULL' : String(raw),
-    })
-  }
 
   // One UPDATE for one edited row: edited columns in SET, the original primary
   // key in WHERE. `reason` is what the UI shows when no statement can be built.
@@ -426,7 +511,12 @@ function DwResults({ store, state, tab, tr }) {
       selected,
       skipBlur,
       onSelect: (row, index) => setSelected({ row, index }),
-      onCellDoubleClick: (row, index) => openDetail(row, index),
+      // Double-click edits in place: the cell is already the right size for the
+      // value a user came to change, and a dialog only put a click between the two.
+      onCellDoubleClick: (row, index) => {
+        setSelected({ row, index })
+        setEditing({ row, index })
+      },
       onEditCommit: (row, index, name, text) => {
         if (skipBlur.current) {
           skipBlur.current = false
@@ -505,55 +595,19 @@ function DwResults({ store, state, tab, tr }) {
     ]),
   ])
 
-  const detailLayer = detail === null ? null : h('div', {
-    key: 'detail',
-    className: 'dw-modal',
-    onClick: () => setDetail(null),
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card dw-cell-dialog',
-    onClick: (event) => event.stopPropagation(),
-  }, [
-    h('div', { key: 'title', className: 'dw-modal-title' }, tr('cellDetailTitle', { column: detail.name, row: detail.row + 1 })),
-    h('div', { key: 'body', className: 'dw-modal-body' }, h('pre', { key: 'v', className: 'dw-cell-view' }, detail.text)),
-    h('div', { key: 'foot', className: 'dw-modal-foot' }, [
-      h('button', {
-        key: 'copy',
-        type: 'button',
-        className: 'dw-btn',
-        onClick: () => copyText(detail.text, () => store.pushLog('info', tr('log.copiedCell'))),
-      }, tr('menuCopyCell')),
-      h('button', {
-        key: 'edit',
-        type: 'button',
-        className: 'dw-btn',
-        onClick: () => {
-          setSelected({ row: detail.row, index: detail.index })
-          setEditing({ row: detail.row, index: detail.index })
-          setDetail(null)
-        },
-      }, tr('editCell')),
-      h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: () => setDetail(null) }, tr('close')),
-    ]),
-  ]))
-
-  const noticeLayer = notice === null ? null : h('div', {
+  const noticeLayer = notice === null ? null : h(DwModal, {
     key: 'notice',
-    className: 'dw-modal',
-    onClick: () => setNotice(null),
-  }, h('div', {
-    key: 'card',
-    className: 'dw-modal-card',
-    onClick: (event) => event.stopPropagation(),
+    onClose: () => setNotice(null),
+    label: notice.title,
   }, [
     h('div', { key: 'title', className: 'dw-modal-title' }, notice.title),
     h('div', { key: 'body', className: 'dw-modal-body' }, h('div', { key: 'm', className: 'dw-error-text' }, notice.message)),
     h('div', { key: 'foot', className: 'dw-modal-foot' }, [
       h('button', { key: 'close', type: 'button', className: 'dw-btn dw-btn-accent', onClick: () => setNotice(null) }, tr('close')),
     ]),
-  ]))
+  ])
 
-  return h('div', { className: 'dw-result' }, [bar, body, cellMenuLayer, exportLayer, detailLayer, noticeLayer])
+  return h('div', { className: 'dw-result' }, [bar, body, cellMenuLayer, exportLayer, noticeLayer])
 }
 
 export { DwResults, DwGrid, dwCell, dwColumnTypeName, dwIsNumericColumn }
